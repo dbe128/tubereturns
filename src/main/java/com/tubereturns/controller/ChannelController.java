@@ -5,16 +5,17 @@ import com.tubereturns.dto.ChannelStatsDto;
 import com.tubereturns.model.Channel;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
-import com.tubereturns.service.StockPerformanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/channels")
 @Tag(name = "Channels", description = "YouTube channel management and statistics")
@@ -22,15 +23,6 @@ public class ChannelController {
 
     private final ChannelRepository channelRepository;
     private final PickRepository pickRepository;
-    private final StockPerformanceService performanceService;
-
-    public ChannelController(ChannelRepository channelRepository,
-                             PickRepository pickRepository,
-                             StockPerformanceService performanceService) {
-        this.channelRepository = channelRepository;
-        this.pickRepository = pickRepository;
-        this.performanceService = performanceService;
-    }
 
     @GetMapping
     @Operation(summary = "Get all active channels")
@@ -49,18 +41,20 @@ public class ChannelController {
     }
 
     @GetMapping("/{channelId}/stats")
-    @Operation(summary = "Get channel performance statistics")
+    @Operation(summary = "Get channel statistics")
     public ResponseEntity<ChannelStatsDto> getChannelStats(
             @PathVariable String channelId) {
         Optional<Channel> channelOpt = channelRepository.findByChannelId(channelId);
-        if (channelOpt.isEmpty()) return ResponseEntity.notFound().build();
+        if (channelOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
 
         Channel channel = channelOpt.get();
         return ResponseEntity.ok(toStatsDto(channel));
     }
 
     @GetMapping("/top-performers")
-    @Operation(summary = "Get channels ranked by 30-day return")
+    @Operation(summary = "Get channels ranked by pick count")
     public ResponseEntity<List<ChannelStatsDto>> getTopPerformers(
             @RequestParam(defaultValue = "10") int limit) {
 
@@ -68,9 +62,6 @@ public class ChannelController {
         List<ChannelStatsDto> stats = channels.stream()
                 .limit(limit)
                 .map(this::toStatsDto)
-                .sorted((a, b) -> Double.compare(
-                        b.avgReturn30d() != null ? b.avgReturn30d() : Double.NEGATIVE_INFINITY,
-                        a.avgReturn30d() != null ? a.avgReturn30d() : Double.NEGATIVE_INFINITY))
                 .toList();
 
         return ResponseEntity.ok(stats);
@@ -92,12 +83,10 @@ public class ChannelController {
     }
 
     private ChannelStatsDto toStatsDto(Channel channel) {
-        Double avgReturn30d = performanceService.getAverageReturn30dByChannel(channel.getId());
         long totalPicks = pickRepository.countByChannelId(channel.getId());
         return new ChannelStatsDto(
             channel.getChannelId(),
             channel.getChannelName(),
-            avgReturn30d,
             (int) totalPicks,
             channel.getSubscriberCount()
         );

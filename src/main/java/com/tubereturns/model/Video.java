@@ -4,9 +4,17 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.Instant;
 import java.util.List;
 
+@Getter
+@Setter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "videos")
 public class Video {
@@ -65,15 +73,11 @@ public class Video {
     @OneToMany(mappedBy = "video", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Pick> picks;
 
-    protected Video() {}
-
     public Video(String videoId, Channel channel, String title, Instant publishedAt) {
         this.videoId = videoId;
         this.channel = channel;
         this.title = title;
         this.publishedAt = publishedAt;
-        this.createdAt = Instant.now();
-        this.updatedAt = Instant.now();
     }
 
     @PrePersist
@@ -95,125 +99,5 @@ public class Video {
 
     public enum ProcessingStatus {
         PENDING, PROCESSING, COMPLETED, FAILED
-    }
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getVideoId() {
-        return videoId;
-    }
-
-    public void setVideoId(String videoId) {
-        this.videoId = videoId;
-    }
-
-    public Channel getChannel() {
-        return channel;
-    }
-
-    public void setChannel(Channel channel) {
-        this.channel = channel;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public Instant getPublishedAt() {
-        return publishedAt;
-    }
-
-    public void setPublishedAt(Instant publishedAt) {
-        this.publishedAt = publishedAt;
-    }
-
-    public Integer getDurationSeconds() {
-        return durationSeconds;
-    }
-
-    public void setDurationSeconds(Integer durationSeconds) {
-        this.durationSeconds = durationSeconds;
-    }
-
-    public Long getViewCount() {
-        return viewCount;
-    }
-
-    public void setViewCount(Long viewCount) {
-        this.viewCount = viewCount;
-    }
-
-    public Long getLikeCount() {
-        return likeCount;
-    }
-
-    public void setLikeCount(Long likeCount) {
-        this.likeCount = likeCount;
-    }
-
-    public String getTranscriptText() {
-        return transcriptText;
-    }
-
-    public void setTranscriptText(String transcriptText) {
-        this.transcriptText = transcriptText;
-    }
-
-    public TranscriptStatus getTranscriptStatus() {
-        return transcriptStatus;
-    }
-
-    public void setTranscriptStatus(TranscriptStatus transcriptStatus) {
-        this.transcriptStatus = transcriptStatus;
-    }
-
-    public ProcessingStatus getProcessingStatus() {
-        return processingStatus;
-    }
-
-    public void setProcessingStatus(ProcessingStatus processingStatus) {
-        this.processingStatus = processingStatus;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
-
-    public void setUpdatedAt(Instant updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
-    public List<Pick> getPicks() {
-        return picks;
-    }
-
-    public void setPicks(List<Pick> picks) {
-        this.picks = picks;
     }
 }

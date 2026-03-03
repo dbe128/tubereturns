@@ -1,16 +1,15 @@
 package com.tubereturns.dto;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 
-public record PickResponseDto(
+public record PickDto(
     Long id,
     String tickerSymbol,
     String companyName,
     String signal,
-    BigDecimal confidenceScore,
-    Instant extractionTimestamp,
     String videoId,
     String videoTitle,
-    String channelName
+    String channelId,
+    String channelName,
+    Instant createdAt
 ) {}

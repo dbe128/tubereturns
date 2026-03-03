@@ -1,12 +1,12 @@
 package com.tubereturns.controller;
 
-import com.tubereturns.dto.PickWithPerformanceDto;
-import com.tubereturns.model.Performance;
+import com.tubereturns.dto.PickDto;
 import com.tubereturns.model.Pick;
 import com.tubereturns.repository.PickRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,6 +15,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/picks")
 @Tag(name = "Stock Picks", description = "Stock picks extracted from YouTube videos")
@@ -22,13 +23,9 @@ public class PickController {
 
     private final PickRepository pickRepository;
 
-    public PickController(PickRepository pickRepository) {
-        this.pickRepository = pickRepository;
-    }
-
     @GetMapping
     @Operation(summary = "Get recent stock picks")
-    public ResponseEntity<List<PickWithPerformanceDto>> getRecentPicks(
+    public ResponseEntity<List<PickDto>> getRecentPicks(
             @Parameter(description = "Days back to search")
             @RequestParam(defaultValue = "30") int days,
             @Parameter(description = "Filter by ticker symbol")
@@ -41,11 +38,11 @@ public class PickController {
         List<Pick> picks;
 
         if (ticker != null) {
-            picks = pickRepository.findByTickerSymbolOrderByExtractionTimestampDesc(ticker.toUpperCase());
+            picks = pickRepository.findByTickerSymbolOrderByCreatedAtDesc(ticker.toUpperCase());
         } else if (signal != null) {
             try {
                 Pick.Signal signalEnum = Pick.Signal.valueOf(signal.toUpperCase());
-                picks = pickRepository.findBySignalOrderByExtractionTimestampDesc(signalEnum);
+                picks = pickRepository.findBySignalOrderByCreatedAtDesc(signalEnum);
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().build();
             }
@@ -64,56 +61,39 @@ public class PickController {
 
     @GetMapping("/ticker/{ticker}")
     @Operation(summary = "Get picks for a specific ticker")
-    public ResponseEntity<List<PickWithPerformanceDto>> getPicksForTicker(
+    public ResponseEntity<List<PickDto>> getPicksForTicker(
             @PathVariable String ticker) {
-        List<Pick> picks = pickRepository.findByTickerSymbolOrderByExtractionTimestampDesc(ticker.toUpperCase());
+        List<Pick> picks = pickRepository.findByTickerSymbolOrderByCreatedAtDesc(ticker.toUpperCase());
         return ResponseEntity.ok(picks.stream().map(this::toDto).toList());
     }
 
     @GetMapping("/channel/{channelId}")
     @Operation(summary = "Get picks by YouTube channel ID")
-    public ResponseEntity<List<PickWithPerformanceDto>> getPicksByChannel(
+    public ResponseEntity<List<PickDto>> getPicksByChannel(
             @PathVariable String channelId) {
-        List<Pick> picks = pickRepository.findByYouTubeChannelIdOrderByExtractionTimestampDesc(channelId);
+        List<Pick> picks = pickRepository.findByYouTubeChannelIdOrderByCreatedAtDesc(channelId);
         return ResponseEntity.ok(picks.stream().map(this::toDto).toList());
     }
 
     @GetMapping("/{pickId}")
     @Operation(summary = "Get pick by ID")
-    public ResponseEntity<PickWithPerformanceDto> getPickById(@PathVariable Long pickId) {
+    public ResponseEntity<PickDto> getPickById(@PathVariable Long pickId) {
         Optional<Pick> pickOpt = pickRepository.findById(pickId);
         return pickOpt.map(p -> ResponseEntity.ok(toDto(p)))
                       .orElse(ResponseEntity.notFound().build());
     }
 
-    private PickWithPerformanceDto toDto(Pick pick) {
-        Performance perf = pick.getPerformance();
-        PickWithPerformanceDto.PerformanceDto perfDto = perf == null ? null :
-            new PickWithPerformanceDto.PerformanceDto(
-                perf.getId(),
-                perf.getStartPrice(),
-                perf.getCurrentPrice(),
-                perf.getReturn1d(),
-                perf.getReturn7d(),
-                perf.getReturn30d(),
-                perf.getReturn90d(),
-                perf.getReturn1y(),
-                perf.getReturnYtd(),
-                perf.getLastUpdated()
-            );
-
-        return new PickWithPerformanceDto(
+    private PickDto toDto(Pick pick) {
+        return new PickDto(
             pick.getId(),
             pick.getTickerSymbol(),
             pick.getCompanyName(),
             pick.getSignal().name(),
-            pick.getConfidenceScore(),
-            pick.getExtractionTimestamp(),
             pick.getVideo().getVideoId(),
             pick.getVideo().getTitle(),
             pick.getVideo().getChannel().getChannelId(),
             pick.getVideo().getChannel().getChannelName(),
-            perfDto
+            pick.getCreatedAt()
         );
     }
 }

@@ -5,8 +5,8 @@ import com.tubereturns.model.Channel;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.VideoRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,46 +14,40 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+@Slf4j
+@RequiredArgsConstructor
 @Service
 @Transactional
 public class YouTubeDiscoveryService {
-
-    private static final Logger logger = LoggerFactory.getLogger(YouTubeDiscoveryService.class);
 
     private final ChannelRepository channelRepository;
     private final VideoRepository videoRepository;
     private final YouTubeApiService youTubeApiService;
 
-    public YouTubeDiscoveryService(ChannelRepository channelRepository, VideoRepository videoRepository, YouTubeApiService youTubeApiService) {
-        this.channelRepository = channelRepository;
-        this.videoRepository = videoRepository;
-        this.youTubeApiService = youTubeApiService;
-    }
-
     public void discoverAndProcessChannels() {
-        logger.info("Starting channel discovery process");
+        log.info("Starting channel discovery process");
 
         List<Channel> activeChannels = channelRepository.findByIsActiveTrue();
-        logger.info("Found {} active channels to process", activeChannels.size());
+        log.info("Found {} active channels to process", activeChannels.size());
 
         for (Channel channel : activeChannels) {
             try {
                 processChannel(channel);
             } catch (Exception e) {
-                logger.error("Error processing channel {}: {}", channel.getChannelId(), e.getMessage(), e);
+                log.error("Error processing channel {}: {}", channel.getChannelId(), e.getMessage(), e);
             }
         }
 
-        logger.info("Completed channel discovery process");
+        log.info("Completed channel discovery process");
     }
 
     public void processChannel(Channel channel) {
-        logger.info("Processing channel: {} ({})", channel.getChannelName(), channel.getChannelId());
+        log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getChannelId());
 
         Instant since = Instant.now().minus(30, ChronoUnit.DAYS);
         List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channel.getChannelUrl(), since);
 
-        logger.info("Found {} recent videos for channel {}", recentVideos.size(), channel.getChannelName());
+        log.info("Found {} recent videos for channel {}", recentVideos.size(), channel.getChannelName());
 
         for (YouTubeVideoDto video : recentVideos) {
             processVideo(channel, video);
@@ -73,15 +67,13 @@ public class YouTubeDiscoveryService {
     }
 
     private void processVideo(Channel channel, YouTubeVideoDto videoDto) {
-        logger.debug("Processing video: {} for channel {}", videoDto.title(), channel.getChannelName());
+        log.debug("Processing video: {} for channel {}", videoDto.title(), channel.getChannelName());
 
-        // Check if video already exists
         if (videoRepository.existsByVideoId(videoDto.videoId())) {
-            logger.debug("Video {} already exists, skipping", videoDto.videoId());
+            log.debug("Video {} already exists, skipping", videoDto.videoId());
             return;
         }
 
-        // Create and save new video
         Video video = new Video(videoDto.videoId(), channel, videoDto.title(), videoDto.publishedAt());
         video.setDescription(videoDto.description());
         video.setDurationSeconds(videoDto.durationSeconds());
@@ -89,6 +81,6 @@ public class YouTubeDiscoveryService {
         video.setLikeCount(videoDto.likeCount());
 
         videoRepository.save(video);
-        logger.info("Created new video: {} ({})", videoDto.title(), videoDto.videoId());
+        log.info("Created new video: {} ({})", videoDto.title(), videoDto.videoId());
     }
 }

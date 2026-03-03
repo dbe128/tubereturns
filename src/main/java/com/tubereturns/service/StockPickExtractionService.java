@@ -7,23 +7,22 @@ import com.tubereturns.model.Pick;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.VideoRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
+@RequiredArgsConstructor
 @Service
 @Transactional
 public class StockPickExtractionService {
-
-    private static final Logger logger = LoggerFactory.getLogger(StockPickExtractionService.class);
 
     @Value("${tubereturns.ai.enabled:false}")
     private boolean aiEnabled;
@@ -36,25 +35,15 @@ public class StockPickExtractionService {
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
 
-    public StockPickExtractionService(VideoRepository videoRepository,
-                                    PickRepository pickRepository,
-                                    ObjectMapper objectMapper,
-                                    AiModelService aiModelService) {
-        this.videoRepository = videoRepository;
-        this.pickRepository = pickRepository;
-        this.objectMapper = objectMapper;
-        this.aiModelService = aiModelService;
-    }
-
     public void processVideosWithTranscripts() {
         List<Video> readyVideos = videoRepository.findVideosReadyForProcessing();
-        logger.info("Found {} videos ready for stock pick extraction", readyVideos.size());
+        log.info("Found {} videos ready for stock pick extraction", readyVideos.size());
 
         for (Video video : readyVideos) {
             try {
                 processVideo(video);
             } catch (Exception e) {
-                logger.error("Error processing video {}: {}", video.getVideoId(), e.getMessage(), e);
+                log.error("Error processing video {}: {}", video.getVideoId(), e.getMessage(), e);
                 video.setProcessingStatus(Video.ProcessingStatus.FAILED);
                 videoRepository.save(video);
             }
@@ -62,10 +51,10 @@ public class StockPickExtractionService {
     }
 
     public List<Pick> processVideo(Video video) {
-        logger.info("Processing video for stock picks: {} ({})", video.getTitle(), video.getVideoId());
+        log.info("Processing video for stock picks: {} ({})", video.getTitle(), video.getVideoId());
 
         if (video.getTranscriptText() == null || video.getTranscriptText().trim().isEmpty()) {
-            logger.warn("Video {} has no transcript text available", video.getVideoId());
+            log.warn("Video {} has no transcript text available", video.getVideoId());
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
             return List.of();
@@ -81,11 +70,11 @@ public class StockPickExtractionService {
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
             videoRepository.save(video);
 
-            logger.info("Successfully extracted {} stock picks from video {}", createdPicks.size(), video.getVideoId());
+            log.info("Successfully extracted {} stock picks from video {}", createdPicks.size(), video.getVideoId());
             return createdPicks;
 
         } catch (Exception e) {
-            logger.error("Failed to extract stock picks from video {}: {}", video.getVideoId(), e.getMessage(), e);
+            log.error("Failed to extract stock picks from video {}: {}", video.getVideoId(), e.getMessage(), e);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
             return List.of();
@@ -94,17 +83,17 @@ public class StockPickExtractionService {
 
     private StockPickExtractionDto extractStockPicks(String videoId, String transcriptText) {
         if (!aiEnabled || mockMode) {
-            logger.info("Using mock extraction for video: {}", videoId);
+            log.info("Using mock extraction for video: {}", videoId);
             return createMockExtraction(videoId, transcriptText);
         }
 
-        logger.debug("Sending transcript to AI for extraction: {}", videoId);
+        log.debug("Sending transcript to AI for extraction: {}", videoId);
         String aiResponse = aiModelService.extractStockPicks(transcriptText);
 
         try {
             return objectMapper.readValue(aiResponse, StockPickExtractionDto.class);
         } catch (JsonProcessingException e) {
-            logger.error("Failed to parse AI response for video {}: {}", videoId, e.getMessage());
+            log.error("Failed to parse AI response for video {}: {}", videoId, e.getMessage());
             return createMockExtraction(videoId, transcriptText);
         }
     }
@@ -126,7 +115,6 @@ public class StockPickExtractionService {
 
         Pattern buyPattern = Pattern.compile("\\b(?:buy|buying|purchased?|long)\\s+(?:stock\\s+)?([A-Z]{1,5})\\b", Pattern.CASE_INSENSITIVE);
         Pattern sellPattern = Pattern.compile("\\b(?:sell|selling|sold|short)\\s+(?:stock\\s+)?([A-Z]{1,5})\\b", Pattern.CASE_INSENSITIVE);
-
         Pattern tickerPattern = Pattern.compile("\\b(AAPL|TSLA|MSFT|GOOGL?|AMZN|META|NVDA|CRM|NFLX|UBER)\\b");
 
         Matcher buyMatcher = buyPattern.matcher(text);
@@ -169,7 +157,9 @@ public class StockPickExtractionService {
         String lowerText = text.toLowerCase();
         int tickerIndex = lowerText.indexOf(ticker.toLowerCase());
 
-        if (tickerIndex == -1) return "BUY";
+        if (tickerIndex == -1) {
+            return "BUY";
+        }
 
         String contextBefore = lowerText.substring(Math.max(0, tickerIndex - 100), tickerIndex);
         String contextAfter = lowerText.substring(tickerIndex, Math.min(lowerText.length(), tickerIndex + 100));
@@ -212,15 +202,14 @@ public class StockPickExtractionService {
 
                 Pick pick = new Pick(video, pickDto.tickerSymbol(), signal);
                 pick.setCompanyName(pickDto.companyName());
-                pick.setConfidenceScore(BigDecimal.valueOf(0.75));
 
                 Pick savedPick = pickRepository.save(pick);
                 savedPicks.add(savedPick);
 
-                logger.debug("Saved stock pick: {} {} for video {}", signal, pickDto.tickerSymbol(), video.getVideoId());
+                log.debug("Saved stock pick: {} {} for video {}", signal, pickDto.tickerSymbol(), video.getVideoId());
 
             } catch (IllegalArgumentException e) {
-                logger.warn("Invalid signal value '{}' for ticker {} in video {}",
+                log.warn("Invalid signal value '{}' for ticker {} in video {}",
                            pickDto.signal(), pickDto.tickerSymbol(), video.getVideoId());
             }
         }

@@ -2,8 +2,7 @@ package com.tubereturns.service;
 
 import com.tubereturns.dto.YouTubeChannelDto;
 import com.tubereturns.dto.YouTubeVideoDto;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,10 +19,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 public class YouTubeApiService {
 
-    private static final Logger logger = LoggerFactory.getLogger(YouTubeApiService.class);
     private static final DateTimeFormatter UPLOAD_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     @Value("${tubereturns.yt-dlp.path:yt-dlp}")
@@ -49,7 +48,7 @@ public class YouTubeApiService {
      */
     public List<YouTubeVideoDto> getRecentVideos(String channelUrl, Instant since) {
         if (!enabled || channelUrl == null || channelUrl.isBlank()) {
-            logger.warn("yt-dlp disabled or no channel URL — skipping video discovery");
+            log.warn("yt-dlp disabled or no channel URL — skipping video discovery");
             return List.of();
         }
 
@@ -57,12 +56,12 @@ public class YouTubeApiService {
                 ? channelUrl + "videos"
                 : channelUrl + "/videos";
 
-        logger.info("Discovering videos for channel: {}", videosUrl);
+        log.info("Discovering videos for channel: {}", videosUrl);
 
         try {
             return fetchVideosViaYtDlp(videosUrl, since);
         } catch (Exception e) {
-            logger.error("Failed to discover videos for {}: {}", channelUrl, e.getMessage(), e);
+            log.error("Failed to discover videos for {}: {}", channelUrl, e.getMessage(), e);
             return List.of();
         }
     }
@@ -97,10 +96,10 @@ public class YouTubeApiService {
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
         if (!finished) {
             process.destroyForcibly();
-            logger.warn("yt-dlp --flat-playlist timed out for {}", playlistUrl);
+            log.warn("yt-dlp --flat-playlist timed out for {}", playlistUrl);
         }
 
-        logger.info("Discovered {} videos from {}", videos.size(), playlistUrl);
+        log.info("Discovered {} videos from {}", videos.size(), playlistUrl);
         return videos;
     }
 
@@ -108,7 +107,7 @@ public class YouTubeApiService {
     private YouTubeVideoDto parseLine(String line) {
         String[] parts = line.split("\t", -1);
         if (parts.length < 5) {
-            logger.debug("Skipping malformed yt-dlp output line: {}", line);
+            log.debug("Skipping malformed yt-dlp output line: {}", line);
             return null;
         }
 
@@ -118,11 +117,15 @@ public class YouTubeApiService {
         String durStr    = parts[3].strip();
         String viewStr   = parts[4].strip();
 
-        if (videoId.isBlank() || title.isBlank()) return null;
+        if (videoId.isBlank() || title.isBlank()) {
+            return null;
+        }
 
         // upload_date is often NA in flat-playlist mode; treat unknown as now so the video isn't filtered out
         Instant publishedAt = parseUploadDate(dateStr);
-        if (publishedAt == null) publishedAt = Instant.now();
+        if (publishedAt == null) {
+            publishedAt = Instant.now();
+        }
 
         Integer duration  = parseIntOrNull(durStr);
         Long    viewCount = parseLongOrNull(viewStr);
@@ -131,18 +134,22 @@ public class YouTubeApiService {
     }
 
     private Instant parseUploadDate(String dateStr) {
-        if (dateStr == null || dateStr.isBlank() || dateStr.equals("NA")) return null;
+        if (dateStr == null || dateStr.isBlank() || dateStr.equals("NA")) {
+            return null;
+        }
         try {
             LocalDate date = LocalDate.parse(dateStr, UPLOAD_DATE_FMT);
             return date.atStartOfDay(ZoneOffset.UTC).toInstant();
         } catch (DateTimeParseException e) {
-            logger.debug("Could not parse upload_date '{}': {}", dateStr, e.getMessage());
+            log.debug("Could not parse upload_date '{}': {}", dateStr, e.getMessage());
             return null;
         }
     }
 
     private Integer parseIntOrNull(String s) {
-        if (s == null || s.isBlank() || s.equals("NA") || s.equals("None")) return null;
+        if (s == null || s.isBlank() || s.equals("NA") || s.equals("None")) {
+            return null;
+        }
         try {
             return Integer.parseInt(s.strip());
         } catch (NumberFormatException e) {
@@ -151,7 +158,9 @@ public class YouTubeApiService {
     }
 
     private Long parseLongOrNull(String s) {
-        if (s == null || s.isBlank() || s.equals("NA") || s.equals("None")) return null;
+        if (s == null || s.isBlank() || s.equals("NA") || s.equals("None")) {
+            return null;
+        }
         try {
             return Long.parseLong(s.strip());
         } catch (NumberFormatException e) {

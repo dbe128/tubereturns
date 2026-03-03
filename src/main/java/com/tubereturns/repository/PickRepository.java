@@ -12,17 +12,17 @@ import java.util.List;
 @Repository
 public interface PickRepository extends JpaRepository<Pick, Long> {
 
-    List<Pick> findByTickerSymbolOrderByExtractionTimestampDesc(String tickerSymbol);
+    List<Pick> findByTickerSymbolOrderByCreatedAtDesc(String tickerSymbol);
 
-    List<Pick> findByVideoIdOrderByExtractionTimestampDesc(Long videoId);
+    List<Pick> findByVideoIdOrderByCreatedAtDesc(Long videoId);
 
-    @Query("SELECT p FROM Pick p WHERE p.video.channel.id = :channelId ORDER BY p.extractionTimestamp DESC")
-    List<Pick> findByChannelIdOrderByExtractionTimestampDesc(@Param("channelId") Long channelId);
+    @Query("SELECT p FROM Pick p WHERE p.video.channel.id = :channelId ORDER BY p.createdAt DESC")
+    List<Pick> findByChannelIdOrderByCreatedAtDesc(@Param("channelId") Long channelId);
 
-    @Query("SELECT p FROM Pick p WHERE p.video.channel.channelId = :channelId ORDER BY p.extractionTimestamp DESC")
-    List<Pick> findByYouTubeChannelIdOrderByExtractionTimestampDesc(@Param("channelId") String channelId);
+    @Query("SELECT p FROM Pick p WHERE p.video.channel.channelId = :channelId ORDER BY p.createdAt DESC")
+    List<Pick> findByYouTubeChannelIdOrderByCreatedAtDesc(@Param("channelId") String channelId);
 
-    @Query("SELECT p FROM Pick p WHERE p.extractionTimestamp >= :since ORDER BY p.extractionTimestamp DESC")
+    @Query("SELECT p FROM Pick p WHERE p.createdAt >= :since ORDER BY p.createdAt DESC")
     List<Pick> findPicksSince(@Param("since") Instant since);
 
     @Query("SELECT DISTINCT p.tickerSymbol FROM Pick p ORDER BY p.tickerSymbol")
@@ -31,9 +31,6 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     @Query("SELECT COUNT(p) FROM Pick p WHERE p.video.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
 
-    @Query("SELECT p FROM Pick p WHERE p.signal = :signal ORDER BY p.extractionTimestamp DESC")
-    List<Pick> findBySignalOrderByExtractionTimestampDesc(@Param("signal") Pick.Signal signal);
-
-    @Query("SELECT p FROM Pick p LEFT JOIN FETCH p.performance WHERE p.performance IS NULL")
-    List<Pick> findPicksWithoutPerformance();
+    @Query("SELECT p FROM Pick p WHERE p.signal = :signal ORDER BY p.createdAt DESC")
+    List<Pick> findBySignalOrderByCreatedAtDesc(@Param("signal") Pick.Signal signal);
 }

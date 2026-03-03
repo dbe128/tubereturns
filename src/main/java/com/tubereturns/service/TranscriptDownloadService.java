@@ -2,8 +2,8 @@ package com.tubereturns.service;
 
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.VideoRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +19,11 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
+@Slf4j
+@RequiredArgsConstructor
 @Service
 @Transactional
 public class TranscriptDownloadService {
-
-    private static final Logger logger = LoggerFactory.getLogger(TranscriptDownloadService.class);
 
     @Value("${tubereturns.yt-dlp.path:yt-dlp}")
     private String ytDlpPath;
@@ -36,19 +36,15 @@ public class TranscriptDownloadService {
 
     private final VideoRepository videoRepository;
 
-    public TranscriptDownloadService(VideoRepository videoRepository) {
-        this.videoRepository = videoRepository;
-    }
-
     public void downloadPendingTranscripts() {
         List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING);
-        logger.info("Found {} videos pending transcript download", pendingVideos.size());
+        log.info("Found {} videos pending transcript download", pendingVideos.size());
 
         for (Video video : pendingVideos) {
             try {
                 downloadTranscript(video);
             } catch (Exception e) {
-                logger.error("Error downloading transcript for video {}: {}", video.getVideoId(), e.getMessage(), e);
+                log.error("Error downloading transcript for video {}: {}", video.getVideoId(), e.getMessage(), e);
                 video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
                 videoRepository.save(video);
             }
@@ -57,13 +53,13 @@ public class TranscriptDownloadService {
 
     public boolean downloadTranscript(Video video) {
         if (!enabled) {
-            logger.warn("yt-dlp is disabled. Skipping transcript for video: {}", video.getVideoId());
+            log.warn("yt-dlp is disabled. Skipping transcript for video: {}", video.getVideoId());
             video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
             videoRepository.save(video);
             return false;
         }
 
-        logger.info("Downloading transcript for video: {} ({})", video.getTitle(), video.getVideoId());
+        log.info("Downloading transcript for video: {} ({})", video.getTitle(), video.getVideoId());
 
         try {
             String transcript = executeYtDlp(video.getVideoId());
@@ -71,17 +67,17 @@ public class TranscriptDownloadService {
             if (transcript != null && !transcript.isBlank()) {
                 video.setTranscriptText(transcript);
                 video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                logger.info("Successfully downloaded transcript for video: {}", video.getVideoId());
+                log.info("Successfully downloaded transcript for video: {}", video.getVideoId());
             } else {
                 video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                logger.warn("No transcript available for video: {}", video.getVideoId());
+                log.warn("No transcript available for video: {}", video.getVideoId());
             }
 
             videoRepository.save(video);
             return transcript != null && !transcript.isBlank();
 
         } catch (Exception e) {
-            logger.error("Failed to download transcript for video {}: {}", video.getVideoId(), e.getMessage());
+            log.error("Failed to download transcript for video {}: {}", video.getVideoId(), e.getMessage());
             video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
             videoRepository.save(video);
             return false;
@@ -120,13 +116,13 @@ public class TranscriptDownloadService {
             }
 
             if (vttFile.isEmpty()) {
-                logger.debug("No .vtt file produced for video {}", videoId);
+                log.debug("No .vtt file produced for video {}", videoId);
                 return null;
             }
 
             String vttContent = Files.readString(vttFile.get());
             String plainText = cleanVtt(vttContent);
-            logger.info("=== TRANSCRIPT [{}] ===\n{}\n=== END TRANSCRIPT ===", videoId, plainText);
+            log.info("=== TRANSCRIPT [{}] ===\n{}\n=== END TRANSCRIPT ===", videoId, plainText);
             return plainText;
 
         } finally {
@@ -154,17 +150,29 @@ public class TranscriptDownloadService {
         for (String rawLine : rawLines) {
             String line = rawLine.stripTrailing();
 
-            if (line.startsWith("WEBVTT")) continue;
-            if (line.startsWith("Kind:")) continue;
-            if (line.startsWith("Language:")) continue;
-            if (line.matches("\\d+")) continue;
-            if (line.matches("\\d{2}:\\d{2}:\\d{2}\\.\\d{3} -->.*")) continue;
+            if (line.startsWith("WEBVTT")) {
+                continue;
+            }
+            if (line.startsWith("Kind:")) {
+                continue;
+            }
+            if (line.startsWith("Language:")) {
+                continue;
+            }
+            if (line.matches("\\d+")) {
+                continue;
+            }
+            if (line.matches("\\d{2}:\\d{2}:\\d{2}\\.\\d{3} -->.*")) {
+                continue;
+            }
 
             // strip HTML / timing tags like <00:00:01.000> or <c.colorname>
             line = line.replaceAll("<[^>]+>", "");
             line = line.stripTrailing();
 
-            if (line.isEmpty()) continue;
+            if (line.isEmpty()) {
+                continue;
+            }
 
             // deduplicate consecutive identical lines (common in auto-captions)
             if (!line.equals(prev)) {

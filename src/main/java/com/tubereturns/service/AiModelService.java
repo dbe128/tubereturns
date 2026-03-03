@@ -2,8 +2,8 @@ package com.tubereturns.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -12,10 +12,10 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
+@RequiredArgsConstructor
 @Service
 public class AiModelService {
-
-    private static final Logger logger = LoggerFactory.getLogger(AiModelService.class);
 
     private static final String EXTRACTION_PROMPT = """
         Analyze the following YouTube video transcript and extract stock picks mentioned by the creator.
@@ -55,13 +55,8 @@ public class AiModelService {
     @Value("${tubereturns.ai.model:}")
     private String configuredModel;
 
-    private final RestClient restClient;
+    private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper;
-
-    public AiModelService(ObjectMapper objectMapper) {
-        this.restClient = RestClient.create();
-        this.objectMapper = objectMapper;
-    }
 
     public String extractStockPicks(String transcriptText) {
         return switch (aiProvider) {
@@ -76,7 +71,7 @@ public class AiModelService {
 
     private String callAnthropic(String transcriptText) {
         String model = configuredModel.isBlank() ? "claude-opus-4-5" : configuredModel;
-        logger.info("Calling Anthropic API with model {}", model);
+        log.info("Calling Anthropic API with model {}", model);
 
         Map<String, Object> body = Map.of(
             "model", model,
@@ -100,7 +95,7 @@ public class AiModelService {
             return stripJsonFences(root.path("content").get(0).path("text").asText());
 
         } catch (Exception e) {
-            logger.error("Anthropic API call failed: {}", e.getMessage(), e);
+            log.error("Anthropic API call failed: {}", e.getMessage(), e);
             return createMockResponse();
         }
     }
@@ -109,7 +104,7 @@ public class AiModelService {
 
     private String callOpenAi(String transcriptText) {
         String model = configuredModel.isBlank() ? "gpt-4o" : configuredModel;
-        logger.info("Calling OpenAI API with model {}", model);
+        log.info("Calling OpenAI API with model {}", model);
 
         Map<String, Object> body = Map.of(
             "model", model,
@@ -131,7 +126,7 @@ public class AiModelService {
             return stripJsonFences(root.path("choices").get(0).path("message").path("content").asText());
 
         } catch (Exception e) {
-            logger.error("OpenAI API call failed: {}", e.getMessage(), e);
+            log.error("OpenAI API call failed: {}", e.getMessage(), e);
             return createMockResponse();
         }
     }
@@ -140,7 +135,7 @@ public class AiModelService {
 
     private String callGemini(String transcriptText) {
         String model = configuredModel.isBlank() ? "gemini-2.0-flash" : configuredModel;
-        logger.info("Calling Gemini API with model {}", model);
+        log.info("Calling Gemini API with model {}", model);
 
         Map<String, Object> body = Map.of(
             "contents", List.of(
@@ -166,7 +161,7 @@ public class AiModelService {
             return stripJsonFences(text);
 
         } catch (Exception e) {
-            logger.error("Gemini API call failed: {}", e.getMessage(), e);
+            log.error("Gemini API call failed: {}", e.getMessage(), e);
             return createMockResponse();
         }
     }
@@ -174,7 +169,9 @@ public class AiModelService {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String stripJsonFences(String text) {
-        if (text == null) return null;
+        if (text == null) {
+            return null;
+        }
         String t = text.strip();
         if (t.startsWith("```")) {
             t = t.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("```\\s*$", "").strip();
