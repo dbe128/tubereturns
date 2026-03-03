@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: tubereturns
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/tubereturns
+    username: tubereturns
+    password: tubereturns_dev
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+logging:
+  level:
+    com.tubereturns: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+
+server:
+  port: 8080
