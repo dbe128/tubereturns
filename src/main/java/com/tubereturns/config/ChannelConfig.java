@@ -18,7 +18,7 @@ public class ChannelConfig {
     @Getter
     @Setter
     public static class ChannelDefinition {
-        private String channelId;
+        private String youtubeChannelId;
         private String channelName;
         private String description;
         private boolean enabled = true;

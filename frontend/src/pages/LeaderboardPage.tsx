@@ -26,7 +26,7 @@ export function LeaderboardPage() {
       const rowsWithStats = await Promise.all(
         channels.map(async (ch) => {
           try {
-            const stats = await fetchChannelStats(ch.channelId)
+            const stats = await fetchChannelStats(ch.youtubeChannelId)
             return { ...ch, stats }
           } catch {
             return { ...ch, stats: null }
@@ -94,7 +94,6 @@ export function LeaderboardPage() {
                 <th className="px-6 py-3">Channel</th>
                 <th className="px-6 py-3 text-right">Picks</th>
                 <th className="px-6 py-3 text-right">Avg 30d Return</th>
-                <th className="px-6 py-3 text-right">Subscribers</th>
               </tr>
             </thead>
             <tbody>
@@ -107,13 +106,13 @@ export function LeaderboardPage() {
               ) : (
                 rows.map((row, i) => (
                   <tr
-                    key={row.channelId}
+                    key={row.youtubeChannelId}
                     className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
                   >
                     <td className="px-6 py-4 text-gray-400 font-mono text-sm">{i + 1}</td>
                     <td className="px-6 py-4">
                       <Link
-                        to={`/channel/${row.channelId}`}
+                        to={`/channel/${row.youtubeChannelId}`}
                         className="font-semibold text-gray-900 hover:text-primary-600 transition-colors"
                       >
                         {row.channelName}
@@ -129,11 +128,6 @@ export function LeaderboardPage() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <ReturnBadge value={row.stats?.avgReturn30d} />
-                    </td>
-                    <td className="px-6 py-4 text-right text-gray-500 text-sm">
-                      {row.subscriberCount != null
-                        ? formatNum(row.subscriberCount)
-                        : '—'}
                     </td>
                   </tr>
                 ))

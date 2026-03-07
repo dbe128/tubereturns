@@ -25,9 +25,9 @@ public class ChannelController {
     private final PickRepository pickRepository;
 
     @GetMapping
-    @Operation(summary = "Get all active channels")
+    @Operation(summary = "Get all channels")
     public ResponseEntity<List<ChannelResponseDto>> getAllChannels() {
-        List<Channel> channels = channelRepository.findByIsActiveTrue();
+        List<Channel> channels = channelRepository.findAll();
         return ResponseEntity.ok(channels.stream().map(this::toResponseDto).toList());
     }
 
@@ -35,7 +35,7 @@ public class ChannelController {
     @Operation(summary = "Get channel by YouTube channel ID")
     public ResponseEntity<ChannelResponseDto> getChannelById(
             @Parameter(description = "YouTube channel ID") @PathVariable String channelId) {
-        Optional<Channel> channel = channelRepository.findByChannelId(channelId);
+        Optional<Channel> channel = channelRepository.findByYoutubeChannelId(channelId);
         return channel.map(c -> ResponseEntity.ok(toResponseDto(c)))
                       .orElse(ResponseEntity.notFound().build());
     }
@@ -44,7 +44,7 @@ public class ChannelController {
     @Operation(summary = "Get channel statistics")
     public ResponseEntity<ChannelStatsDto> getChannelStats(
             @PathVariable String channelId) {
-        Optional<Channel> channelOpt = channelRepository.findByChannelId(channelId);
+        Optional<Channel> channelOpt = channelRepository.findByYoutubeChannelId(channelId);
         if (channelOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -58,7 +58,7 @@ public class ChannelController {
     public ResponseEntity<List<ChannelStatsDto>> getTopPerformers(
             @RequestParam(defaultValue = "10") int limit) {
 
-        List<Channel> channels = channelRepository.findActiveChannelsOrderBySubscriberCount();
+        List<Channel> channels = channelRepository.findAll();
         List<ChannelStatsDto> stats = channels.stream()
                 .limit(limit)
                 .map(this::toStatsDto)
@@ -70,12 +70,9 @@ public class ChannelController {
     private ChannelResponseDto toResponseDto(Channel channel) {
         return new ChannelResponseDto(
             channel.getId(),
-            channel.getChannelId(),
+            channel.getYoutubeChannelId(),
             channel.getChannelName(),
             channel.getDescription(),
-            channel.getSubscriberCount(),
-            channel.getVideoCount(),
-            channel.getIsActive(),
             channel.getChannelUrl(),
             channel.getCreatedAt(),
             channel.getUpdatedAt()
@@ -85,10 +82,9 @@ public class ChannelController {
     private ChannelStatsDto toStatsDto(Channel channel) {
         long totalPicks = pickRepository.countByChannelId(channel.getId());
         return new ChannelStatsDto(
-            channel.getChannelId(),
+            channel.getYoutubeChannelId(),
             channel.getChannelName(),
-            (int) totalPicks,
-            channel.getSubscriberCount()
+            (int) totalPicks
         );
     }
 }

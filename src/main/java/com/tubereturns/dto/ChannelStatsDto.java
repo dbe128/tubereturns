@@ -1,8 +1,7 @@
 package com.tubereturns.dto;
 
 public record ChannelStatsDto(
-    String channelId,
+    String youtubeChannelId,
     String channelName,
-    Integer totalPicks,
-    Long subscriberCount
+    Integer totalPicks
 ) {}

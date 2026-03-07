@@ -91,7 +91,7 @@ public class PickController {
             pick.getSignal().name(),
             pick.getVideo().getVideoId(),
             pick.getVideo().getTitle(),
-            pick.getVideo().getChannel().getChannelId(),
+            pick.getVideo().getChannel().getYoutubeChannelId(),
             pick.getVideo().getChannel().getChannelName(),
             pick.getCreatedAt()
         );

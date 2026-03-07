@@ -43,15 +43,12 @@ tubereturns:
     provider: openrouter
     api-key: ${OPENROUTER_API_KEY:}
 
-  extraction:
-    mock-mode: false
-
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level %logger{36}:%L - %msg%n"
   level:
-    com.tubereturns: DEBUG
-    org.springframework.web: DEBUG
+    com.tubereturns: INFO
+    org.springframework.web: INFO
 
 server:
   port: 8080

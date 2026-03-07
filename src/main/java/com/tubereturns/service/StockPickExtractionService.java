@@ -4,7 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tubereturns.dto.StockPickExtractionDto;
 import com.tubereturns.model.Pick;
+import com.tubereturns.model.PickPrice;
 import com.tubereturns.model.Video;
+import com.tubereturns.repository.PickPriceRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +15,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -27,11 +31,9 @@ public class StockPickExtractionService {
     @Value("${tubereturns.ai.enabled:false}")
     private boolean aiEnabled;
 
-    @Value("${tubereturns.extraction.mock-mode:true}")
-    private boolean mockMode;
-
     private final VideoRepository videoRepository;
     private final PickRepository pickRepository;
+    private final PickPriceRepository pickPriceRepository;
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
 
@@ -82,7 +84,7 @@ public class StockPickExtractionService {
     }
 
     private StockPickExtractionDto extractStockPicks(String videoId, String transcriptText) {
-        if (!aiEnabled || mockMode) {
+        if (!aiEnabled) {
             log.info("Using mock extraction for video: {}", videoId);
             return createMockExtraction(videoId, transcriptText);
         }
@@ -196,6 +198,7 @@ public class StockPickExtractionService {
 
     private List<Pick> savePicks(Video video, StockPickExtractionDto extraction) {
         List<Pick> savedPicks = new ArrayList<>();
+        LocalDate priceDate = video.getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
 
         for (StockPickExtractionDto.PickExtractionDto pickDto : extraction.extractions()) {
             try {
@@ -209,6 +212,8 @@ public class StockPickExtractionService {
 
                 log.info("Extracted pick: {} {} ({}) from video {}", signal, pickDto.tickerSymbol(), pickDto.companyName(), video.getVideoId());
 
+                fetchAndSavePickPrice(savedPick, priceDate);
+
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid signal value '{}' for ticker {} in video {}",
                            pickDto.signal(), pickDto.tickerSymbol(), video.getVideoId());
@@ -216,5 +221,16 @@ public class StockPickExtractionService {
         }
 
         return savedPicks;
+    }
+
+    private void fetchAndSavePickPrice(Pick pick, LocalDate priceDate) {
+        try {
+            double closePrice = StockPriceService.getClosePrice(pick.getTickerSymbol(), priceDate);
+            PickPrice pickPrice = new PickPrice(pick, priceDate, closePrice);
+            pickPriceRepository.save(pickPrice);
+            log.info("Saved price ${} for {} on {}", closePrice, pick.getTickerSymbol(), priceDate);
+        } catch (Exception e) {
+            log.warn("Could not fetch price for {} on {}: {}", pick.getTickerSymbol(), priceDate, e.getMessage());
+        }
     }
 }

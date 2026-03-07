@@ -27,14 +27,14 @@ public class YouTubeDiscoveryService {
     public void discoverAndProcessChannels() {
         log.info("Starting channel discovery process");
 
-        List<Channel> activeChannels = channelRepository.findByIsActiveTrue();
-        log.info("Found {} active channels to process", activeChannels.size());
+        List<Channel> activeChannels = channelRepository.findAll();
+        log.info("Found {} channels to process", activeChannels.size());
 
         for (Channel channel : activeChannels) {
             try {
                 processChannel(channel);
             } catch (Exception e) {
-                log.error("Error processing channel {}: {}", channel.getChannelId(), e.getMessage(), e);
+                log.error("Error processing channel {}: {}", channel.getYoutubeChannelId(), e.getMessage(), e);
             }
         }
 
@@ -42,7 +42,7 @@ public class YouTubeDiscoveryService {
     }
 
     public void processChannel(Channel channel) {
-        log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getChannelId());
+        log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getYoutubeChannelId());
 
         Instant since = Instant.now().minus(30, ChronoUnit.DAYS);
         List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channel.getChannelUrl(), since);
@@ -55,7 +55,7 @@ public class YouTubeDiscoveryService {
     }
 
     public Channel createOrUpdateChannel(String channelId, String channelName) {
-        return channelRepository.findByChannelId(channelId)
+        return channelRepository.findByYoutubeChannelId(channelId)
             .map(existing -> {
                 existing.setChannelName(channelName);
                 return channelRepository.save(existing);

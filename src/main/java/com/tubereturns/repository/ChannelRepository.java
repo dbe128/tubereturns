@@ -11,12 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
-    Optional<Channel> findByChannelId(String channelId);
+    Optional<Channel> findByYoutubeChannelId(String youtubeChannelId);
 
-    List<Channel> findByIsActiveTrue();
-
-    @Query("SELECT c FROM Channel c WHERE c.isActive = true ORDER BY c.subscriberCount DESC")
-    List<Channel> findActiveChannelsOrderBySubscriberCount();
-
-    boolean existsByChannelId(String channelId);
+    boolean existsByYoutubeChannelId(String youtubeChannelId);
 }

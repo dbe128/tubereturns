@@ -95,15 +95,6 @@ export function ChannelDetailPage() {
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Stat label="Total Picks" value={stats?.totalPicks ?? picks.length} />
           <Stat label="Avg 30d Return" value={<ReturnBadge value={stats?.avgReturn30d} />} />
-          <Stat
-            label="Subscribers"
-            value={
-              channel.subscriberCount != null
-                ? formatNum(channel.subscriberCount)
-                : '—'
-            }
-          />
-          <Stat label="Videos" value={channel.videoCount ?? '—'} />
         </div>
       </div>
 

@@ -10,6 +10,7 @@ import java.net.http.*;
 import java.time.*;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 @Service
@@ -20,7 +21,21 @@ public class StockPriceService {
 
     private static final Map<String, Double> cache = new ConcurrentHashMap<>();
 
+    /** Non-null when rate-limited; fetches are blocked until this instant. */
+    private static final AtomicReference<Instant> rateLimitedUntil = new AtomicReference<>(null);
+
     public static double getClosePrice(String ticker, LocalDate date) throws Exception {
+
+        Instant blockedUntil = rateLimitedUntil.get();
+        if (blockedUntil != null) {
+            if (Instant.now().isBefore(blockedUntil)) {
+                throw new IllegalStateException(
+                        "Yahoo Finance rate-limited — fetches suspended until " + blockedUntil);
+            } else {
+                rateLimitedUntil.set(null);
+                log.info("Yahoo Finance rate-limit window has passed, resuming fetches.");
+            }
+        }
 
         date = adjustForWeekend(date);
 
@@ -57,11 +72,27 @@ public class StockPriceService {
 
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
+                        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
                         .GET()
                         .build();
 
+                log.debug("Stock price request: GET {}", url);
+
                 HttpResponse<String> response =
                         client.send(request, HttpResponse.BodyHandlers.ofString());
+
+                log.debug("Stock price response: status={} body={}", response.statusCode(), response.body());
+
+                if (response.statusCode() == 429) {
+                    Instant nextHour = ZonedDateTime.now(ZoneOffset.UTC)
+                            .truncatedTo(java.time.temporal.ChronoUnit.HOURS)
+                            .plusHours(1)
+                            .toInstant();
+                    rateLimitedUntil.set(nextHour);
+                    log.warn("Yahoo Finance returned 429 (rate limited) for {} on {}. "
+                            + "All price fetches suspended until {}.", ticker, date, nextHour);
+                    throw new IllegalStateException("Yahoo Finance rate limit hit — suspended until " + nextHour);
+                }
 
                 JsonNode root = mapper.readTree(response.body());
 
