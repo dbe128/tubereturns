@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Slf4j
@@ -44,10 +43,13 @@ public class YouTubeDiscoveryService {
     public void processChannel(Channel channel) {
         log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getYoutubeChannelId());
 
-        Instant since = Instant.now().minus(30, ChronoUnit.DAYS);
+        Instant since = channel.getLastProcessedAt() != null
+                ? channel.getLastProcessedAt()
+                : Instant.EPOCH;
+        log.info("Fetching videos for channel '{}' since {}", channel.getChannelName(), since);
         List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channel.getChannelUrl(), since);
 
-        log.info("Found {} recent videos for channel {}", recentVideos.size(), channel.getChannelName());
+        log.info("Found {} new video(s) for channel '{}'", recentVideos.size(), channel.getChannelName());
 
         for (YouTubeVideoDto video : recentVideos) {
             processVideo(channel, video);

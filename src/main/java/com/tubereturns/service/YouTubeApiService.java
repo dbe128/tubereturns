@@ -1,6 +1,5 @@
 package com.tubereturns.service;
 
-import com.tubereturns.dto.YouTubeChannelDto;
 import com.tubereturns.dto.YouTubeVideoDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +15,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -34,18 +32,6 @@ public class YouTubeApiService {
     @Value("${tubereturns.yt-dlp.enabled:true}")
     private boolean enabled;
 
-    /** Returns basic channel metadata. Currently returns a stub — subscriber count
-     *  is not easily available from yt-dlp without downloading a full playlist. */
-    public Optional<YouTubeChannelDto> getChannelInfo(String channelId) {
-        return Optional.empty();
-    }
-
-    /**
-     * Discovers recent videos for a channel using yt-dlp --flat-playlist.
-     *
-     * @param channelUrl the YouTube channel URL (e.g. https://www.youtube.com/@Channel/)
-     * @param since      only return videos published after this instant
-     */
     public List<YouTubeVideoDto> getRecentVideos(String channelUrl, Instant since) {
         if (!enabled || channelUrl == null || channelUrl.isBlank()) {
             log.warn("yt-dlp disabled or no channel URL — skipping video discovery");
@@ -81,8 +67,7 @@ public class YouTubeApiService {
         Process process = pb.start();
 
         List<YouTubeVideoDto> videos = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(process.getInputStream()))) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
 
             String line;
             while ((line = reader.readLine()) != null) {
@@ -103,7 +88,6 @@ public class YouTubeApiService {
         return videos;
     }
 
-    /** Parses a tab-separated line from yt-dlp --print output. */
     private YouTubeVideoDto parseLine(String line) {
         String[] parts = line.split("\t", -1);
         if (parts.length < 5) {
@@ -111,24 +95,23 @@ public class YouTubeApiService {
             return null;
         }
 
-        String videoId   = parts[0].strip();
-        String title     = parts[1].strip();
-        String dateStr   = parts[2].strip();
-        String durStr    = parts[3].strip();
-        String viewStr   = parts[4].strip();
+        String videoId = parts[0].strip();
+        String title = parts[1].strip();
+        String dateStr = parts[2].strip();
+        String durStr = parts[3].strip();
+        String viewStr = parts[4].strip();
 
         if (videoId.isBlank() || title.isBlank()) {
             return null;
         }
 
-        // upload_date is often NA in flat-playlist mode; treat unknown as now so the video isn't filtered out
         Instant publishedAt = parseUploadDate(dateStr);
         if (publishedAt == null) {
             publishedAt = Instant.now();
         }
 
-        Integer duration  = parseIntOrNull(durStr);
-        Long    viewCount = parseLongOrNull(viewStr);
+        Integer duration = parseIntOrNull(durStr);
+        Long viewCount = parseLongOrNull(viewStr);
 
         return new YouTubeVideoDto(videoId, title, null, publishedAt, duration, viewCount, null);
     }

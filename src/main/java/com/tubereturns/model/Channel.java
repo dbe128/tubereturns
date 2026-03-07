@@ -44,6 +44,9 @@ public class Channel {
     @Column(name = "channel_url")
     private String channelUrl;
 
+    @Column(name = "last_processed_at")
+    private Instant lastProcessedAt;
+
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Video> videos;
 

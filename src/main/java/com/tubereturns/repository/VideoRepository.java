@@ -30,7 +30,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.publishedAt >= :since ORDER BY v.publishedAt DESC")
     List<Video> findVideosPublishedSince(@Param("since") Instant since);
 
-    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' LIMIT 1")
+    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' ORDER BY v.publishedAt ASC")
     List<Video> findVideosReadyForProcessing();
 
     boolean existsByVideoId(String videoId);

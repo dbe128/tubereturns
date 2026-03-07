@@ -137,4 +137,13 @@ Send full transcript text to AI.
       "signal": "BUY"
     }
   ]
-}
+}```
+
+---
+
+# 5. Code Style
+
+## Clean Code Principles
+
+- **No comments** — code must be self-explanatory through good naming and structure. Do not add Javadoc, inline comments, or block comments.
+- **No unused code** — remove dead methods, unused imports, unreachable branches, and stubs immediately. Do not leave placeholder implementations.

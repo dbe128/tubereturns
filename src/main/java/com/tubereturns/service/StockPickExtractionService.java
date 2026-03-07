@@ -6,6 +6,7 @@ import com.tubereturns.dto.StockPickExtractionDto;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.PickPrice;
 import com.tubereturns.model.Video;
+import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickPriceRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.VideoRepository;
@@ -34,6 +35,7 @@ public class StockPickExtractionService {
     private final VideoRepository videoRepository;
     private final PickRepository pickRepository;
     private final PickPriceRepository pickPriceRepository;
+    private final ChannelRepository channelRepository;
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
 
@@ -71,6 +73,8 @@ public class StockPickExtractionService {
 
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
             videoRepository.save(video);
+
+            advanceLastProcessedAt(video);
 
             return createdPicks;
 
@@ -226,6 +230,15 @@ public class StockPickExtractionService {
         }
 
         return savedPicks;
+    }
+
+    private void advanceLastProcessedAt(Video video) {
+        var channel = video.getChannel();
+        if (channel.getLastProcessedAt() == null || video.getPublishedAt().isAfter(channel.getLastProcessedAt())) {
+            channel.setLastProcessedAt(video.getPublishedAt());
+            channelRepository.save(channel);
+            log.info("Advanced last_processed_at for channel '{}' to {}", channel.getChannelName(), video.getPublishedAt());
+        }
     }
 
     private void fetchAndSavePickPrice(Pick pick, LocalDate priceDate) {
