@@ -70,7 +70,7 @@ public class YouTubeDiscoveryService {
         log.debug("Processing video: {} for channel {}", videoDto.title(), channel.getChannelName());
 
         if (videoRepository.existsByVideoId(videoDto.videoId())) {
-            log.debug("Video {} already exists, skipping", videoDto.videoId());
+            log.debug("Video {} already exists, skipping", "https://youtu.be/" + videoDto.videoId());
             return;
         }
 
@@ -81,6 +81,6 @@ public class YouTubeDiscoveryService {
         video.setLikeCount(videoDto.likeCount());
 
         videoRepository.save(video);
-        log.info("Created new video: {} ({})", videoDto.title(), videoDto.videoId());
+        log.info("Created new video: {} ({})", videoDto.title(), "https://youtu.be/" + videoDto.videoId());
     }
 }

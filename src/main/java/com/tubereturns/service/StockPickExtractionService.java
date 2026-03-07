@@ -45,7 +45,7 @@ public class StockPickExtractionService {
             try {
                 processVideo(video);
             } catch (Exception e) {
-                log.error("Error processing video {}: {}", video.getVideoId(), e.getMessage(), e);
+                log.error("Error processing video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
                 video.setProcessingStatus(Video.ProcessingStatus.FAILED);
                 videoRepository.save(video);
             }
@@ -53,10 +53,10 @@ public class StockPickExtractionService {
     }
 
     public List<Pick> processVideo(Video video) {
-        log.info("Processing video for stock picks: {} ({})", video.getTitle(), video.getVideoId());
+        log.info("Processing video for stock picks: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
 
         if (video.getTranscriptText() == null || video.getTranscriptText().trim().isEmpty()) {
-            log.warn("Video {} has no transcript text available", video.getVideoId());
+            log.warn("Video {} has no transcript text available", "https://youtu.be/" + video.getVideoId());
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
             return List.of();
@@ -72,11 +72,10 @@ public class StockPickExtractionService {
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
             videoRepository.save(video);
 
-            log.info("Successfully extracted {} stock picks from video {}", createdPicks.size(), video.getVideoId());
             return createdPicks;
 
         } catch (Exception e) {
-            log.error("Failed to extract stock picks from video {}: {}", video.getVideoId(), e.getMessage(), e);
+            log.error("Failed to extract stock picks from video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
             return List.of();
@@ -85,18 +84,18 @@ public class StockPickExtractionService {
 
     private StockPickExtractionDto extractStockPicks(String videoId, String transcriptText) {
         if (!aiEnabled) {
-            log.info("Using mock extraction for video: {}", videoId);
+            log.info("Using mock extraction for video: {}", "https://youtu.be/" + videoId);
             return createMockExtraction(videoId, transcriptText);
         }
 
-        log.info("Sending transcript to AI for extraction: {}", videoId);
+        log.info("Sending transcript to AI for extraction: {}", "https://youtu.be/" + videoId);
         String aiResponse = aiModelService.extractStockPicks(transcriptText);
-        log.info("AI response for video {}: {}", videoId, aiResponse);
+        log.info("AI response for video {}: {}", "https://youtu.be/" + videoId, aiResponse);
 
         try {
             return objectMapper.readValue(aiResponse, StockPickExtractionDto.class);
         } catch (JsonProcessingException e) {
-            log.error("Failed to parse AI response for video {}: {}", videoId, e.getMessage());
+            log.error("Failed to parse AI response for video {}: {}", "https://youtu.be/" + videoId, e.getMessage());
             return createMockExtraction(videoId, transcriptText);
         }
     }
@@ -210,14 +209,20 @@ public class StockPickExtractionService {
                 Pick savedPick = pickRepository.save(pick);
                 savedPicks.add(savedPick);
 
-                log.info("Extracted pick: {} {} ({}) from video {}", signal, pickDto.tickerSymbol(), pickDto.companyName(), video.getVideoId());
-
                 fetchAndSavePickPrice(savedPick, priceDate);
 
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid signal value '{}' for ticker {} in video {}",
-                           pickDto.signal(), pickDto.tickerSymbol(), video.getVideoId());
+                           pickDto.signal(), pickDto.tickerSymbol(), "https://youtu.be/" + video.getVideoId());
             }
+        }
+
+        if (!savedPicks.isEmpty()) {
+            String picksSummary = savedPicks.stream()
+                    .map(p -> p.getSignal() + " " + p.getTickerSymbol())
+                    .collect(java.util.stream.Collectors.joining(", "));
+            log.info("Extracted {} pick(s) from {} — [{}]",
+                    savedPicks.size(), "https://youtu.be/" + video.getVideoId(), picksSummary);
         }
 
         return savedPicks;

@@ -44,7 +44,7 @@ public class TranscriptDownloadService {
             try {
                 downloadTranscript(video);
             } catch (Exception e) {
-                log.error("Error downloading transcript for video {}: {}", video.getVideoId(), e.getMessage(), e);
+                log.error("Error downloading transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
                 video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
                 videoRepository.save(video);
             }
@@ -53,13 +53,13 @@ public class TranscriptDownloadService {
 
     public boolean downloadTranscript(Video video) {
         if (!enabled) {
-            log.warn("yt-dlp is disabled. Skipping transcript for video: {}", video.getVideoId());
+            log.warn("yt-dlp is disabled. Skipping transcript for video: {}", "https://youtu.be/" + video.getVideoId());
             video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
             videoRepository.save(video);
             return false;
         }
 
-        log.info("Downloading transcript for video: {} ({})", video.getTitle(), video.getVideoId());
+        log.info("Downloading transcript for video: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
 
         try {
             String transcript = executeYtDlp(video.getVideoId());
@@ -67,17 +67,17 @@ public class TranscriptDownloadService {
             if (transcript != null && !transcript.isBlank()) {
                 video.setTranscriptText(transcript);
                 video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                log.info("Successfully downloaded transcript for video: {}", video.getVideoId());
+                log.info("Successfully downloaded transcript for video: {}", "https://youtu.be/" + video.getVideoId());
             } else {
                 video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                log.warn("No transcript available for video: {}", video.getVideoId());
+                log.warn("No transcript available for video: {}", "https://youtu.be/" + video.getVideoId());
             }
 
             videoRepository.save(video);
             return transcript != null && !transcript.isBlank();
 
         } catch (Exception e) {
-            log.error("Failed to download transcript for video {}: {}", video.getVideoId(), e.getMessage());
+            log.error("Failed to download transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage());
             video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
             videoRepository.save(video);
             return false;
@@ -116,13 +116,14 @@ public class TranscriptDownloadService {
             }
 
             if (vttFile.isEmpty()) {
-                log.debug("No .vtt file produced for video {}", videoId);
+                log.debug("No .vtt file produced for video {}", "https://youtu.be/" + videoId);
                 return null;
             }
 
             String vttContent = Files.readString(vttFile.get());
             String plainText = cleanVtt(vttContent);
-            log.info("=== TRANSCRIPT [{}] ===\n{}\n=== END TRANSCRIPT ===", videoId, plainText);
+            log.info("Transcript [{}] ({} chars): {}", "https://youtu.be/" + videoId, plainText.length(),
+                    plainText.length() > 200 ? plainText.substring(0, 200) + "…" : plainText);
             return plainText;
 
         } finally {
