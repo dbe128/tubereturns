@@ -17,6 +17,8 @@ import java.util.Map;
 @Service
 public class AiModelService {
 
+    private static final String MODEL = "stepfun/step-3.5-flash";
+
     private static final String EXTRACTION_PROMPT = """
         Analyze the following YouTube video transcript and extract stock picks mentioned by the creator.
 
@@ -38,7 +40,7 @@ public class AiModelService {
         }
 
         Rules:
-        - Only include clear investment recommendations
+        - You MUST include EVERY investment recommendation mentioned in the transcript — do not skip or summarise any
         - signal must be either "BUY" or "SELL"
         - tickerSymbol must be a valid stock ticker (1-5 uppercase letters)
         - If no picks are found, return an empty extractions array
@@ -52,30 +54,21 @@ public class AiModelService {
     @Value("${tubereturns.ai.api-key:}")
     private String apiKey;
 
-    @Value("${tubereturns.ai.model:}")
-    private String configuredModel;
-
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper;
 
     public String extractStockPicks(String transcriptText) {
         return switch (aiProvider) {
-            case "anthropic" -> callAnthropic(transcriptText);
-            case "openai"    -> callOpenAi(transcriptText);
-            case "gemini"    -> callGemini(transcriptText);
-            default          -> createMockResponse();
+            case "openrouter" -> callOpenRouter(transcriptText);
+            default           -> createMockResponse();
         };
     }
 
-    // ── Anthropic (Claude) ────────────────────────────────────────────────────
-
-    private String callAnthropic(String transcriptText) {
-        String model = configuredModel.isBlank() ? "claude-opus-4-5" : configuredModel;
-        log.info("Calling Anthropic API with model {}", model);
+    private String callOpenRouter(String transcriptText) {
+        log.info("Calling OpenRouter API with model {}", MODEL);
 
         Map<String, Object> body = Map.of(
-            "model", model,
-            "max_tokens", 1024,
+            "model", MODEL,
             "messages", List.of(
                 Map.of("role", "user", "content", EXTRACTION_PROMPT + transcriptText)
             )
@@ -83,39 +76,7 @@ public class AiModelService {
 
         try {
             String response = restClient.post()
-                .uri("https://api.anthropic.com/v1/messages")
-                .header("x-api-key", apiKey)
-                .header("anthropic-version", "2023-06-01")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(String.class);
-
-            JsonNode root = objectMapper.readTree(response);
-            return stripJsonFences(root.path("content").get(0).path("text").asText());
-
-        } catch (Exception e) {
-            log.error("Anthropic API call failed: {}", e.getMessage(), e);
-            return createMockResponse();
-        }
-    }
-
-    // ── OpenAI ────────────────────────────────────────────────────────────────
-
-    private String callOpenAi(String transcriptText) {
-        String model = configuredModel.isBlank() ? "gpt-4o" : configuredModel;
-        log.info("Calling OpenAI API with model {}", model);
-
-        Map<String, Object> body = Map.of(
-            "model", model,
-            "messages", List.of(
-                Map.of("role", "user", "content", EXTRACTION_PROMPT + transcriptText)
-            )
-        );
-
-        try {
-            String response = restClient.post()
-                .uri("https://api.openai.com/v1/chat/completions")
+                .uri("https://openrouter.ai/api/v1/chat/completions")
                 .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(body)
@@ -123,50 +84,14 @@ public class AiModelService {
                 .body(String.class);
 
             JsonNode root = objectMapper.readTree(response);
-            return stripJsonFences(root.path("choices").get(0).path("message").path("content").asText());
-
-        } catch (Exception e) {
-            log.error("OpenAI API call failed: {}", e.getMessage(), e);
-            return createMockResponse();
-        }
-    }
-
-    // ── Gemini ────────────────────────────────────────────────────────────────
-
-    private String callGemini(String transcriptText) {
-        String model = configuredModel.isBlank() ? "gemini-2.0-flash" : configuredModel;
-        log.info("Calling Gemini API with model {}", model);
-
-        Map<String, Object> body = Map.of(
-            "contents", List.of(
-                Map.of("parts", List.of(
-                    Map.of("text", EXTRACTION_PROMPT + transcriptText)
-                ))
-            )
-        );
-
-        try {
-            String response = restClient.post()
-                .uri("https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}",
-                    model, apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(String.class);
-
-            JsonNode root = objectMapper.readTree(response);
-            String text = root.path("candidates").get(0)
-                .path("content").path("parts").get(0)
-                .path("text").asText();
+            String text = root.path("choices").get(0).path("message").path("content").asText();
             return stripJsonFences(text);
 
         } catch (Exception e) {
-            log.error("Gemini API call failed: {}", e.getMessage(), e);
+            log.error("OpenRouter API call failed: {}", e.getMessage(), e);
             return createMockResponse();
         }
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String stripJsonFences(String text) {
         if (text == null) {
@@ -178,8 +103,6 @@ public class AiModelService {
         }
         return t;
     }
-
-    // ── Mock ──────────────────────────────────────────────────────────────────
 
     private String createMockResponse() {
         return """

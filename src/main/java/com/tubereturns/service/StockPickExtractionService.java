@@ -87,8 +87,9 @@ public class StockPickExtractionService {
             return createMockExtraction(videoId, transcriptText);
         }
 
-        log.debug("Sending transcript to AI for extraction: {}", videoId);
+        log.info("Sending transcript to AI for extraction: {}", videoId);
         String aiResponse = aiModelService.extractStockPicks(transcriptText);
+        log.info("AI response for video {}: {}", videoId, aiResponse);
 
         try {
             return objectMapper.readValue(aiResponse, StockPickExtractionDto.class);
@@ -206,7 +207,7 @@ public class StockPickExtractionService {
                 Pick savedPick = pickRepository.save(pick);
                 savedPicks.add(savedPick);
 
-                log.debug("Saved stock pick: {} {} for video {}", signal, pickDto.tickerSymbol(), video.getVideoId());
+                log.info("Extracted pick: {} {} ({}) from video {}", signal, pickDto.tickerSymbol(), pickDto.companyName(), video.getVideoId());
 
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid signal value '{}' for ticker {} in video {}",
