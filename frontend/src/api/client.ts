@@ -5,6 +5,19 @@ import type { Channel, ChannelStats, Pick } from './types'
 
 const http = axios.create({ baseURL: '/api' })
 
+http.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (!err.response) {
+      return Promise.reject(new Error('Cannot reach the backend. Make sure the server is running on port 8080.'))
+    }
+    if (err.response.status >= 500) {
+      return Promise.reject(new Error('The service is not available, please try again later.'))
+    }
+    return Promise.reject(err)
+  }
+)
+
 async function validated<T>(schema: z.ZodType<T>, promise: Promise<unknown>): Promise<T> {
   const data = await promise
   return schema.parse(data)

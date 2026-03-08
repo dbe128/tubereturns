@@ -63,14 +63,16 @@ export function LeaderboardPage() {
           <h1 className="text-3xl font-bold text-gray-900">TubeReturns</h1>
           <p className="text-gray-500 mt-1">Finance YouTubers ranked by historical stock pick performance</p>
         </div>
-        <button
-          onClick={handleIngest}
-          disabled={ingesting}
-          className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium
-                     hover:bg-primary-700 disabled:opacity-50 transition-colors"
-        >
-          {ingesting ? 'Running…' : 'Run Ingestion'}
-        </button>
+        {!error && (
+          <button
+            onClick={handleIngest}
+            disabled={ingesting}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium
+                       hover:bg-primary-700 disabled:opacity-50 transition-colors"
+          >
+            {ingesting ? 'Running…' : 'Run Ingestion'}
+          </button>
+        )}
       </div>
 
       {loading && (
