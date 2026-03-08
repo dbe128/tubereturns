@@ -92,7 +92,7 @@ public class StockPickExtractionService {
             return createMockExtraction(videoId, transcriptText);
         }
 
-        log.info("Sending transcript to AI for extraction: {}", "https://youtu.be/" + videoId);
+        log.info("Sending transcript to AI for extraction: {}: \n{}", "https://youtu.be/" + videoId, transcriptText);
         String aiResponse = aiModelService.extractStockPicks(transcriptText);
         log.info("AI response for video {}: {}", "https://youtu.be/" + videoId, aiResponse);
 

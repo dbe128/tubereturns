@@ -84,7 +84,7 @@ public class TranscriptDownloadService {
         }
     }
 
-    private String executeYtDlp(String videoId) throws IOException, InterruptedException {
+    String executeYtDlp(String videoId) throws IOException, InterruptedException {
         String videoUrl = "https://www.youtube.com/watch?v=" + videoId;
         Path tempDir = Files.createTempDirectory("tubereturns-transcript-");
 
@@ -112,7 +112,9 @@ public class TranscriptDownloadService {
 
             Optional<Path> vttFile;
             try (Stream<Path> files = Files.list(tempDir)) {
-                vttFile = files.filter(f -> f.toString().endsWith(".vtt")).findFirst();
+                vttFile = files
+                        .filter(f -> f.toString().endsWith(".vtt"))
+                        .min(Comparator.comparingInt(p -> p.toString().contains(".auto.") ? 1 : 0));
             }
 
             if (vttFile.isEmpty()) {
@@ -139,7 +141,7 @@ public class TranscriptDownloadService {
      *           s/<[^>]+>//g; s/[[:space:]]+$//; /^$/d'
      *   | awk '!(NR>1 && $0==prev){print} {prev=$0}'
      */
-    private String cleanVtt(String vttContent) {
+    static String cleanVtt(String vttContent) {
         if (vttContent == null || vttContent.isBlank()) {
             return null;
         }

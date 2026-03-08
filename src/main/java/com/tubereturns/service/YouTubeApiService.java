@@ -1,152 +1,195 @@
 package com.tubereturns.service;
 
+import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.google.api.services.youtube.YouTube;
+import com.google.api.services.youtube.model.PlaylistItem;
+import com.google.api.services.youtube.model.PlaylistItemListResponse;
+import com.google.api.services.youtube.model.Video;
+import com.google.api.services.youtube.model.VideoListResponse;
 import com.tubereturns.dto.YouTubeVideoDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 public class YouTubeApiService {
 
-    private static final DateTimeFormatter UPLOAD_DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    @Value("${tubereturns.youtube.api-key:}")
+    private String apiKey;
 
-    @Value("${tubereturns.yt-dlp.path:yt-dlp}")
-    private String ytDlpPath;
-
-    @Value("${tubereturns.yt-dlp.timeout-seconds:300}")
-    private int timeoutSeconds;
-
-    @Value("${tubereturns.yt-dlp.enabled:true}")
+    @Value("${tubereturns.youtube.enabled:false}")
     private boolean enabled;
 
     public List<YouTubeVideoDto> getRecentVideos(String channelUrl, Instant since) {
         if (!enabled || channelUrl == null || channelUrl.isBlank()) {
-            log.warn("yt-dlp disabled or no channel URL — skipping video discovery");
+            log.warn("YouTube API disabled or no channel URL — skipping video discovery");
+            return List.of();
+        }
+        if (apiKey == null || apiKey.isBlank()) {
+            log.error("YOUTUBE_API_KEY is not set — cannot discover videos for {}", channelUrl);
             return List.of();
         }
 
-        String videosUrl = channelUrl.endsWith("/")
-                ? channelUrl + "videos"
-                : channelUrl + "/videos";
-
-        log.info("Discovering videos for channel: {}", videosUrl);
-
         try {
-            return fetchVideosViaYtDlp(videosUrl, since);
+            YouTube youtube = buildClient();
+            String uploadsPlaylistId = resolveUploadsPlaylistId(youtube, channelUrl);
+            if (uploadsPlaylistId == null) {
+                log.warn("Could not resolve uploads playlist for: {}", channelUrl);
+                return List.of();
+            }
+
+            List<String> videoIds = fetchVideoIds(youtube, uploadsPlaylistId, since);
+            return fetchVideoDetails(youtube, videoIds).stream()
+                    .sorted(Comparator.comparing(YouTubeVideoDto::publishedAt))
+                    .toList();
+
         } catch (Exception e) {
             log.error("Failed to discover videos for {}: {}", channelUrl, e.getMessage(), e);
             return List.of();
         }
     }
 
-    private List<YouTubeVideoDto> fetchVideosViaYtDlp(String playlistUrl, Instant since)
-            throws IOException, InterruptedException {
+    private YouTube buildClient() throws GeneralSecurityException, IOException {
+        return new YouTube.Builder(
+                GoogleNetHttpTransport.newTrustedTransport(),
+                GsonFactory.getDefaultInstance(),
+                request -> {}
+        ).setApplicationName("tubereturns").build();
+    }
 
-        ProcessBuilder pb = new ProcessBuilder(
-                ytDlpPath,
-                "--flat-playlist",
-                "--print", "%(id)s\t%(title)s\t%(upload_date)s\t%(duration)s\t%(view_count)s",
-                "--playlist-end", "50",
-                playlistUrl
-        );
-        pb.redirectErrorStream(false);
+    private String resolveUploadsPlaylistId(YouTube youtube, String channelUrl) throws IOException {
+        YouTube.Channels.List request = youtube.channels()
+                .list(List.of("contentDetails"))
+                .setKey(apiKey);
 
-        Process process = pb.start();
+        if (channelUrl.contains("/@")) {
+            String handle = channelUrl.substring(channelUrl.lastIndexOf("/@") + 2);
+            if (handle.contains("/")) {
+                handle = handle.substring(0, handle.indexOf("/"));
+            }
+            request.set("forHandle", handle);
+        } else if (channelUrl.contains("/channel/")) {
+            String channelId = channelUrl.substring(channelUrl.lastIndexOf("/channel/") + 9);
+            if (channelId.contains("/")) {
+                channelId = channelId.substring(0, channelId.indexOf("/"));
+            }
+            request.setId(List.of(channelId));
+        } else {
+            log.warn("Unsupported channel URL format: {}", channelUrl);
+            return null;
+        }
 
-        List<YouTubeVideoDto> videos = new ArrayList<>();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+        var response = request.execute();
+        if (response.getItems() == null || response.getItems().isEmpty()) {
+            return null;
+        }
 
-            String line;
-            while ((line = reader.readLine()) != null) {
-                YouTubeVideoDto dto = parseLine(line);
-                if (dto != null && (since == null || dto.publishedAt().isAfter(since))) {
-                    videos.add(dto);
+        return response.getItems().get(0).getContentDetails().getRelatedPlaylists().getUploads();
+    }
+
+    private List<String> fetchVideoIds(YouTube youtube, String uploadsPlaylistId, Instant since) throws IOException {
+        List<String> videoIds = new ArrayList<>();
+        String pageToken = null;
+
+        do {
+            YouTube.PlaylistItems.List request = youtube.playlistItems()
+                    .list(List.of("contentDetails"))
+                    .setPlaylistId(uploadsPlaylistId)
+                    .setMaxResults(50L)
+                    .setKey(apiKey);
+
+            if (pageToken != null) {
+                request.setPageToken(pageToken);
+            }
+
+            PlaylistItemListResponse response = request.execute();
+            if (response.getItems() == null) {
+                break;
+            }
+
+            boolean reachedOlderVideos = false;
+            for (PlaylistItem item : response.getItems()) {
+                Instant publishedAt = Instant.ofEpochMilli(
+                        item.getContentDetails().getVideoPublishedAt().getValue());
+                if (since != null && !publishedAt.isAfter(since)) {
+                    reachedOlderVideos = true;
+                    break;
+                }
+                videoIds.add(item.getContentDetails().getVideoId());
+            }
+
+            if (reachedOlderVideos) {
+                break;
+            }
+
+            pageToken = response.getNextPageToken();
+        } while (pageToken != null);
+
+        return videoIds;
+    }
+
+    private List<YouTubeVideoDto> fetchVideoDetails(YouTube youtube, List<String> videoIds) throws IOException {
+        if (videoIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<YouTubeVideoDto> result = new ArrayList<>();
+
+        for (int i = 0; i < videoIds.size(); i += 50) {
+            List<String> batch = videoIds.subList(i, Math.min(i + 50, videoIds.size()));
+            VideoListResponse response = youtube.videos()
+                    .list(List.of("snippet", "contentDetails", "statistics"))
+                    .setId(batch)
+                    .setKey(apiKey)
+                    .execute();
+
+            if (response.getItems() != null) {
+                for (Video video : response.getItems()) {
+                    result.add(toDto(video));
                 }
             }
         }
 
-        boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-        if (!finished) {
-            process.destroyForcibly();
-            log.warn("yt-dlp --flat-playlist timed out for {}", playlistUrl);
-        }
-
-        log.info("Discovered {} videos from {}", videos.size(), playlistUrl);
-        return videos;
+        return result;
     }
 
-    private YouTubeVideoDto parseLine(String line) {
-        String[] parts = line.split("\t", -1);
-        if (parts.length < 5) {
-            log.debug("Skipping malformed yt-dlp output line: {}", line);
-            return null;
-        }
+    private YouTubeVideoDto toDto(Video video) {
+        Instant publishedAt = Instant.ofEpochMilli(video.getSnippet().getPublishedAt().getValue());
+        Integer durationSeconds = parseDurationSeconds(video.getContentDetails().getDuration());
 
-        String videoId = parts[0].strip();
-        String title = parts[1].strip();
-        String dateStr = parts[2].strip();
-        String durStr = parts[3].strip();
-        String viewStr = parts[4].strip();
+        Long viewCount = video.getStatistics() != null && video.getStatistics().getViewCount() != null
+                ? video.getStatistics().getViewCount().longValue() : null;
+        Long likeCount = video.getStatistics() != null && video.getStatistics().getLikeCount() != null
+                ? video.getStatistics().getLikeCount().longValue() : null;
 
-        if (videoId.isBlank() || title.isBlank()) {
-            return null;
-        }
-
-        Instant publishedAt = parseUploadDate(dateStr);
-        if (publishedAt == null) {
-            publishedAt = Instant.now();
-        }
-
-        Integer duration = parseIntOrNull(durStr);
-        Long viewCount = parseLongOrNull(viewStr);
-
-        return new YouTubeVideoDto(videoId, title, null, publishedAt, duration, viewCount, null);
+        return new YouTubeVideoDto(
+                video.getId(),
+                video.getSnippet().getTitle(),
+                video.getSnippet().getDescription(),
+                publishedAt,
+                durationSeconds,
+                viewCount,
+                likeCount
+        );
     }
 
-    private Instant parseUploadDate(String dateStr) {
-        if (dateStr == null || dateStr.isBlank() || dateStr.equals("NA")) {
+    private Integer parseDurationSeconds(String isoDuration) {
+        if (isoDuration == null || isoDuration.isBlank()) {
             return null;
         }
         try {
-            LocalDate date = LocalDate.parse(dateStr, UPLOAD_DATE_FMT);
-            return date.atStartOfDay(ZoneOffset.UTC).toInstant();
-        } catch (DateTimeParseException e) {
-            log.debug("Could not parse upload_date '{}': {}", dateStr, e.getMessage());
-            return null;
-        }
-    }
-
-    private Integer parseIntOrNull(String s) {
-        if (s == null || s.isBlank() || s.equals("NA") || s.equals("None")) {
-            return null;
-        }
-        try {
-            return Integer.parseInt(s.strip());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private Long parseLongOrNull(String s) {
-        if (s == null || s.isBlank() || s.equals("NA") || s.equals("None")) {
-            return null;
-        }
-        try {
-            return Long.parseLong(s.strip());
-        } catch (NumberFormatException e) {
+            return (int) Duration.parse(isoDuration).getSeconds();
+        } catch (Exception e) {
             return null;
         }
     }

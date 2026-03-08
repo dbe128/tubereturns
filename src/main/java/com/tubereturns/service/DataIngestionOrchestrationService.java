@@ -15,7 +15,7 @@ public class DataIngestionOrchestrationService {
     private final TranscriptDownloadService transcriptDownloadService;
     private final StockPickExtractionService stockPickExtractionService;
 
-    @Scheduled(fixedRate = 3600000, initialDelay = 10000) // 10s delay on startup, then every hour
+    @Scheduled(fixedRate = 3600000, initialDelay = 3000) // 10s delay on startup, then every hour
     public void runFullIngestionPipeline() {
         log.info("Starting full data ingestion pipeline");
 

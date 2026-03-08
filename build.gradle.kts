@@ -31,6 +31,9 @@ dependencies {
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
 
+    implementation("com.google.apis:google-api-services-youtube:v3-rev20231011-2.0.0")
+    implementation("com.google.http-client:google-http-client-gson:1.44.2")
+
     implementation("com.fasterxml.jackson.core:jackson-databind")
     implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 

@@ -30,7 +30,7 @@ management:
 
 tubereturns:
   youtube:
-    enabled: false
+    enabled: true
     api-key: ${YOUTUBE_API_KEY:}
 
   yt-dlp:
