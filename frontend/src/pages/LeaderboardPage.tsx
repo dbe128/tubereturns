@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchChannels, fetchChannelStats, triggerIngestion } from '../api/client'
 import type { Channel, ChannelStats } from '../api/types'
+import { useBackendRecovery } from '../hooks/useBackendRecovery'
 
 interface ChannelRow extends Channel {
   stats: ChannelStats | null
@@ -16,6 +17,8 @@ export function LeaderboardPage() {
   useEffect(() => {
     load()
   }, [])
+
+  useBackendRecovery(error !== null, load)
 
   async function load() {
     setLoading(true)
@@ -111,9 +114,20 @@ export function LeaderboardPage() {
                     <td className="px-6 py-4">
                       <Link
                         to={`/channel/${row.youtubeChannelId}`}
-                        className="font-semibold text-gray-900 hover:text-primary-600 transition-colors"
+                        className="flex items-center gap-3 group"
                       >
-                        {row.channelName}
+                        {row.thumbnailUrl ? (
+                          <img
+                            src={row.thumbnailUrl}
+                            alt={row.channelName}
+                            className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-gray-200 flex-shrink-0" />
+                        )}
+                        <span className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                          {row.channelName}
+                        </span>
                       </Link>
                     </td>
                     <td className="px-6 py-4 text-right text-gray-600 font-mono text-sm">

@@ -90,6 +90,7 @@ public class ChannelController {
             channel.getChannelName(),
             channel.getDescription(),
             channel.getChannelUrl(),
+            channel.getThumbnailUrl(),
             channel.getCreatedAt(),
             channel.getUpdatedAt()
         );

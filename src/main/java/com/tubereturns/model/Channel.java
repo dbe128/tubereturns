@@ -44,6 +44,9 @@ public class Channel {
     @Column(name = "channel_url")
     private String channelUrl;
 
+    @Column(name = "thumbnail_url", columnDefinition = "TEXT")
+    private String thumbnailUrl;
+
     @Column(name = "last_processed_at")
     private Instant lastProcessedAt;
 

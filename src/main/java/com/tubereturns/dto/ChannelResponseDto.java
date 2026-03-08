@@ -8,6 +8,7 @@ public record ChannelResponseDto(
     String channelName,
     String description,
     String channelUrl,
+    String thumbnailUrl,
     Instant createdAt,
     Instant updatedAt
 ) {}

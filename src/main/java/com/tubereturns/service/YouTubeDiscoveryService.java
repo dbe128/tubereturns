@@ -43,6 +43,14 @@ public class YouTubeDiscoveryService {
     public void processChannel(Channel channel) {
         log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getYoutubeChannelId());
 
+        if (channel.getThumbnailUrl() == null) {
+            YouTubeApiService.ChannelInfo info = youTubeApiService.resolveChannelInfo(channel.getChannelUrl());
+            if (info != null && info.thumbnailUrl() != null) {
+                channel.setThumbnailUrl(info.thumbnailUrl());
+                channelRepository.save(channel);
+            }
+        }
+
         Instant since = channel.getLastProcessedAt() != null
                 ? channel.getLastProcessedAt()
                 : Instant.EPOCH;

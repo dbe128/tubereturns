@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { fetchChannel, fetchChannelStats, fetchVideosForChannel } from '../api/client'
 import type { Channel, ChannelStats, VideoSummary } from '../api/types'
+import { useBackendRecovery } from '../hooks/useBackendRecovery'
 
 type SortKey = 'index' | 'publishedAt' | 'transcriptStatus' | 'processingStatus'
 type SortDir = 'asc' | 'desc'
@@ -34,6 +35,8 @@ export function ChannelDetailPage() {
     if (!channelId) return
     load(channelId)
   }, [channelId])
+
+  useBackendRecovery(error !== null, () => channelId && load(channelId))
 
   async function load(id: string) {
     setLoading(true)
@@ -121,7 +124,7 @@ export function ChannelDetailPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-10">
+    <div className="max-w-screen-2xl mx-auto px-6 py-10">
       <Link to="/" className="text-primary-600 hover:underline text-sm mb-6 inline-block">
         ← Leaderboard
       </Link>
@@ -225,8 +228,9 @@ export function ChannelDetailPage() {
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
               <SortTh label="#" sortKey="index" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-12" />
-              <SortTh label="Upload Date" sortKey="publishedAt" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
+              <th className="px-4 py-3 w-44"></th>
               <th className="px-4 py-3">Video</th>
+              <SortTh label="Upload Date" sortKey="publishedAt" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
               <SortTh label="Transcript" sortKey="transcriptStatus" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-32" />
               <SortTh label="Picks" sortKey="processingStatus" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
               <th className="px-4 py-3">Buy</th>
@@ -236,7 +240,7 @@ export function ChannelDetailPage() {
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
                   No videos match the current filters.
                 </td>
               </tr>
@@ -244,18 +248,31 @@ export function ChannelDetailPage() {
               sorted.map(({ v, originalIndex }) => (
                 <tr key={v.videoId} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-400 font-mono">{originalIndex}</td>
-                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                    {new Date(v.publishedAt).toLocaleDateString()}
+                  <td className="px-4 py-3">
+                    <a
+                      href={`https://www.youtube.com/watch?v=${v.videoId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <img
+                        src={`https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`}
+                        alt=""
+                        className="w-40 rounded object-cover aspect-video"
+                      />
+                    </a>
                   </td>
                   <td className="px-4 py-3">
                     <a
                       href={`https://www.youtube.com/watch?v=${v.videoId}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-gray-900 hover:text-primary-600 line-clamp-2"
+                      className="text-gray-900 hover:text-primary-600 whitespace-nowrap overflow-hidden text-ellipsis block max-w-xl"
                     >
                       {v.title}
                     </a>
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                    {new Date(v.publishedAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
                     <TranscriptBadge status={v.transcriptStatus} />

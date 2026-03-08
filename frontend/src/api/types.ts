@@ -8,6 +8,7 @@ export const ChannelSchema = z.object({
   channelName: z.string(),
   description: z.string().nullable(),
   channelUrl: z.string().nullable(),
+  thumbnailUrl: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })

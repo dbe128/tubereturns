@@ -18,6 +18,7 @@ CREATE TABLE channels (
     channel_name       VARCHAR(500) NOT NULL,
     description        TEXT,
     channel_url        VARCHAR(1000),
+    thumbnail_url      TEXT,
     last_processed_at  TIMESTAMP,
     created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP
