@@ -1,9 +1,7 @@
 package com.tubereturns.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,15 +25,10 @@ public class Pick {
     @JoinColumn(name = "video_id", nullable = false)
     private Video video;
 
-    @NotBlank
-    @Size(max = 10)
-    @Setter(AccessLevel.NONE)
-    @Column(name = "ticker_symbol", nullable = false)
-    private String tickerSymbol;
-
-    @Size(max = 500)
-    @Column(name = "company_name")
-    private String companyName;
+    @NotNull
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "stock_id", nullable = false)
+    private Stock stock;
 
     @NotNull
     @Enumerated(EnumType.STRING)
@@ -48,14 +41,10 @@ public class Pick {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    public Pick(Video video, String tickerSymbol, Signal signal) {
+    public Pick(Video video, Stock stock, Signal signal) {
         this.video = video;
-        this.tickerSymbol = tickerSymbol.toUpperCase();
+        this.stock = stock;
         this.signal = signal;
-    }
-
-    public void setTickerSymbol(String tickerSymbol) {
-        this.tickerSymbol = tickerSymbol != null ? tickerSymbol.toUpperCase() : null;
     }
 
     @PrePersist

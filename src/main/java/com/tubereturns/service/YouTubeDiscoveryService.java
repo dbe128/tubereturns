@@ -77,7 +77,6 @@ public class YouTubeDiscoveryService {
         }
 
         Video video = new Video(videoDto.videoId(), channel, videoDto.title(), videoDto.publishedAt());
-        video.setDescription(videoDto.description());
         video.setDurationSeconds(videoDto.durationSeconds());
         video.setViewCount(videoDto.viewCount());
         video.setLikeCount(videoDto.likeCount());

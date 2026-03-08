@@ -37,9 +37,6 @@ public class Video {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
     @NotNull
     @Column(name = "published_at", nullable = false)
     private Instant publishedAt;

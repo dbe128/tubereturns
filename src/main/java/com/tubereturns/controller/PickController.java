@@ -38,7 +38,7 @@ public class PickController {
         List<Pick> picks;
 
         if (ticker != null) {
-            picks = pickRepository.findByTickerSymbolOrderByCreatedAtDesc(ticker.toUpperCase());
+            picks = pickRepository.findByStock_TickerSymbolOrderByCreatedAtDesc(ticker.toUpperCase());
         } else if (signal != null) {
             try {
                 Pick.Signal signalEnum = Pick.Signal.valueOf(signal.toUpperCase());
@@ -63,7 +63,7 @@ public class PickController {
     @Operation(summary = "Get picks for a specific ticker")
     public ResponseEntity<List<PickDto>> getPicksForTicker(
             @PathVariable String ticker) {
-        List<Pick> picks = pickRepository.findByTickerSymbolOrderByCreatedAtDesc(ticker.toUpperCase());
+        List<Pick> picks = pickRepository.findByStock_TickerSymbolOrderByCreatedAtDesc(ticker.toUpperCase());
         return ResponseEntity.ok(picks.stream().map(this::toDto).toList());
     }
 
@@ -86,8 +86,8 @@ public class PickController {
     private PickDto toDto(Pick pick) {
         return new PickDto(
             pick.getId(),
-            pick.getTickerSymbol(),
-            pick.getCompanyName(),
+            pick.getStock().getTickerSymbol(),
+            pick.getStock().getCompanyName(),
             pick.getSignal().name(),
             pick.getVideo().getVideoId(),
             pick.getVideo().getTitle(),

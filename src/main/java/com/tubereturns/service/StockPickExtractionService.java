@@ -4,11 +4,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tubereturns.dto.StockPickExtractionDto;
 import com.tubereturns.model.Pick;
-import com.tubereturns.model.PickPrice;
+import com.tubereturns.model.Stock;
+import com.tubereturns.model.StockPrice;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
-import com.tubereturns.repository.PickPriceRepository;
 import com.tubereturns.repository.PickRepository;
+import com.tubereturns.repository.StockPriceRepository;
+import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +36,8 @@ public class StockPickExtractionService {
 
     private final VideoRepository videoRepository;
     private final PickRepository pickRepository;
-    private final PickPriceRepository pickPriceRepository;
+    private final StockRepository stockRepository;
+    private final StockPriceRepository stockPriceRepository;
     private final ChannelRepository channelRepository;
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
@@ -92,7 +95,7 @@ public class StockPickExtractionService {
             return createMockExtraction(videoId, transcriptText);
         }
 
-        log.info("Sending transcript to AI for extraction: {}: \n{}", "https://youtu.be/" + videoId, transcriptText);
+        log.info("Sending transcript to AI for extraction: {}", "https://youtu.be/" + videoId);
         String aiResponse = aiModelService.extractStockPicks(transcriptText);
         log.info("AI response for video {}: {}", "https://youtu.be/" + videoId, aiResponse);
 
@@ -207,13 +210,12 @@ public class StockPickExtractionService {
             try {
                 Pick.Signal signal = Pick.Signal.valueOf(pickDto.signal().toUpperCase());
 
-                Pick pick = new Pick(video, pickDto.tickerSymbol(), signal);
-                pick.setCompanyName(pickDto.companyName());
+                Stock stock = stockRepository.findByTickerSymbol(pickDto.tickerSymbol().toUpperCase())
+                        .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName())));
 
-                Pick savedPick = pickRepository.save(pick);
-                savedPicks.add(savedPick);
+                savedPicks.add(pickRepository.save(new Pick(video, stock, signal)));
 
-                fetchAndSavePickPrice(savedPick, priceDate);
+                fetchAndSaveStockPrice(stock, priceDate);
 
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid signal value '{}' for ticker {} in video {}",
@@ -223,7 +225,7 @@ public class StockPickExtractionService {
 
         if (!savedPicks.isEmpty()) {
             String picksSummary = savedPicks.stream()
-                    .map(p -> p.getSignal() + " " + p.getTickerSymbol())
+                    .map(p -> p.getSignal() + " " + p.getStock().getTickerSymbol())
                     .collect(java.util.stream.Collectors.joining(", "));
             log.info("Extracted {} pick(s) from {} — [{}]",
                     savedPicks.size(), "https://youtu.be/" + video.getVideoId(), picksSummary);
@@ -241,14 +243,16 @@ public class StockPickExtractionService {
         }
     }
 
-    private void fetchAndSavePickPrice(Pick pick, LocalDate priceDate) {
+    private void fetchAndSaveStockPrice(Stock stock, LocalDate priceDate) {
         try {
-            double closePrice = StockPriceService.getClosePrice(pick.getTickerSymbol(), priceDate);
-            PickPrice pickPrice = new PickPrice(pick, priceDate, closePrice);
-            pickPriceRepository.save(pickPrice);
-            log.info("Saved price ${} for {} on {}", closePrice, pick.getTickerSymbol(), priceDate);
+            if (stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), priceDate)) {
+                return;
+            }
+            double closePrice = StockPriceService.getClosePrice(stock.getTickerSymbol(), priceDate);
+            stockPriceRepository.save(new StockPrice(stock, priceDate, closePrice));
+            log.info("Saved price ${} for {} on {}", closePrice, stock.getTickerSymbol(), priceDate);
         } catch (Exception e) {
-            log.warn("Could not fetch price for {} on {}: {}", pick.getTickerSymbol(), priceDate, e.getMessage());
+            log.warn("Could not fetch price for {} on {}: {}", stock.getTickerSymbol(), priceDate, e.getMessage());
         }
     }
 }

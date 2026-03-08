@@ -15,18 +15,13 @@ public class DataIngestionOrchestrationService {
     private final TranscriptDownloadService transcriptDownloadService;
     private final StockPickExtractionService stockPickExtractionService;
 
-    @Scheduled(fixedRate = 3600000, initialDelay = 3000) // 10s delay on startup, then every hour
+    @Scheduled(fixedRate = 3600000, initialDelay = 3000)
     public void runFullIngestionPipeline() {
         log.info("Starting full data ingestion pipeline");
 
         try {
-            // Step 1: Discover new videos from configured channels
             youTubeDiscoveryService.discoverAndProcessChannels();
-
-            // Step 2: Download transcripts for videos without them
             transcriptDownloadService.downloadPendingTranscripts();
-
-            // Step 3: Extract stock picks from transcripts
             stockPickExtractionService.processVideosWithTranscripts();
 
             log.info("Full data ingestion pipeline completed successfully");
