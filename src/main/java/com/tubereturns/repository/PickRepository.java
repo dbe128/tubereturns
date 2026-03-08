@@ -28,6 +28,9 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     @Query("SELECT COUNT(p) FROM Pick p WHERE p.video.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
 
+    @Query("SELECT DISTINCT p.stock.tickerSymbol FROM Pick p WHERE p.video.channel.id = :channelId AND p.signal = :signal ORDER BY p.stock.tickerSymbol")
+    List<String> findDistinctTickersByChannelIdAndSignal(@Param("channelId") Long channelId, @Param("signal") Pick.Signal signal);
+
     @Query("SELECT p FROM Pick p WHERE p.signal = :signal ORDER BY p.createdAt DESC")
     List<Pick> findBySignalOrderByCreatedAtDesc(@Param("signal") Pick.Signal signal);
 }

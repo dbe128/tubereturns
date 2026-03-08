@@ -15,12 +15,28 @@ export const ChannelSchema = z.object({
 export const ChannelStatsSchema = z.object({
   youtubeChannelId: z.string(),
   channelName: z.string(),
-  avgReturn30d: z.number().nullable(),
-  totalPicks: z.number(),
+  totalVideos: z.number(),
+  processedVideos: z.number(),
+  buyPicks: z.array(z.string()),
+  sellPicks: z.array(z.string()),
 })
 
 export type Channel = z.infer<typeof ChannelSchema>
 export type ChannelStats = z.infer<typeof ChannelStatsSchema>
+
+// ── Video Summary ─────────────────────────────────────────────────────────────
+
+export const VideoSummarySchema = z.object({
+  videoId: z.string(),
+  title: z.string(),
+  publishedAt: z.string(),
+  transcriptStatus: z.enum(['PENDING', 'DOWNLOADED', 'NO_TRANSCRIPT', 'FAILED']),
+  processingStatus: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']),
+  buyPicks: z.array(z.string()),
+  sellPicks: z.array(z.string()),
+})
+
+export type VideoSummary = z.infer<typeof VideoSummarySchema>
 
 // ── Performance ───────────────────────────────────────────────────────────────
 

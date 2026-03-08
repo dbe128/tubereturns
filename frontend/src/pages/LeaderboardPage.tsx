@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchChannels, fetchChannelStats, triggerIngestion } from '../api/client'
 import type { Channel, ChannelStats } from '../api/types'
-import { ReturnBadge } from '../components/ReturnBadge'
 
 interface ChannelRow extends Channel {
   stats: ChannelStats | null
@@ -33,12 +32,7 @@ export function LeaderboardPage() {
           }
         })
       )
-      const sorted = rowsWithStats.sort((a, b) => {
-        const aR = a.stats?.avgReturn30d ?? -Infinity
-        const bR = b.stats?.avgReturn30d ?? -Infinity
-        return bR - aR
-      })
-      setRows(sorted)
+      setRows(rowsWithStats)
     } catch (e) {
       setError(String(e))
     } finally {
@@ -92,16 +86,18 @@ export function LeaderboardPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-gray-50 border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
-                <th className="px-6 py-3 w-10">#</th>
+                <th className="px-6 py-3">#</th>
                 <th className="px-6 py-3">Channel</th>
-                <th className="px-6 py-3 text-right">Picks</th>
-                <th className="px-6 py-3 text-right">Avg 30d Return</th>
+                <th className="px-6 py-3 text-right">Videos</th>
+                <th className="px-6 py-3 text-right">Processed</th>
+                <th className="px-6 py-3">Buy Picks</th>
+                <th className="px-6 py-3">Sell Picks</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                     No channels yet. Run ingestion to get started.
                   </td>
                 </tr>
@@ -119,17 +115,22 @@ export function LeaderboardPage() {
                       >
                         {row.channelName}
                       </Link>
-                      {row.description && (
-                        <p className="text-gray-400 text-xs mt-0.5 truncate max-w-sm">
-                          {row.description}
-                        </p>
-                      )}
                     </td>
                     <td className="px-6 py-4 text-right text-gray-600 font-mono text-sm">
-                      {row.stats?.totalPicks ?? '—'}
+                      {row.stats?.totalVideos ?? '—'}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <ReturnBadge value={row.stats?.avgReturn30d} />
+                    <td className="px-6 py-4 text-right text-gray-600 font-mono text-sm">
+                      {row.stats?.processedVideos ?? '—'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-green-700">
+                      {row.stats && row.stats.buyPicks.length > 0
+                        ? row.stats.buyPicks.join(', ')
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-red-600">
+                      {row.stats && row.stats.sellPicks.length > 0
+                        ? row.stats.sellPicks.join(', ')
+                        : <span className="text-gray-300">—</span>}
                     </td>
                   </tr>
                 ))
@@ -140,10 +141,4 @@ export function LeaderboardPage() {
       )}
     </div>
   )
-}
-
-function formatNum(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`
-  return String(n)
 }

@@ -2,9 +2,13 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.dto.ChannelStatsDto;
+import com.tubereturns.dto.VideoSummaryDto;
 import com.tubereturns.model.Channel;
+import com.tubereturns.model.Pick;
+import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
+import com.tubereturns.repository.VideoRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +27,7 @@ public class ChannelController {
 
     private final ChannelRepository channelRepository;
     private final PickRepository pickRepository;
+    private final VideoRepository videoRepository;
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -53,6 +58,17 @@ public class ChannelController {
         return ResponseEntity.ok(toStatsDto(channel));
     }
 
+    @GetMapping("/{channelId}/videos")
+    @Operation(summary = "Get videos for a channel with pick summaries")
+    public ResponseEntity<List<VideoSummaryDto>> getChannelVideos(@PathVariable String channelId) {
+        Optional<Channel> channelOpt = channelRepository.findByYoutubeChannelId(channelId);
+        if (channelOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        List<Video> videos = videoRepository.findByChannelIdOrderByPublishedAtDesc(channelOpt.get().getId());
+        return ResponseEntity.ok(videos.stream().map(this::toVideoSummaryDto).toList());
+    }
+
     @GetMapping("/top-performers")
     @Operation(summary = "Get channels ranked by pick count")
     public ResponseEntity<List<ChannelStatsDto>> getTopPerformers(
@@ -79,12 +95,38 @@ public class ChannelController {
         );
     }
 
+    private VideoSummaryDto toVideoSummaryDto(Video video) {
+        List<String> buyPicks = video.getPicks() == null ? List.of() : video.getPicks().stream()
+                .filter(p -> p.getSignal() == Pick.Signal.BUY)
+                .map(p -> p.getStock().getTickerSymbol())
+                .distinct().sorted().toList();
+        List<String> sellPicks = video.getPicks() == null ? List.of() : video.getPicks().stream()
+                .filter(p -> p.getSignal() == Pick.Signal.SELL)
+                .map(p -> p.getStock().getTickerSymbol())
+                .distinct().sorted().toList();
+        return new VideoSummaryDto(
+            video.getVideoId(),
+            video.getTitle(),
+            video.getPublishedAt(),
+            video.getTranscriptStatus().name(),
+            video.getProcessingStatus().name(),
+            buyPicks,
+            sellPicks
+        );
+    }
+
     private ChannelStatsDto toStatsDto(Channel channel) {
-        long totalPicks = pickRepository.countByChannelId(channel.getId());
+        long totalVideos = videoRepository.countByChannelId(channel.getId());
+        long processedVideos = videoRepository.countByChannelIdAndProcessingStatus(channel.getId(), Video.ProcessingStatus.COMPLETED);
+        List<String> buyPicks = pickRepository.findDistinctTickersByChannelIdAndSignal(channel.getId(), Pick.Signal.BUY);
+        List<String> sellPicks = pickRepository.findDistinctTickersByChannelIdAndSignal(channel.getId(), Pick.Signal.SELL);
         return new ChannelStatsDto(
             channel.getYoutubeChannelId(),
             channel.getChannelName(),
-            (int) totalPicks
+            totalVideos,
+            processedVideos,
+            buyPicks,
+            sellPicks
         );
     }
 }

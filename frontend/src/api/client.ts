@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { z } from 'zod'
-import { ChannelSchema, ChannelStatsSchema, PickSchema } from './types'
-import type { Channel, ChannelStats, Pick } from './types'
+import { ChannelSchema, ChannelStatsSchema, PickSchema, VideoSummarySchema } from './types'
+import type { Channel, ChannelStats, Pick, VideoSummary } from './types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -52,6 +52,10 @@ export async function fetchChannelStats(channelId: string): Promise<ChannelStats
 }
 
 // ── Picks ─────────────────────────────────────────────────────────────────────
+
+export async function fetchVideosForChannel(channelId: string): Promise<VideoSummary[]> {
+  return validated(z.array(VideoSummarySchema), get(`/channels/${channelId}/videos`))
+}
 
 export async function fetchPicksForChannel(channelId: string): Promise<Pick[]> {
   return validated(z.array(PickSchema), get(`/picks/channel/${channelId}`))
