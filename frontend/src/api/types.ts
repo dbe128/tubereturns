@@ -35,6 +35,7 @@ export const VideoSummarySchema = z.object({
   processingStatus: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']),
   buyPicks: z.array(z.string()),
   sellPicks: z.array(z.string()),
+  transcriptText: z.string().nullable(),
 })
 
 export type VideoSummary = z.infer<typeof VideoSummarySchema>

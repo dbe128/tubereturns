@@ -42,6 +42,15 @@ public class StockPickExtractionService {
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
 
+    public List<Pick> reprocessVideo(String youtubeVideoId) {
+        Video video = videoRepository.findByVideoId(youtubeVideoId)
+                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + youtubeVideoId));
+        pickRepository.deleteByVideoId(video.getId());
+        video.setProcessingStatus(Video.ProcessingStatus.PENDING);
+        videoRepository.save(video);
+        return processVideo(video);
+    }
+
     public void processVideosWithTranscripts() {
         List<Video> readyVideos = videoRepository.findVideosReadyForProcessing();
         log.info("Found {} videos ready for stock pick extraction", readyVideos.size());

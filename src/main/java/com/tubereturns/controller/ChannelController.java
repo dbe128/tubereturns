@@ -112,7 +112,8 @@ public class ChannelController {
             video.getTranscriptStatus().name(),
             video.getProcessingStatus().name(),
             buyPicks,
-            sellPicks
+            sellPicks,
+            video.getTranscriptStatus() == Video.TranscriptStatus.DOWNLOADED ? video.getTranscriptText() : null
         );
     }
 

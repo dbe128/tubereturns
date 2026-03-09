@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { fetchChannel, fetchChannelStats, fetchVideosForChannel } from '../api/client'
+import { fetchChannel, fetchChannelStats, fetchVideosForChannel, reextractVideo } from '../api/client'
 import type { Channel, ChannelStats, VideoSummary } from '../api/types'
 import { useBackendRecovery } from '../hooks/useBackendRecovery'
 
@@ -24,6 +24,7 @@ export function ChannelDetailPage() {
   const [videos, setVideos] = useState<VideoSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [reextracting, setReextracting] = useState<string | null>(null)
 
   const [sortKey, setSortKey] = useState<SortKey>('publishedAt')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
@@ -37,6 +38,16 @@ export function ChannelDetailPage() {
   }, [channelId])
 
   useBackendRecovery(error !== null, () => channelId && load(channelId))
+
+  async function handleReextract(videoId: string) {
+    setReextracting(videoId)
+    try {
+      await reextractVideo(videoId)
+      if (channelId) await load(channelId)
+    } finally {
+      setReextracting(null)
+    }
+  }
 
   async function load(id: string) {
     setLoading(true)
@@ -85,6 +96,7 @@ export function ChannelDetailPage() {
   }, [videos, filterTranscript, filterProcessing, filterPick])
 
   const sorted = useMemo(() => {
+    // @ts-ignore
     const withIndex = filtered.map((v, i) => ({ v, originalIndex: videos.indexOf(v) + 1 }))
     withIndex.sort((a, b) => {
       let cmp = 0
@@ -113,10 +125,10 @@ export function ChannelDetailPage() {
   if (error || !channel) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-10">
-        <div className="bg-danger-50 border border-danger-500 text-danger-600 rounded-lg p-4">
+        <div className="bg-danger-50 border border-danger-500 text-danger-500 rounded-xl p-4 text-sm">
           {error ?? 'Channel not found'}
         </div>
-        <Link to="/" className="mt-4 inline-block text-primary-600 hover:underline text-sm">
+        <Link to="/" className="mt-4 inline-block text-primary-600 hover:text-primary-700 text-sm font-medium">
           ← Back to leaderboard
         </Link>
       </div>
@@ -125,33 +137,32 @@ export function ChannelDetailPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto px-6 py-10">
-      <Link to="/" className="text-primary-600 hover:underline text-sm mb-6 inline-block">
+      <Link to="/" className="text-primary-600 hover:text-primary-700 text-sm font-medium mb-6 inline-block">
         ← Leaderboard
       </Link>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{channel.channelName}</h1>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div className="flex items-center gap-4">
+          {channel.thumbnailUrl && (
+            <img src={channel.thumbnailUrl} alt={channel.channelName} className="w-14 h-14 rounded-full ring-2 ring-gray-100 flex-shrink-0" />
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold text-gray-900">{channel.channelName}</h1>
             {channel.channelUrl && (
-              <a
-                href={channel.channelUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary-600 hover:underline text-sm mt-2 inline-block"
-              >
+              <a href={channel.channelUrl} target="_blank" rel="noreferrer"
+                className="text-primary-600 hover:text-primary-700 text-xs mt-0.5 inline-block">
                 YouTube Channel ↗
               </a>
             )}
           </div>
-          <div className="flex gap-6 text-sm text-gray-500">
+          <div className="flex gap-8 text-sm text-gray-400 flex-shrink-0">
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{stats?.totalVideos ?? '—'}</div>
-              <div>Videos</div>
+              <div className="text-2xl font-bold text-gray-800">{stats?.totalVideos ?? '—'}</div>
+              <div className="text-xs uppercase tracking-wide">Videos</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-gray-900">{stats?.processedVideos ?? '—'}</div>
-              <div>Processed</div>
+              <div className="text-2xl font-bold text-primary-600">{stats?.processedVideos ?? '—'}</div>
+              <div className="text-xs uppercase tracking-wide">Processed</div>
             </div>
           </div>
         </div>
@@ -233,14 +244,15 @@ export function ChannelDetailPage() {
               <SortTh label="Upload Date" sortKey="publishedAt" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
               <SortTh label="Transcript" sortKey="transcriptStatus" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-32" />
               <SortTh label="Picks" sortKey="processingStatus" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
-              <th className="px-4 py-3">Buy</th>
-              <th className="px-4 py-3">Sell</th>
+              <th className="px-4 py-3 text-primary-600">▲ Buy</th>
+              <th className="px-4 py-3 text-danger-500">▼ Sell</th>
+              <th className="px-4 py-3 w-10"></th>
             </tr>
           </thead>
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
                   No videos match the current filters.
                 </td>
               </tr>
@@ -275,16 +287,27 @@ export function ChannelDetailPage() {
                     {new Date(v.publishedAt).toLocaleDateString()}
                   </td>
                   <td className="px-4 py-3">
-                    <TranscriptBadge status={v.transcriptStatus} />
+                    <TranscriptBadge status={v.transcriptStatus} transcriptText={v.transcriptText} />
                   </td>
                   <td className="px-4 py-3">
                     <ProcessingBadge status={v.processingStatus} />
                   </td>
-                  <td className="px-4 py-3 text-green-700 font-mono">
-                    {v.buyPicks.length > 0 ? v.buyPicks.join(', ') : <span className="text-gray-300">—</span>}
+                  <td className="px-4 py-3 text-primary-600 font-mono font-medium text-sm">
+                    {v.buyPicks.length > 0 ? v.buyPicks.join(', ') : <span className="text-gray-200 font-normal">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-red-600 font-mono">
-                    {v.sellPicks.length > 0 ? v.sellPicks.join(', ') : <span className="text-gray-300">—</span>}
+                  <td className="px-4 py-3 text-danger-500 font-mono font-medium text-sm">
+                    {v.sellPicks.length > 0 ? v.sellPicks.join(', ') : <span className="text-gray-200 font-normal">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleReextract(v.videoId)}
+                      disabled={reextracting === v.videoId}
+                      title="Re-extract picks"
+                      style={reextracting === v.videoId ? { animationDirection: 'reverse' } : undefined}
+                      className={`text-lg leading-none transition-colors ${reextracting === v.videoId ? 'text-primary-500 animate-spin' : 'text-gray-400 hover:text-primary-600'}`}
+                    >
+                      ↺
+                    </button>
                   </td>
                 </tr>
               ))
@@ -323,37 +346,96 @@ function SortTh({
   const active = current === sortKey
   return (
     <th
-      className={`px-4 py-3 cursor-pointer select-none hover:text-gray-700 ${className ?? ''}`}
+      className={`px-4 py-3 cursor-pointer select-none hover:text-primary-600 transition-colors ${className ?? ''}`}
       onClick={() => onSort(sortKey)}
     >
       {label}
-      <span className="ml-1 text-gray-300">
+      <span className={`ml-1 ${active ? 'text-primary-500' : 'text-gray-300'}`}>
         {active ? (dir === 'asc' ? '↑' : '↓') : '↕'}
       </span>
     </th>
   )
 }
 
-function TranscriptBadge({ status }: { status: VideoSummary['transcriptStatus'] }) {
-  const styles: Record<VideoSummary['transcriptStatus'], string> = {
-    DOWNLOADED: 'bg-green-100 text-green-700',
-    NO_TRANSCRIPT: 'bg-yellow-100 text-yellow-700',
-    FAILED: 'bg-red-100 text-red-700',
-    PENDING: 'bg-gray-100 text-gray-500',
+function TranscriptBadge({ status, transcriptText }: { status: VideoSummary['transcriptStatus']; transcriptText: string | null }) {
+  const [open, setOpen] = useState(false)
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({})
+  const badgeRef = useRef<HTMLSpanElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function onClickOutside(e: MouseEvent) {
+      if (badgeRef.current && !badgeRef.current.closest('[data-transcript-popup]')?.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [open])
+
+  function handleClick() {
+    if (!transcriptText) return
+    if (!open && badgeRef.current) {
+      const rect = badgeRef.current.getBoundingClientRect()
+      const popupWidth = 520
+      const popupHeight = Math.min(window.innerHeight * 0.75, 600)
+      const margin = 12
+
+      let left = rect.left
+      if (left + popupWidth > window.innerWidth - margin) {
+        left = window.innerWidth - popupWidth - margin
+      }
+      left = Math.max(margin, left)
+
+      let top = rect.bottom + 6
+      if (top + popupHeight > window.innerHeight - margin) {
+        top = rect.top - popupHeight - 6
+      }
+      top = Math.max(margin, top)
+
+      setPopupStyle({ position: 'fixed', top, left, width: popupWidth, maxHeight: popupHeight })
+    }
+    setOpen((v) => !v)
   }
+
+  const styles: Record<VideoSummary['transcriptStatus'], string> = {
+    DOWNLOADED: 'bg-primary-50 text-primary-700',
+    NO_TRANSCRIPT: 'bg-yellow-50 text-yellow-700',
+    FAILED: 'bg-danger-50 text-danger-500',
+    PENDING: 'bg-gray-100 text-gray-400',
+  }
+
   return (
-    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${styles[status]}`}>
-      {TRANSCRIPT_LABELS[status]}
-    </span>
+    <div data-transcript-popup className="relative inline-block">
+      <span
+        ref={badgeRef}
+        onClick={handleClick}
+        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${styles[status]} ${transcriptText ? 'cursor-pointer select-none' : ''}`}
+      >
+        {TRANSCRIPT_LABELS[status]}
+      </span>
+      {open && transcriptText && (
+        <div
+          style={popupStyle}
+          className="z-50 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-2xl p-5 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Transcript</span>
+            <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 text-base leading-none">✕</button>
+          </div>
+          {transcriptText}
+        </div>
+      )}
+    </div>
   )
 }
 
 function ProcessingBadge({ status }: { status: VideoSummary['processingStatus'] }) {
   const styles: Record<VideoSummary['processingStatus'], string> = {
-    COMPLETED: 'bg-green-100 text-green-700',
-    PROCESSING: 'bg-blue-100 text-blue-700',
-    FAILED: 'bg-red-100 text-red-700',
-    PENDING: 'bg-gray-100 text-gray-500',
+    COMPLETED: 'bg-primary-50 text-primary-700',
+    PROCESSING: 'bg-blue-50 text-blue-600',
+    FAILED: 'bg-danger-50 text-danger-500',
+    PENDING: 'bg-gray-100 text-gray-400',
   }
   return (
     <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${styles[status]}`}>

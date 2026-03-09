@@ -70,3 +70,15 @@ export async function fetchRecentPicks(days = 30): Promise<Pick[]> {
 export async function triggerIngestion(): Promise<void> {
   await post('/admin/ingestion/run')
 }
+
+export async function reextractVideo(videoId: string): Promise<void> {
+  await post(`/admin/videos/${videoId}/reextract`)
+}
+
+// ── Stocks ────────────────────────────────────────────────────────────────────
+
+export interface PricePoint { date: string; close: number }
+
+export async function fetchStockPrices(ticker: string, from: string, to: string): Promise<PricePoint[]> {
+  return get(`/stocks/${ticker}/prices`, { from, to })
+}

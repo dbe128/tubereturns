@@ -10,5 +10,6 @@ public record VideoSummaryDto(
     String transcriptStatus,
     String processingStatus,
     List<String> buyPicks,
-    List<String> sellPicks
+    List<String> sellPicks,
+    String transcriptText
 ) {}

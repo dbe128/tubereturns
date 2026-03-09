@@ -1,6 +1,7 @@
 package com.tubereturns.controller;
 
 import com.tubereturns.service.DataIngestionOrchestrationService;
+import com.tubereturns.service.StockPickExtractionService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +18,7 @@ public class AdminController {
 
     private final DataIngestionOrchestrationService orchestrationService;
     private final YouTubeDiscoveryService discoveryService;
+    private final StockPickExtractionService stockPickExtractionService;
 
     @PostMapping("/ingestion/run")
     @Operation(summary = "Run manual data ingestion", description = "Trigger the full data ingestion pipeline manually")
@@ -32,6 +34,17 @@ public class AdminController {
             @Parameter(description = "Channel name") @RequestParam String channelName) {
         discoveryService.createOrUpdateChannel(channelId, channelName);
         return ResponseEntity.ok("Channel added successfully");
+    }
+
+    @PostMapping("/videos/{videoId}/reextract")
+    @Operation(summary = "Re-extract picks from a video", description = "Deletes existing picks and re-runs extraction for the given video")
+    public ResponseEntity<String> reextractVideo(@PathVariable String videoId) {
+        try {
+            stockPickExtractionService.reprocessVideo(videoId);
+            return ResponseEntity.ok("Re-extraction completed for video: " + videoId);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @GetMapping("/health")
