@@ -80,10 +80,11 @@ public class StockPickExtractionService {
         videoRepository.save(video);
 
         try {
-            StockPickExtractionDto extraction = extractStockPicks(video.getVideoId(), video.getTranscriptText());
+            StockPickExtractionDto extraction = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
             List<Pick> createdPicks = savePicks(video, extraction);
 
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
+            video.setExtractionModel(aiModelService.getModel());
             videoRepository.save(video);
 
             advanceLastProcessedAt(video);
@@ -98,14 +99,14 @@ public class StockPickExtractionService {
         }
     }
 
-    private StockPickExtractionDto extractStockPicks(String videoId, String transcriptText) {
+    private StockPickExtractionDto extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         if (!aiEnabled) {
             log.info("Using mock extraction for video: {}", "https://youtu.be/" + videoId);
             return createMockExtraction(videoId, transcriptText);
         }
 
         log.info("Sending transcript to AI for extraction: {}", "https://youtu.be/" + videoId);
-        String aiResponse = aiModelService.extractStockPicks(transcriptText);
+        String aiResponse = aiModelService.extractStockPicks(videoTitle, transcriptText);
         log.info("AI response for video {}: {}", "https://youtu.be/" + videoId, aiResponse);
 
         try {

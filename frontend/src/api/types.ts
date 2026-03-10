@@ -8,7 +8,7 @@ export const ChannelSchema = z.object({
   channelName: z.string(),
   description: z.string().nullable(),
   channelUrl: z.string().nullable(),
-  thumbnailUrl: z.string().nullable(),
+  hasThumbnail: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -33,6 +33,7 @@ export const VideoSummarySchema = z.object({
   publishedAt: z.string(),
   transcriptStatus: z.enum(['PENDING', 'DOWNLOADED', 'NO_TRANSCRIPT', 'FAILED']),
   processingStatus: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']),
+  extractionModel: z.string().nullable(),
   buyPicks: z.array(z.string()),
   sellPicks: z.array(z.string()),
   transcriptText: z.string().nullable(),

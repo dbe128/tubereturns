@@ -19,8 +19,10 @@ public class AiModelService {
 
     private static final String MODEL = "stepfun/step-3.5-flash";
 
-    private static final String EXTRACTION_PROMPT = """
+    private static final String EXTRACTION_PROMPT_TEMPLATE = """
         Analyze the following YouTube video transcript and extract stock picks mentioned by the creator.
+
+        Video title: %s
 
         Look for:
         1. Stock ticker symbols (e.g., AAPL, TSLA, MSFT)
@@ -57,20 +59,25 @@ public class AiModelService {
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper;
 
-    public String extractStockPicks(String transcriptText) {
+    public String getModel() {
+        return "openrouter".equals(aiProvider) ? MODEL : "mock";
+    }
+
+    public String extractStockPicks(String videoTitle, String transcriptText) {
         return switch (aiProvider) {
-            case "openrouter" -> callOpenRouter(transcriptText);
+            case "openrouter" -> callOpenRouter(videoTitle, transcriptText);
             default           -> createMockResponse();
         };
     }
 
-    private String callOpenRouter(String transcriptText) {
+    private String callOpenRouter(String videoTitle, String transcriptText) {
         log.info("Calling OpenRouter API with model {}", MODEL);
 
+        String prompt = EXTRACTION_PROMPT_TEMPLATE.formatted(videoTitle) + transcriptText;
         Map<String, Object> body = Map.of(
             "model", MODEL,
             "messages", List.of(
-                Map.of("role", "user", "content", EXTRACTION_PROMPT + transcriptText)
+                Map.of("role", "user", "content", prompt)
             )
         );
 

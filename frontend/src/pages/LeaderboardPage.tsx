@@ -120,9 +120,9 @@ export function LeaderboardPage() {
                         to={`/channel/${row.youtubeChannelId}`}
                         className="flex items-center gap-3 group"
                       >
-                        {row.thumbnailUrl ? (
+                        {row.hasThumbnail ? (
                           <img
-                            src={row.thumbnailUrl}
+                            src={`/api/channels/${row.youtubeChannelId}/thumbnail`}
                             alt={row.channelName}
                             className="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
                           />

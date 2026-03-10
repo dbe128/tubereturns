@@ -143,8 +143,8 @@ export function ChannelDetailPage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
         <div className="flex items-center gap-4">
-          {channel.thumbnailUrl && (
-            <img src={channel.thumbnailUrl} alt={channel.channelName} className="w-14 h-14 rounded-full ring-2 ring-gray-100 flex-shrink-0" />
+          {channel.hasThumbnail && (
+            <img src={`/api/channels/${channel.youtubeChannelId}/thumbnail`} alt={channel.channelName} className="w-14 h-14 rounded-full ring-2 ring-gray-100 flex-shrink-0" />
           )}
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">{channel.channelName}</h1>
@@ -244,6 +244,7 @@ export function ChannelDetailPage() {
               <SortTh label="Upload Date" sortKey="publishedAt" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
               <SortTh label="Transcript" sortKey="transcriptStatus" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-32" />
               <SortTh label="Picks" sortKey="processingStatus" current={sortKey} dir={sortDir} onSort={toggleSort} className="w-28" />
+              <th className="px-4 py-3 w-36 text-gray-500">Model</th>
               <th className="px-4 py-3 text-primary-600">▲ Buy</th>
               <th className="px-4 py-3 text-danger-500">▼ Sell</th>
               <th className="px-4 py-3 w-10"></th>
@@ -252,7 +253,7 @@ export function ChannelDetailPage() {
           <tbody>
             {sorted.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
+                <td colSpan={10} className="px-4 py-12 text-center text-gray-400">
                   No videos match the current filters.
                 </td>
               </tr>
@@ -291,6 +292,9 @@ export function ChannelDetailPage() {
                   </td>
                   <td className="px-4 py-3">
                     <ProcessingBadge status={v.processingStatus} />
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">
+                    {v.extractionModel ?? <span className="text-gray-200">—</span>}
                   </td>
                   <td className="px-4 py-3 text-primary-600 font-mono font-medium text-sm">
                     {v.buyPicks.length > 0 ? v.buyPicks.join(', ') : <span className="text-gray-200 font-normal">—</span>}

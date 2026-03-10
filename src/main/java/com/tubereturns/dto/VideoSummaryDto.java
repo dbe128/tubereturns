@@ -9,6 +9,7 @@ public record VideoSummaryDto(
     Instant publishedAt,
     String transcriptStatus,
     String processingStatus,
+    String extractionModel,
     List<String> buyPicks,
     List<String> sellPicks,
     String transcriptText

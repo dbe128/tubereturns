@@ -10,6 +10,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.List;
 
@@ -22,6 +27,7 @@ public class YouTubeDiscoveryService {
     private final ChannelRepository channelRepository;
     private final VideoRepository videoRepository;
     private final YouTubeApiService youTubeApiService;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public void discoverAndProcessChannels() {
         log.info("Starting channel discovery process");
@@ -43,10 +49,10 @@ public class YouTubeDiscoveryService {
     public void processChannel(Channel channel) {
         log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getYoutubeChannelId());
 
-        if (channel.getThumbnailUrl() == null) {
+        if (channel.getThumbnailData() == null) {
             YouTubeApiService.ChannelInfo info = youTubeApiService.resolveChannelInfo(channel.getChannelUrl());
             if (info != null && info.thumbnailUrl() != null) {
-                channel.setThumbnailUrl(info.thumbnailUrl());
+                downloadThumbnail(info.thumbnailUrl(), channel);
                 channelRepository.save(channel);
             }
         }
@@ -74,6 +80,22 @@ public class YouTubeDiscoveryService {
                 Channel newChannel = new Channel(channelId, channelName);
                 return channelRepository.save(newChannel);
             });
+    }
+
+    private void downloadThumbnail(String url, Channel channel) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "Mozilla/5.0")
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            channel.setThumbnailData(response.body());
+            channel.setThumbnailContentType(
+                    response.headers().firstValue("Content-Type").orElse("image/jpeg"));
+        } catch (IOException | InterruptedException e) {
+            log.warn("Failed to download thumbnail from {}: {}", url, e.getMessage());
+        }
     }
 
     private void processVideo(Channel channel, YouTubeVideoDto videoDto) {

@@ -61,6 +61,9 @@ public class Video {
     @Column(name = "processing_status", length = 50)
     private ProcessingStatus processingStatus = ProcessingStatus.PENDING;
 
+    @Column(name = "extraction_model", length = 100)
+    private String extractionModel;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

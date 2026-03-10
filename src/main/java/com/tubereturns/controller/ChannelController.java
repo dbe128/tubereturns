@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,6 +59,18 @@ public class ChannelController {
         return ResponseEntity.ok(toStatsDto(channel));
     }
 
+    @GetMapping("/{channelId}/thumbnail")
+    @Operation(summary = "Get channel thumbnail image")
+    public ResponseEntity<byte[]> getChannelThumbnail(@PathVariable String channelId) {
+        return channelRepository.findByYoutubeChannelId(channelId)
+                .filter(c -> c.getThumbnailData() != null)
+                .map(c -> ResponseEntity.ok()
+                        .contentType(MediaType.parseMediaType(
+                                c.getThumbnailContentType() != null ? c.getThumbnailContentType() : "image/jpeg"))
+                        .body(c.getThumbnailData()))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{channelId}/videos")
     @Operation(summary = "Get videos for a channel with pick summaries")
     public ResponseEntity<List<VideoSummaryDto>> getChannelVideos(@PathVariable String channelId) {
@@ -90,7 +103,7 @@ public class ChannelController {
             channel.getChannelName(),
             channel.getDescription(),
             channel.getChannelUrl(),
-            channel.getThumbnailUrl(),
+            channel.getThumbnailData() != null,
             channel.getCreatedAt(),
             channel.getUpdatedAt()
         );
@@ -111,6 +124,7 @@ public class ChannelController {
             video.getPublishedAt(),
             video.getTranscriptStatus().name(),
             video.getProcessingStatus().name(),
+            video.getExtractionModel(),
             buyPicks,
             sellPicks,
             video.getTranscriptStatus() == Video.TranscriptStatus.DOWNLOADED ? video.getTranscriptText() : null
