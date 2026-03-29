@@ -1,0 +1,488 @@
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  OnInit,
+  OnDestroy,
+} from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { RouterLink, ActivatedRoute } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { ApiService } from '../../api/api.service';
+import { BackendRecoveryService } from '../../services/backend-recovery.service';
+import type { Channel, ChannelStats, VideoSummary } from '../../api/types';
+
+type SortKey = 'index' | 'publishedAt' | 'transcriptStatus' | 'processingStatus';
+type SortDir = 'asc' | 'desc';
+
+const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
+  DOWNLOADED: 0, NO_TRANSCRIPT: 1, PENDING: 2, FAILED: 3,
+};
+
+const PROCESSING_ORDER: Record<VideoSummary['processingStatus'], number> = {
+  COMPLETED: 0, PROCESSING: 1, PENDING: 2, FAILED: 3,
+};
+
+const TRANSCRIPT_LABELS: Record<VideoSummary['transcriptStatus'], string> = {
+  DOWNLOADED: 'Downloaded',
+  NO_TRANSCRIPT: 'No transcript',
+  FAILED: 'Failed',
+  PENDING: 'Pending',
+};
+
+const PROCESSING_LABELS: Record<VideoSummary['processingStatus'], string> = {
+  COMPLETED: 'Extracted',
+  PROCESSING: 'Processing',
+  FAILED: 'Failed',
+  PENDING: 'Pending',
+};
+
+const TRANSCRIPT_STYLES: Record<VideoSummary['transcriptStatus'], string> = {
+  DOWNLOADED: 'bg-primary-50 text-primary-700',
+  NO_TRANSCRIPT: 'bg-yellow-50 text-yellow-700',
+  FAILED: 'bg-danger-50 text-danger-500',
+  PENDING: 'bg-gray-100 text-gray-400',
+};
+
+const PROCESSING_STYLES: Record<VideoSummary['processingStatus'], string> = {
+  COMPLETED: 'bg-primary-50 text-primary-700',
+  PROCESSING: 'bg-blue-50 text-blue-600',
+  FAILED: 'bg-danger-50 text-danger-500',
+  PENDING: 'bg-gray-100 text-gray-400',
+};
+
+interface IndexedVideo {
+  v: VideoSummary;
+  originalIndex: number;
+}
+
+@Component({
+  selector: 'app-channel-detail',
+  standalone: true,
+  imports: [CommonModule, RouterLink, FormsModule],
+  template: `
+    @if (loading()) {
+      <div class="flex justify-center py-20">
+        <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent"></div>
+      </div>
+    } @else if (error() || !channel()) {
+      <div class="max-w-5xl mx-auto px-4 py-10">
+        <div class="bg-danger-50 border border-danger-500 text-danger-500 rounded-xl p-4 text-sm">
+          {{ error() ?? 'Channel not found' }}
+        </div>
+        <a routerLink="/" class="mt-4 inline-block text-primary-600 hover:text-primary-700 text-sm font-medium">
+          ← Back to leaderboard
+        </a>
+      </div>
+    } @else {
+      <div class="max-w-screen-2xl mx-auto px-6 py-10">
+        <a routerLink="/" class="text-primary-600 hover:text-primary-700 text-sm font-medium mb-6 inline-block">
+          ← Leaderboard
+        </a>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+          <div class="flex items-center gap-4">
+            @if (channel()!.hasThumbnail) {
+              <img
+                [src]="'/api/channels/' + channel()!.youtubeChannelId + '/thumbnail'"
+                [alt]="channel()!.channelName"
+                class="w-14 h-14 rounded-full ring-2 ring-gray-100 flex-shrink-0"
+              />
+            }
+            <div class="flex-1 min-w-0">
+              <h1 class="text-xl font-bold text-gray-900">{{ channel()!.channelName }}</h1>
+              @if (channel()!.channelUrl) {
+                <a
+                  [href]="channel()!.channelUrl!"
+                  target="_blank"
+                  rel="noreferrer"
+                  class="text-primary-600 hover:text-primary-700 text-xs mt-0.5 inline-block"
+                >YouTube Channel ↗</a>
+              }
+            </div>
+            <div class="flex gap-8 text-sm text-gray-400 flex-shrink-0">
+              <div class="text-center">
+                <div class="text-2xl font-bold text-gray-800">{{ stats()?.totalVideos ?? '—' }}</div>
+                <div class="text-xs uppercase tracking-wide">Videos</div>
+              </div>
+              <div class="text-center">
+                <div class="text-2xl font-bold text-primary-600">{{ stats()?.processedVideos ?? '—' }}</div>
+                <div class="text-xs uppercase tracking-wide">Processed</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4 mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
+            @if (filterTranscript() || filterProcessing() || filterPick()) {
+              <button
+                (click)="clearFilters()"
+                class="text-xs text-primary-600 hover:text-primary-800 font-medium"
+              >Clear all</button>
+            }
+          </div>
+          <div class="flex flex-wrap gap-4">
+            <div class="flex flex-col gap-1">
+              <label class="text-xs text-gray-500">Transcript status</label>
+              <select
+                [ngModel]="filterTranscript()"
+                (ngModelChange)="filterTranscript.set($event)"
+                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+              >
+                <option value="">All transcript statuses</option>
+                <option value="DOWNLOADED">Downloaded</option>
+                <option value="NO_TRANSCRIPT">No transcript</option>
+                <option value="FAILED">Failed</option>
+                <option value="PENDING">Pending</option>
+              </select>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-xs text-gray-500">Pick extraction</label>
+              <select
+                [ngModel]="filterProcessing()"
+                (ngModelChange)="filterProcessing.set($event)"
+                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+              >
+                <option value="">All pick statuses</option>
+                <option value="COMPLETED">Extracted</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="FAILED">Failed</option>
+                <option value="PENDING">Pending</option>
+              </select>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-xs text-gray-500">Ticker</label>
+              <select
+                [ngModel]="filterPick()"
+                (ngModelChange)="filterPick.set($event)"
+                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+              >
+                <option value="">All picks</option>
+                @for (ticker of allTickers(); track ticker) {
+                  <option [value]="ticker">{{ ticker }}</option>
+                }
+              </select>
+            </div>
+
+            @if (filterTranscript() || filterProcessing() || filterPick()) {
+              <div class="flex items-end">
+                <span class="text-xs text-gray-400 pb-2">
+                  {{ sorted().length }} of {{ videos().length }} videos
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50 border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
+                <th
+                  class="px-4 py-3 w-12 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  (click)="toggleSort('index')"
+                >#<span class="ml-1" [class.text-primary-500]="sortKey() === 'index'" [class.text-gray-300]="sortKey() !== 'index'">{{ sortKey() === 'index' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                <th class="px-4 py-3 w-44"></th>
+                <th class="px-4 py-3">Video</th>
+                <th
+                  class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  (click)="toggleSort('publishedAt')"
+                >Upload Date<span class="ml-1" [class.text-primary-500]="sortKey() === 'publishedAt'" [class.text-gray-300]="sortKey() !== 'publishedAt'">{{ sortKey() === 'publishedAt' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                <th
+                  class="px-4 py-3 w-32 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  (click)="toggleSort('transcriptStatus')"
+                >Transcript<span class="ml-1" [class.text-primary-500]="sortKey() === 'transcriptStatus'" [class.text-gray-300]="sortKey() !== 'transcriptStatus'">{{ sortKey() === 'transcriptStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                <th
+                  class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  (click)="toggleSort('processingStatus')"
+                >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'processingStatus'" [class.text-gray-300]="sortKey() !== 'processingStatus'">{{ sortKey() === 'processingStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                <th class="px-4 py-3 w-36 text-gray-500">Model</th>
+                <th class="px-4 py-3 text-primary-600">▲ Buy</th>
+                <th class="px-4 py-3 text-danger-500">▼ Sell</th>
+                <th class="px-4 py-3 w-10"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @if (sorted().length === 0) {
+                <tr>
+                  <td colspan="10" class="px-4 py-12 text-center text-gray-400">
+                    No videos match the current filters.
+                  </td>
+                </tr>
+              } @else {
+                @for (item of sorted(); track item.v.videoId) {
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 text-gray-400 font-mono">{{ item.originalIndex }}</td>
+                    <td class="px-4 py-3">
+                      <a
+                        [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <img
+                          [src]="'https://img.youtube.com/vi/' + item.v.videoId + '/mqdefault.jpg'"
+                          alt=""
+                          class="w-40 rounded object-cover aspect-video"
+                        />
+                      </a>
+                    </td>
+                    <td class="px-4 py-3">
+                      <a
+                        [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
+                        target="_blank"
+                        rel="noreferrer"
+                        class="text-gray-900 hover:text-primary-600 whitespace-nowrap overflow-hidden text-ellipsis block max-w-xl"
+                      >{{ item.v.title }}</a>
+                    </td>
+                    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      {{ item.v.publishedAt | date: 'shortDate' }}
+                    </td>
+                    <td class="px-4 py-3">
+                      <span
+                        class="inline-block px-2 py-0.5 rounded text-xs font-medium cursor-pointer select-none"
+                        [ngClass]="transcriptStyle(item.v.transcriptStatus)"
+                        (click)="openTranscript(item.v)"
+                      >{{ transcriptLabel(item.v.transcriptStatus) }}</span>
+                    </td>
+                    <td class="px-4 py-3">
+                      <span
+                        class="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                        [ngClass]="processingStyle(item.v.processingStatus)"
+                      >{{ processingLabel(item.v.processingStatus) }}</span>
+                    </td>
+                    <td class="px-4 py-3 text-gray-400 font-mono text-xs">
+                      @if (item.v.extractionModel) {
+                        {{ item.v.extractionModel }}
+                      } @else {
+                        <span class="text-gray-200">—</span>
+                      }
+                    </td>
+                    <td class="px-4 py-3 text-primary-600 font-mono font-medium text-sm">
+                      @if (item.v.buyPicks.length > 0) {
+                        {{ item.v.buyPicks.join(', ') }}
+                      } @else {
+                        <span class="text-gray-200 font-normal">—</span>
+                      }
+                    </td>
+                    <td class="px-4 py-3 text-danger-500 font-mono font-medium text-sm">
+                      @if (item.v.sellPicks.length > 0) {
+                        {{ item.v.sellPicks.join(', ') }}
+                      } @else {
+                        <span class="text-gray-200 font-normal">—</span>
+                      }
+                    </td>
+                    <td class="px-4 py-3">
+                      <button
+                        (click)="handleReextract(item.v.videoId)"
+                        [disabled]="reextracting() === item.v.videoId"
+                        title="Re-extract picks"
+                        class="text-lg leading-none transition-colors"
+                        [class.text-primary-500]="reextracting() === item.v.videoId"
+                        [class.animate-spin]="reextracting() === item.v.videoId"
+                        [class.text-gray-400]="reextracting() !== item.v.videoId"
+                        [class.hover:text-primary-600]="reextracting() !== item.v.videoId"
+                      >↺</button>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      @if (transcriptPopup()) {
+        <div
+          class="fixed inset-0 z-40"
+          (click)="closeTranscript()"
+        ></div>
+        <div
+          class="fixed z-50 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-2xl p-5 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed"
+          [style.top.px]="transcriptPopupPos().top"
+          [style.left.px]="transcriptPopupPos().left"
+          [style.width.px]="transcriptPopupPos().width"
+          [style.max-height.px]="transcriptPopupPos().maxHeight"
+          (click)="$event.stopPropagation()"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Transcript</span>
+            <button (click)="closeTranscript()" class="text-gray-400 hover:text-gray-600 text-base leading-none">✕</button>
+          </div>
+          {{ transcriptPopup() }}
+        </div>
+      }
+    }
+  `,
+})
+export class ChannelDetailComponent implements OnInit, OnDestroy {
+  private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly recovery = inject(BackendRecoveryService);
+
+  readonly channel = signal<Channel | null>(null);
+  readonly stats = signal<ChannelStats | null>(null);
+  readonly videos = signal<VideoSummary[]>([]);
+  readonly loading = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly reextracting = signal<string | null>(null);
+
+  readonly sortKey = signal<SortKey>('publishedAt');
+  readonly sortDir = signal<SortDir>('desc');
+  readonly filterTranscript = signal<VideoSummary['transcriptStatus'] | ''>('');
+  readonly filterProcessing = signal<VideoSummary['processingStatus'] | ''>('');
+  readonly filterPick = signal('');
+
+  readonly transcriptPopup = signal<string | null>(null);
+  readonly transcriptPopupPos = signal({ top: 0, left: 0, width: 520, maxHeight: 600 });
+
+  readonly allTickers = computed(() => {
+    const tickers = new Set<string>();
+    this.videos().forEach((v) => {
+      v.buyPicks.forEach((t) => tickers.add(t));
+      v.sellPicks.forEach((t) => tickers.add(t));
+    });
+    return Array.from(tickers).sort();
+  });
+
+  readonly filtered = computed(() =>
+    this.videos().filter((v) => {
+      if (this.filterTranscript() && v.transcriptStatus !== this.filterTranscript()) return false;
+      if (this.filterProcessing() && v.processingStatus !== this.filterProcessing()) return false;
+      if (this.filterPick() && !v.buyPicks.includes(this.filterPick()) && !v.sellPicks.includes(this.filterPick())) return false;
+      return true;
+    }),
+  );
+
+  readonly sorted = computed((): IndexedVideo[] => {
+    const vids = this.videos();
+    const withIndex: IndexedVideo[] = this.filtered().map((v) => ({
+      v,
+      originalIndex: vids.indexOf(v) + 1,
+    }));
+    const key = this.sortKey();
+    const dir = this.sortDir();
+    withIndex.sort((a, b) => {
+      let cmp = 0;
+      if (key === 'index') {
+        cmp = a.originalIndex - b.originalIndex;
+      } else if (key === 'publishedAt') {
+        cmp = new Date(a.v.publishedAt).getTime() - new Date(b.v.publishedAt).getTime();
+      } else if (key === 'transcriptStatus') {
+        cmp = TRANSCRIPT_ORDER[a.v.transcriptStatus] - TRANSCRIPT_ORDER[b.v.transcriptStatus];
+      } else if (key === 'processingStatus') {
+        cmp = PROCESSING_ORDER[a.v.processingStatus] - PROCESSING_ORDER[b.v.processingStatus];
+      }
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return withIndex;
+  });
+
+  ngOnInit(): void {
+    const channelId = this.route.snapshot.paramMap.get('channelId');
+    if (channelId) {
+      this.loadData(channelId);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.recovery.stopPolling();
+  }
+
+  loadData(id: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.recovery.stopPolling();
+
+    forkJoin({
+      channel: this.api.getChannel(id),
+      stats: this.api.getChannelStats(id).pipe(catchError(() => of(null))),
+      videos: this.api.getVideosForChannel(id),
+    }).subscribe({
+      next: ({ channel, stats, videos }) => {
+        this.channel.set(channel);
+        this.stats.set(stats);
+        this.videos.set(videos);
+        this.loading.set(false);
+      },
+      error: (err: unknown) => {
+        this.error.set(String(err));
+        this.loading.set(false);
+        this.recovery.startPolling(() => {
+          const cid = this.route.snapshot.paramMap.get('channelId');
+          if (cid) this.loadData(cid);
+        });
+      },
+    });
+  }
+
+  toggleSort(key: SortKey): void {
+    if (this.sortKey() === key) {
+      this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.sortKey.set(key);
+      this.sortDir.set('asc');
+    }
+  }
+
+  clearFilters(): void {
+    this.filterTranscript.set('');
+    this.filterProcessing.set('');
+    this.filterPick.set('');
+  }
+
+  handleReextract(videoId: string): void {
+    this.reextracting.set(videoId);
+    this.api.reextractVideo(videoId).subscribe({
+      next: () => {
+        this.reextracting.set(null);
+        const cid = this.route.snapshot.paramMap.get('channelId');
+        if (cid) this.loadData(cid);
+      },
+      error: () => {
+        this.reextracting.set(null);
+      },
+    });
+  }
+
+  openTranscript(v: VideoSummary): void {
+    if (!v.transcriptText) return;
+    const popupWidth = 520;
+    const popupHeight = Math.min(window.innerHeight * 0.75, 600);
+    const margin = 12;
+    let left = margin;
+    let top = margin;
+    if (popupWidth + 2 * margin < window.innerWidth) {
+      left = Math.max(margin, Math.min(window.innerWidth - popupWidth - margin, window.innerWidth / 2 - popupWidth / 2));
+    }
+    top = Math.max(margin, window.innerHeight / 2 - popupHeight / 2);
+    this.transcriptPopupPos.set({ top, left, width: popupWidth, maxHeight: popupHeight });
+    this.transcriptPopup.set(v.transcriptText);
+  }
+
+  closeTranscript(): void {
+    this.transcriptPopup.set(null);
+  }
+
+  transcriptLabel(status: VideoSummary['transcriptStatus']): string {
+    return TRANSCRIPT_LABELS[status];
+  }
+
+  processingLabel(status: VideoSummary['processingStatus']): string {
+    return PROCESSING_LABELS[status];
+  }
+
+  transcriptStyle(status: VideoSummary['transcriptStatus']): string {
+    return TRANSCRIPT_STYLES[status];
+  }
+
+  processingStyle(status: VideoSummary['processingStatus']): string {
+    return PROCESSING_STYLES[status];
+  }
+}

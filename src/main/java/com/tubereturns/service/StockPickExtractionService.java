@@ -165,7 +165,7 @@ public class StockPickExtractionService {
     }
 
     private boolean isValidTicker(String ticker) {
-        return ticker.length() >= 1 && ticker.length() <= 5 && ticker.matches("[A-Z]+");
+        return !ticker.isEmpty() && ticker.length() <= 5 && ticker.matches("[A-Z]+");
     }
 
     private boolean containsTicker(List<StockPickExtractionDto.PickExtractionDto> picks, String ticker) {

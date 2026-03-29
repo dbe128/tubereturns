@@ -15,8 +15,8 @@ echo "Starting backend (http://localhost:8080, debug port 5005)..."
 "$ROOT/gradlew" -p "$ROOT" --console plain bootRun --args='--spring.profiles.active=dev' &
 BACKEND_PID=$!
 
-echo "Starting frontend (http://localhost:5173)..."
-cd "$ROOT/frontend" && npm run dev &
+echo "Starting frontend (http://localhost:4200)..."
+cd "$ROOT/frontend" && npm start &
 FRONTEND_PID=$!
 
 echo "TubeReturns running — press Ctrl+C to stop"
