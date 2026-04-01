@@ -24,7 +24,7 @@ The system:
 
 ## Frontend
 
-- **React (latest stable version)**
+- **Angular (latest stable version)**
 - **TypeScript (strict mode enabled)**
 - **Vite** (or equivalent modern bundler)
 - **Zod** for all runtime validations

@@ -54,5 +54,6 @@ tasks.withType<Test> {
 }
 
 tasks.bootRun {
+    classpath += sourceSets.test.get().runtimeClasspath
     jvmArgs("-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005")
 }
