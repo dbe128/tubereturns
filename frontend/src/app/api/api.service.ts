@@ -9,8 +9,10 @@ import {
   VideoSummarySchema,
   PickSchema,
   PricePointSchema,
+  PortfolioPricePointSchema,
+  PortfolioSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -101,6 +103,21 @@ export class ApiService {
     return this.validated(
       z.array(PricePointSchema),
       this.http.get<unknown>(`/api/stocks/${ticker}/prices`, { params }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getPortfolios(): Observable<Portfolio[]> {
+    return this.validated(
+      z.array(PortfolioSchema),
+      this.http.get<unknown>('/api/portfolios').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getPortfolioPrices(channelId: string, from?: string): Observable<PortfolioPricePoint[]> {
+    const params = from ? new HttpParams().set('from', from) : new HttpParams();
+    return this.validated(
+      z.array(PortfolioPricePointSchema),
+      this.http.get<unknown>(`/api/portfolios/${channelId}/prices`, { params }).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

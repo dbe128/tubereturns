@@ -64,9 +64,24 @@ export const PricePointSchema = z.object({
   close: z.number(),
 });
 
+export const PortfolioPricePointSchema = z.object({
+  date: z.string(),
+  changePercent: z.number(),
+  close: z.number().nullable(),
+});
+
+export const PortfolioSchema = z.object({
+  channelId: z.string(),
+  name: z.string(),
+  startDate: z.string(),
+  tickers: z.array(z.string()),
+});
+
 export type Channel = z.infer<typeof ChannelSchema>;
 export type ChannelStats = z.infer<typeof ChannelStatsSchema>;
 export type VideoSummary = z.infer<typeof VideoSummarySchema>;
 export type Performance = z.infer<typeof PerformanceSchema>;
 export type Pick = z.infer<typeof PickSchema>;
 export type PricePoint = z.infer<typeof PricePointSchema>;
+export type PortfolioPricePoint = z.infer<typeof PortfolioPricePointSchema>;
+export type Portfolio = z.infer<typeof PortfolioSchema>;

@@ -11,9 +11,15 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-echo "Starting backend (http://localhost:8080, debug port 5005)..."
+echo "Starting backend (http://localhost:8080)..."
 "$ROOT/gradlew" -p "$ROOT" --console plain bootRun --args='--spring.profiles.active=dev' &
 BACKEND_PID=$!
+
+echo "Waiting for backend to be ready..."
+until curl -sf http://localhost:8080/api/admin/health > /dev/null 2>&1; do
+    sleep 1
+done
+echo "Backend is up."
 
 echo "Starting frontend (http://localhost:4200)..."
 cd "$ROOT/frontend" && npm start &

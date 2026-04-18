@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PickRepository extends JpaRepository<Pick, Long> {
@@ -35,4 +36,7 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
 
     @Query("SELECT p FROM Pick p WHERE p.signal = :signal ORDER BY p.createdAt DESC")
     List<Pick> findBySignalOrderByCreatedAtDesc(@Param("signal") Pick.Signal signal);
+
+    @Query("SELECT MIN(p.video.publishedAt) FROM Pick p WHERE p.video.channel.id = :channelId AND p.signal = 'BUY'")
+    Optional<Instant> findEarliestBuyPickPublishedAt(@Param("channelId") Long channelId);
 }
