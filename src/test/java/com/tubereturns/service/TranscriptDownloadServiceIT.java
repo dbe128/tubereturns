@@ -11,7 +11,7 @@ class TranscriptDownloadServiceIT {
 
     @Test
     void transcript_isDownloadedAndComplete() throws Exception {
-        TranscriptDownloadService service = new TranscriptDownloadService(null);
+        TranscriptDownloadService service = new TranscriptDownloadService(null, null);
         ReflectionTestUtils.setField(service, "ytDlpPath", "yt-dlp");
         ReflectionTestUtils.setField(service, "timeoutSeconds", 300);
         ReflectionTestUtils.setField(service, "enabled", true);

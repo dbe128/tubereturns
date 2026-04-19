@@ -50,7 +50,7 @@ tubereturns:
       max-items: 100
     transcript:
       cron: "0 15 * * * *"
-      max-items: 100
+      max-items: 5
     extraction:
       cron: "0 30 * * * *"
       max-items: 100

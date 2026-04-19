@@ -16,7 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -28,7 +30,6 @@ import java.util.regex.Pattern;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Transactional
 public class StockPickExtractionService {
 
     @Value("${tubereturns.ai.enabled:false}")
@@ -41,7 +42,9 @@ public class StockPickExtractionService {
     private final ChannelRepository channelRepository;
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
+    private final PlatformTransactionManager txManager;
 
+    @Transactional
     public List<Pick> reprocessVideo(String youtubeVideoId) {
         Video video = videoRepository.findByVideoId(youtubeVideoId)
                 .orElseThrow(() -> new IllegalArgumentException("Video not found: " + youtubeVideoId));
@@ -52,16 +55,15 @@ public class StockPickExtractionService {
     }
 
     public int processVideosWithTranscripts(int maxItems) {
-        List<Video> readyVideos = videoRepository.findVideosReadyForProcessing().stream().limit(maxItems).toList();
+        List<Video> readyVideos = videoRepository.findVideosReadyForProcessing(maxItems);
         log.info("Found {} videos ready for stock pick extraction", readyVideos.size());
 
+        TransactionTemplate tx = new TransactionTemplate(txManager);
         for (Video video : readyVideos) {
             try {
-                processVideo(video);
+                tx.executeWithoutResult(status -> processVideo(video));
             } catch (Exception e) {
                 log.error("Error processing video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
-                video.setProcessingStatus(Video.ProcessingStatus.FAILED);
-                videoRepository.save(video);
             }
         }
         return readyVideos.size();

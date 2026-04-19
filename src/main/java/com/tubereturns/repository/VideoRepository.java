@@ -21,8 +21,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
 
     Page<Video> findByChannelIdOrderByPublishedAtDesc(Long channelId, Pageable pageable);
 
-    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status LIMIT 1")
-    List<Video> findByTranscriptStatus(@Param("status") Video.TranscriptStatus status);
+    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status ORDER BY v.publishedAt ASC LIMIT :limit")
+    List<Video> findByTranscriptStatus(@Param("status") Video.TranscriptStatus status, @Param("limit") int limit);
 
     @Query("SELECT v FROM Video v WHERE v.processingStatus = :status")
     List<Video> findByProcessingStatus(@Param("status") Video.ProcessingStatus status);
@@ -30,8 +30,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.publishedAt >= :since ORDER BY v.publishedAt DESC")
     List<Video> findVideosPublishedSince(@Param("since") Instant since);
 
-    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' ORDER BY v.publishedAt ASC")
-    List<Video> findVideosReadyForProcessing();
+    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' ORDER BY v.publishedAt ASC LIMIT :limit")
+    List<Video> findVideosReadyForProcessing(@Param("limit") int limit);
 
     boolean existsByVideoId(String videoId);
 

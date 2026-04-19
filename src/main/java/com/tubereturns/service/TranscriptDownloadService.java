@@ -6,7 +6,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -22,8 +23,9 @@ import java.util.stream.Stream;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Transactional
 public class TranscriptDownloadService {
+
+    private final PlatformTransactionManager txManager;
 
     @Value("${tubereturns.yt-dlp.path:yt-dlp}")
     private String ytDlpPath;
@@ -40,17 +42,15 @@ public class TranscriptDownloadService {
     private final VideoRepository videoRepository;
 
     public int downloadPendingTranscripts(int maxItems) {
-        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING)
-                .stream().limit(maxItems).toList();
+        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, maxItems);
         log.info("Found {} videos pending transcript download", pendingVideos.size());
 
+        TransactionTemplate tx = new TransactionTemplate(txManager);
         for (Video video : pendingVideos) {
             try {
-                downloadTranscript(video);
+                tx.executeWithoutResult(status -> downloadTranscript(video));
             } catch (Exception e) {
                 log.error("Error downloading transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
-                video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
-                videoRepository.save(video);
             }
         }
         return pendingVideos.size();
