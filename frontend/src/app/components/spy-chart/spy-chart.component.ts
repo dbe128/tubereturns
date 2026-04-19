@@ -119,7 +119,7 @@ interface SeriesData {
                 class="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-semibold border transition-colors"
                 [class.opacity-40]="!isVisible('SPY')"
               >
-                <span class="w-3 h-0.5 inline-block rounded" style="background:#6b7280"></span>
+                <span class="w-5 h-1 inline-block rounded-sm" style="background:#6b7280"></span>
                 SPY
               </button>
               @for (p of portfolios(); track p.channelId) {
@@ -128,7 +128,7 @@ interface SeriesData {
                   class="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-semibold border transition-colors"
                   [class.opacity-40]="!isVisible(p.channelId)"
                 >
-                  <span class="w-3 h-0.5 inline-block rounded" [style.background]="colorFor(p.channelId)"></span>
+                  <span class="w-5 h-1 inline-block rounded-sm" [style.background]="colorFor(p.channelId)"></span>
                   {{ p.name }}
                 </button>
               }
