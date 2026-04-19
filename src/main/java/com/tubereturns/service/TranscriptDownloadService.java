@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -92,6 +93,7 @@ public class TranscriptDownloadService {
         Path tempDir = Files.createTempDirectory("tubereturns-transcript-");
 
         try {
+            int sleepSeconds = 10 + new Random().nextInt(6);
             List<String> cmd = new ArrayList<>(List.of(
                 ytDlpPath,
                 "--write-subs",
@@ -100,6 +102,7 @@ public class TranscriptDownloadService {
                 "--sub-format", "vtt",
                 "--skip-download",
                 "--remote-components", "ejs:github",
+                "--sleep-subtitles", String.valueOf(sleepSeconds),
                 "-o", tempDir.resolve("%(id)s.%(ext)s").toString()
             ));
             if (cookiesPath != null && !cookiesPath.isBlank()) {
