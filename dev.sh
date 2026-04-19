@@ -2,6 +2,31 @@
 set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+FRONTEND_ONLY=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --frontend-only) FRONTEND_ONLY=true ;;
+    esac
+done
+
+if $FRONTEND_ONLY; then
+    cleanup() {
+        echo ""
+        echo "Stopping..."
+        kill "$FRONTEND_PID" 2>/dev/null
+        wait "$FRONTEND_PID" 2>/dev/null
+    }
+    trap cleanup INT TERM
+
+    echo "Starting frontend (http://localhost:4200)..."
+    cd "$ROOT/frontend" && npm start &
+    FRONTEND_PID=$!
+
+    echo "Frontend running — press Ctrl+C to stop"
+    wait
+    exit 0
+fi
 
 cleanup() {
     echo ""
