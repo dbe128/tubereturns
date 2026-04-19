@@ -28,9 +28,9 @@ import type { PortfolioPricePoint, Portfolio } from '../../api/types';
 
 Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler, Legend);
 
-type Timeframe = '1W' | '1M' | 'YTD' | '1Y' | '2Y' | '3Y' | '5Y' | '10Y';
+type Timeframe = '1W' | '1M' | 'YTD' | '1Y' | '2Y' | '3Y' | '4Y' | '5Y' | '10Y';
 
-const TIMEFRAMES: Timeframe[] = ['1W', '1M', 'YTD', '1Y', '2Y', '3Y', '5Y', '10Y'];
+const TIMEFRAMES: Timeframe[] = ['1W', '1M', 'YTD', '1Y', '2Y', '3Y', '4Y', '5Y', '10Y'];
 
 const PORTFOLIO_COLORS = ['#2563eb', '#16a34a', '#ea580c', '#7c3aed', '#db2777', '#0891b2'];
 
@@ -43,6 +43,7 @@ function fromDate(tf: Timeframe): string {
     case '1Y':  now.setFullYear(now.getFullYear() - 1); break;
     case '2Y':  now.setFullYear(now.getFullYear() - 2); break;
     case '3Y':  now.setFullYear(now.getFullYear() - 3); break;
+    case '4Y':  now.setFullYear(now.getFullYear() - 4); break;
     case '5Y':  now.setFullYear(now.getFullYear() - 5); break;
     case '10Y': now.setFullYear(now.getFullYear() - 10); break;
   }
