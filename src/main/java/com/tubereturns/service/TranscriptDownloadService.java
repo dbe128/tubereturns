@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -40,8 +39,9 @@ public class TranscriptDownloadService {
 
     private final VideoRepository videoRepository;
 
-    public void downloadPendingTranscripts() {
-        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING);
+    public int downloadPendingTranscripts(int maxItems) {
+        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING)
+                .stream().limit(maxItems).toList();
         log.info("Found {} videos pending transcript download", pendingVideos.size());
 
         for (Video video : pendingVideos) {
@@ -53,6 +53,7 @@ public class TranscriptDownloadService {
                 videoRepository.save(video);
             }
         }
+        return pendingVideos.size();
     }
 
     public boolean downloadTranscript(Video video) {
@@ -106,20 +107,30 @@ public class TranscriptDownloadService {
                 "-o", tempDir.resolve("%(id)s.%(ext)s").toString()
             ));
             if (cookiesPath != null && !cookiesPath.isBlank()) {
+                Path resolvedCookies = Path.of(cookiesPath).toAbsolutePath();
+                log.info("Cookies file: {} (exists: {})", resolvedCookies, Files.exists(resolvedCookies));
                 cmd.add("--cookies");
-                cmd.add(cookiesPath);
+                cmd.add(resolvedCookies.toString());
             }
             cmd.add(videoUrl);
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
 
+            log.info("Running yt-dlp: {}", cmd);
             Process process = pb.start();
-            drain(process.getInputStream());
+            String ytDlpOutput = new String(process.getInputStream().readAllBytes());
 
             boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
             if (!finished) {
                 process.destroyForcibly();
                 throw new RuntimeException("yt-dlp timed out after " + timeoutSeconds + "s for video " + videoId);
+            }
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                log.warn("yt-dlp exited with code {} for video {}:\n{}", exitCode, "https://youtu.be/" + videoId, ytDlpOutput);
+            } else {
+                log.debug("yt-dlp output for {}:\n{}", "https://youtu.be/" + videoId, ytDlpOutput);
             }
 
             Optional<Path> vttFile;
@@ -130,7 +141,7 @@ public class TranscriptDownloadService {
             }
 
             if (vttFile.isEmpty()) {
-                log.debug("No .vtt file produced for video {}", "https://youtu.be/" + videoId);
+                log.warn("No .vtt file produced for video {}", "https://youtu.be/" + videoId);
                 return null;
             }
 
@@ -198,13 +209,6 @@ public class TranscriptDownloadService {
 
         String text = String.join(" ", result).strip();
         return text.isEmpty() ? null : text;
-    }
-
-    private void drain(InputStream stream) {
-        try (stream) {
-            stream.transferTo(java.io.OutputStream.nullOutputStream());
-        } catch (IOException ignored) {
-        }
     }
 
     private void deleteDir(Path dir) {

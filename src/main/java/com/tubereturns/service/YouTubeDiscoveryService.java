@@ -29,24 +29,29 @@ public class YouTubeDiscoveryService {
     private final YouTubeApiService youTubeApiService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
-    public void discoverAndProcessChannels() {
+    public int discoverAndProcessChannels(int maxVideos) {
         log.info("Starting channel discovery process");
 
         List<Channel> activeChannels = channelRepository.findAll();
         log.info("Found {} channels to process", activeChannels.size());
 
+        int videosProcessed = 0;
         for (Channel channel : activeChannels) {
+            if (videosProcessed >= maxVideos) {
+                break;
+            }
             try {
-                processChannel(channel);
+                videosProcessed += processChannel(channel, maxVideos - videosProcessed);
             } catch (Exception e) {
                 log.error("Error processing channel {}: {}", channel.getYoutubeChannelId(), e.getMessage(), e);
             }
         }
 
-        log.info("Completed channel discovery process");
+        log.info("Completed channel discovery process, processed {} video(s)", videosProcessed);
+        return videosProcessed;
     }
 
-    public void processChannel(Channel channel) {
+    public int processChannel(Channel channel, int maxVideos) {
         log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getYoutubeChannelId());
 
         if (channel.getThumbnailData() == null) {
@@ -61,13 +66,15 @@ public class YouTubeDiscoveryService {
                 ? channel.getLastProcessedAt()
                 : Instant.EPOCH;
         log.info("Fetching videos for channel '{}' since {}", channel.getChannelName(), since);
-        List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channel.getChannelUrl(), since);
+        List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channel.getChannelUrl(), since)
+                .stream().limit(maxVideos).toList();
 
         log.info("Found {} new video(s) for channel '{}'", recentVideos.size(), channel.getChannelName());
 
         for (YouTubeVideoDto video : recentVideos) {
             processVideo(channel, video);
         }
+        return recentVideos.size();
     }
 
     public Channel createOrUpdateChannel(String channelId, String channelName) {

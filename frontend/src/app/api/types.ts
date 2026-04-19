@@ -77,6 +77,17 @@ export const PortfolioSchema = z.object({
   tickers: z.array(z.string()),
 });
 
+export const PipelineStepStatusSchema = z.object({
+  step: z.string(),
+  label: z.string(),
+  lastStartedAt: z.string().nullable(),
+  lastFinishedAt: z.string().nullable(),
+  nextRunAt: z.string().nullable(),
+  running: z.boolean(),
+  lastRunCount: z.number().nullable(),
+  limit: z.number(),
+});
+
 export type Channel = z.infer<typeof ChannelSchema>;
 export type ChannelStats = z.infer<typeof ChannelStatsSchema>;
 export type VideoSummary = z.infer<typeof VideoSummarySchema>;
@@ -85,3 +96,4 @@ export type Pick = z.infer<typeof PickSchema>;
 export type PricePoint = z.infer<typeof PricePointSchema>;
 export type PortfolioPricePoint = z.infer<typeof PortfolioPricePointSchema>;
 export type Portfolio = z.infer<typeof PortfolioSchema>;
+export type PipelineStepStatus = z.infer<typeof PipelineStepStatusSchema>;

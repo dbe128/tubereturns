@@ -11,8 +11,9 @@ import {
   PricePointSchema,
   PortfolioPricePointSchema,
   PortfolioSchema,
+  PipelineStepStatusSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -90,12 +91,19 @@ export class ApiService {
     );
   }
 
-  triggerIngestion(): Observable<unknown> {
-    return this.http.post('/api/admin/ingestion/run', null).pipe(catchError((e) => this.handleError(e)));
+  getPipelineStatus(): Observable<PipelineStepStatus[]> {
+    return this.validated(
+      z.array(PipelineStepStatusSchema),
+      this.http.get<unknown>('/api/admin/pipeline/status').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  triggerPipelineStep(step: string): Observable<unknown> {
+    return this.http.post<unknown>(`/api/admin/pipeline/${step}/trigger`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
   reextractVideo(videoId: string): Observable<unknown> {
-    return this.http.post(`/api/admin/videos/${videoId}/reextract`, null).pipe(catchError((e) => this.handleError(e)));
+    return this.http.post<unknown>(`/api/admin/videos/${videoId}/reextract`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
   getStockPrices(ticker: string, from: string, to: string): Observable<PricePoint[]> {

@@ -51,8 +51,8 @@ public class StockPickExtractionService {
         return processVideo(video);
     }
 
-    public void processVideosWithTranscripts() {
-        List<Video> readyVideos = videoRepository.findVideosReadyForProcessing();
+    public int processVideosWithTranscripts(int maxItems) {
+        List<Video> readyVideos = videoRepository.findVideosReadyForProcessing().stream().limit(maxItems).toList();
         log.info("Found {} videos ready for stock pick extraction", readyVideos.size());
 
         for (Video video : readyVideos) {
@@ -64,6 +64,7 @@ public class StockPickExtractionService {
                 videoRepository.save(video);
             }
         }
+        return readyVideos.size();
     }
 
     public List<Pick> processVideo(Video video) {

@@ -44,6 +44,17 @@ tubereturns:
     provider: openrouter
     api-key: ${OPENROUTER_API_KEY:}
 
+  pipeline:
+    discovery:
+      cron: "0 0 * * * *"
+      max-items: 100
+    transcript:
+      cron: "0 15 * * * *"
+      max-items: 100
+    extraction:
+      cron: "0 30 * * * *"
+      max-items: 100
+
 logging:
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level %logger{36}:%L - %msg%n"

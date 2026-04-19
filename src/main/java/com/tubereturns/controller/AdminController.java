@@ -1,6 +1,8 @@
 package com.tubereturns.controller;
 
-import com.tubereturns.service.DataIngestionOrchestrationService;
+import com.tubereturns.dto.PipelineStepStatusDto;
+import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.PipelineStatusRegistry;
 import com.tubereturns.service.StockPickExtractionService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,38 +12,57 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/admin")
 @Tag(name = "Admin", description = "Administrative operations and manual triggers")
 public class AdminController {
 
-    private final DataIngestionOrchestrationService orchestrationService;
+    private final PipelineSchedulerService scheduler;
+    private final PipelineStatusRegistry registry;
     private final YouTubeDiscoveryService discoveryService;
     private final StockPickExtractionService stockPickExtractionService;
 
-    @PostMapping("/ingestion/run")
-    @Operation(summary = "Run manual data ingestion", description = "Trigger the full data ingestion pipeline manually")
-    public ResponseEntity<String> runManualIngestion() {
-        orchestrationService.runManualIngestion();
-        return ResponseEntity.ok("Data ingestion pipeline started");
+    @GetMapping("/pipeline/status")
+    @Operation(summary = "Get pipeline status", description = "Returns last/next run timestamps and running state for each pipeline step")
+    public List<PipelineStepStatusDto> getPipelineStatus() {
+        return List.of(
+                toDto("discovery", "Video Discovery"),
+                toDto("transcript", "Transcript Download"),
+                toDto("extraction", "Pick Extraction")
+        );
+    }
+
+    @PostMapping("/pipeline/{step}/trigger")
+    @Operation(summary = "Trigger a pipeline step", description = "Manually triggers a single pipeline step asynchronously")
+    public ResponseEntity<Map<String, String>> triggerStep(@Parameter(description = "Step name: discovery, transcript, extraction") @PathVariable String step) {
+        switch (step) {
+            case "discovery" -> scheduler.triggerDiscovery();
+            case "transcript" -> scheduler.triggerTranscript();
+            case "extraction" -> scheduler.triggerExtraction();
+            default -> { return ResponseEntity.badRequest().body(Map.of("message", "Unknown step: " + step)); }
+        }
+        return ResponseEntity.accepted().body(Map.of("message", "Step '" + step + "' triggered"));
     }
 
     @PostMapping("/channels/{channelId}/add")
     @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring")
-    public ResponseEntity<String> addChannel(
+    public ResponseEntity<Map<String, String>> addChannel(
             @Parameter(description = "YouTube channel ID") @PathVariable String channelId,
             @Parameter(description = "Channel name") @RequestParam String channelName) {
         discoveryService.createOrUpdateChannel(channelId, channelName);
-        return ResponseEntity.ok("Channel added successfully");
+        return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }
 
     @PostMapping("/videos/{videoId}/reextract")
     @Operation(summary = "Re-extract picks from a video", description = "Deletes existing picks and re-runs extraction for the given video")
-    public ResponseEntity<String> reextractVideo(@PathVariable String videoId) {
+    public ResponseEntity<Map<String, String>> reextractVideo(@PathVariable String videoId) {
         try {
             stockPickExtractionService.reprocessVideo(videoId);
-            return ResponseEntity.ok("Re-extraction completed for video: " + videoId);
+            return ResponseEntity.ok(Map.of("message", "Re-extraction completed for video: " + videoId));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
@@ -49,7 +70,11 @@ public class AdminController {
 
     @GetMapping("/health")
     @Operation(summary = "Health check", description = "Check if the application is running")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("TubeReturns is running");
+    public ResponseEntity<Map<String, String>> health() {
+        return ResponseEntity.ok(Map.of("message", "TubeReturns is running"));
+    }
+
+    private PipelineStepStatusDto toDto(String step, String label) {
+        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), registry.isRunning(step), registry.getLastRunCount(step), registry.getLimit(step));
     }
 }
