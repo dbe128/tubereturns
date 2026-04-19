@@ -34,6 +34,9 @@ public class TranscriptDownloadService {
     @Value("${tubereturns.yt-dlp.enabled:true}")
     private boolean enabled;
 
+    @Value("${tubereturns.yt-dlp.cookies-path:}")
+    private String cookiesPath;
+
     private final VideoRepository videoRepository;
 
     public void downloadPendingTranscripts() {
@@ -89,16 +92,22 @@ public class TranscriptDownloadService {
         Path tempDir = Files.createTempDirectory("tubereturns-transcript-");
 
         try {
-            ProcessBuilder pb = new ProcessBuilder(
+            List<String> cmd = new ArrayList<>(List.of(
                 ytDlpPath,
-                "--write-subs",       // prefer human-generated captions
-                "--write-auto-subs",  // fall back to auto-generated
+                "--write-subs",
+                "--write-auto-subs",
                 "--sub-lang", "en",
                 "--sub-format", "vtt",
                 "--skip-download",
-                "-o", tempDir.resolve("%(id)s.%(ext)s").toString(),
-                videoUrl
-            );
+                "--remote-components", "ejs:github",
+                "-o", tempDir.resolve("%(id)s.%(ext)s").toString()
+            ));
+            if (cookiesPath != null && !cookiesPath.isBlank()) {
+                cmd.add("--cookies");
+                cmd.add(cookiesPath);
+            }
+            cmd.add(videoUrl);
+            ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectErrorStream(true);
 
             Process process = pb.start();

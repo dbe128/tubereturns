@@ -37,6 +37,7 @@ tubereturns:
     enabled: true
     path: yt-dlp
     timeout-seconds: 300
+    cookies-path: src/main/resources/cookies.txt
 
   ai:
     enabled: true

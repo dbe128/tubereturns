@@ -44,3 +44,4 @@ bin/
 /frontend/node_modules/
 /build/
 /.gradle/
+/src/main/resources/cookies.txt

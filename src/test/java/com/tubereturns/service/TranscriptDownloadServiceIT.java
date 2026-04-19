@@ -15,6 +15,7 @@ class TranscriptDownloadServiceIT {
         ReflectionTestUtils.setField(service, "ytDlpPath", "yt-dlp");
         ReflectionTestUtils.setField(service, "timeoutSeconds", 300);
         ReflectionTestUtils.setField(service, "enabled", true);
+        ReflectionTestUtils.setField(service, "cookiesPath", "src/main/resources/cookies.txt");
 
         String transcript = service.executeYtDlp(VIDEO_ID);
 
