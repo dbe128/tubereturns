@@ -87,21 +87,19 @@ interface IndexedVideo {
           <div class="flex items-center gap-4">
             @if (channel()!.hasThumbnail) {
               <img
-                [src]="'/api/channels/' + channel()!.youtubeChannelId + '/thumbnail'"
+                [src]="'/api/channels/' + channel()!.handle + '/thumbnail'"
                 [alt]="channel()!.channelName"
                 class="w-14 h-14 rounded-full ring-2 ring-gray-100 flex-shrink-0"
               />
             }
             <div class="flex-1 min-w-0">
               <h1 class="text-xl font-bold text-gray-900">{{ channel()!.channelName }}</h1>
-              @if (channel()!.channelUrl) {
-                <a
-                  [href]="channel()!.channelUrl!"
-                  target="_blank"
-                  rel="noreferrer"
-                  class="text-primary-600 hover:text-primary-700 text-xs mt-0.5 inline-block"
-                >YouTube Channel ↗</a>
-              }
+              <a
+                [href]="'https://www.youtube.com/@' + channel()!.handle"
+                target="_blank"
+                rel="noreferrer"
+                class="text-primary-600 hover:text-primary-700 text-xs mt-0.5 inline-block"
+              >youtube.com/@{{ channel()!.handle }} ↗</a>
             </div>
             <div class="flex gap-8 text-sm text-gray-400 flex-shrink-0">
               <div class="text-center">

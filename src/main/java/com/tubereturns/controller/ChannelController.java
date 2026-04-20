@@ -37,32 +37,27 @@ public class ChannelController {
         return ResponseEntity.ok(channels.stream().map(this::toResponseDto).toList());
     }
 
-    @GetMapping("/{channelId}")
-    @Operation(summary = "Get channel by YouTube channel ID")
+    @GetMapping("/{handle}")
+    @Operation(summary = "Get channel by handle")
     public ResponseEntity<ChannelResponseDto> getChannelById(
-            @Parameter(description = "YouTube channel ID") @PathVariable String channelId) {
-        Optional<Channel> channel = channelRepository.findByYoutubeChannelId(channelId);
-        return channel.map(c -> ResponseEntity.ok(toResponseDto(c)))
-                      .orElse(ResponseEntity.notFound().build());
+            @Parameter(description = "Channel handle") @PathVariable String handle) {
+        return channelRepository.findByHandle(handle)
+                .map(c -> ResponseEntity.ok(toResponseDto(c)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/{channelId}/stats")
+    @GetMapping("/{handle}/stats")
     @Operation(summary = "Get channel statistics")
-    public ResponseEntity<ChannelStatsDto> getChannelStats(
-            @PathVariable String channelId) {
-        Optional<Channel> channelOpt = channelRepository.findByYoutubeChannelId(channelId);
-        if (channelOpt.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        }
-
-        Channel channel = channelOpt.get();
-        return ResponseEntity.ok(toStatsDto(channel));
+    public ResponseEntity<ChannelStatsDto> getChannelStats(@PathVariable String handle) {
+        return channelRepository.findByHandle(handle)
+                .map(c -> ResponseEntity.ok(toStatsDto(c)))
+                .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/{channelId}/thumbnail")
+    @GetMapping("/{handle}/thumbnail")
     @Operation(summary = "Get channel thumbnail image")
-    public ResponseEntity<byte[]> getChannelThumbnail(@PathVariable String channelId) {
-        return channelRepository.findByYoutubeChannelId(channelId)
+    public ResponseEntity<byte[]> getChannelThumbnail(@PathVariable String handle) {
+        return channelRepository.findByHandle(handle)
                 .filter(c -> c.getThumbnailData() != null)
                 .map(c -> ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(
@@ -71,10 +66,10 @@ public class ChannelController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/{channelId}/videos")
+    @GetMapping("/{handle}/videos")
     @Operation(summary = "Get videos for a channel with pick summaries")
-    public ResponseEntity<List<VideoSummaryDto>> getChannelVideos(@PathVariable String channelId) {
-        Optional<Channel> channelOpt = channelRepository.findByYoutubeChannelId(channelId);
+    public ResponseEntity<List<VideoSummaryDto>> getChannelVideos(@PathVariable String handle) {
+        Optional<Channel> channelOpt = channelRepository.findByHandle(handle);
         if (channelOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -86,23 +81,20 @@ public class ChannelController {
     @Operation(summary = "Get channels ranked by pick count")
     public ResponseEntity<List<ChannelStatsDto>> getTopPerformers(
             @RequestParam(defaultValue = "10") int limit) {
-
         List<Channel> channels = channelRepository.findAll();
         List<ChannelStatsDto> stats = channels.stream()
                 .limit(limit)
                 .map(this::toStatsDto)
                 .toList();
-
         return ResponseEntity.ok(stats);
     }
 
     private ChannelResponseDto toResponseDto(Channel channel) {
         return new ChannelResponseDto(
             channel.getId(),
-            channel.getYoutubeChannelId(),
+            channel.getHandle(),
             channel.getChannelName(),
             channel.getDescription(),
-            channel.getChannelUrl(),
             channel.getThumbnailData() != null,
             channel.getCreatedAt(),
             channel.getUpdatedAt()
@@ -137,7 +129,7 @@ public class ChannelController {
         List<String> buyPicks = pickRepository.findDistinctTickersByChannelIdAndSignal(channel.getId(), Pick.Signal.BUY);
         List<String> sellPicks = pickRepository.findDistinctTickersByChannelIdAndSignal(channel.getId(), Pick.Signal.SELL);
         return new ChannelStatsDto(
-            channel.getYoutubeChannelId(),
+            channel.getHandle(),
             channel.getChannelName(),
             totalVideos,
             processedVideos,

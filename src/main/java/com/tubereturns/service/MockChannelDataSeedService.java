@@ -32,9 +32,9 @@ public class MockChannelDataSeedService {
     @EventListener(ApplicationReadyEvent.class)
     public void seedData() {
         for (MockChannelProvider.MockChannelData channelData : mockChannelProvider.getChannels()) {
-            Channel channel = channelRepository.findByYoutubeChannelId(channelData.youtubeChannelId())
+            Channel channel = channelRepository.findByHandle(channelData.handle())
                 .orElseGet(() -> {
-                    Channel c = new Channel(channelData.youtubeChannelId(), channelData.channelName());
+                    Channel c = new Channel(channelData.handle(), channelData.channelName());
                     c.setDescription(channelData.description());
                     return channelRepository.save(c);
                 });

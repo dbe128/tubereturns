@@ -9,7 +9,7 @@ public record PickDto(
     String signal,
     String videoId,
     String videoTitle,
-    String youtubeChannelId,
+    String handle,
     String channelName,
     Instant createdAt
 ) {}

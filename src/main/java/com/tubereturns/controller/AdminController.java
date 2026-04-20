@@ -1,7 +1,9 @@
 package com.tubereturns.controller;
 
+import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.PipelineStatusRegistry;
 import com.tubereturns.service.StockPickExtractionService;
 import com.tubereturns.service.YouTubeDiscoveryService;
@@ -24,6 +26,7 @@ public class AdminController {
     private final PipelineSchedulerService scheduler;
     private final PipelineStatusRegistry registry;
     private final YouTubeDiscoveryService discoveryService;
+    private final YouTubeApiService youTubeApiService;
     private final StockPickExtractionService stockPickExtractionService;
 
     @GetMapping("/pipeline/status")
@@ -48,12 +51,28 @@ public class AdminController {
         return ResponseEntity.accepted().body(Map.of("message", "Step '" + step + "' triggered"));
     }
 
-    @PostMapping("/channels/{channelId}/add")
-    @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring")
+    @GetMapping("/channels/search")
+    @Operation(summary = "Search YouTube channels", description = "Returns up to 5 YouTube channels matching the query")
+    public List<ChannelSearchResultDto> searchChannels(@RequestParam String q) {
+        return youTubeApiService.searchChannels(q);
+    }
+
+    @DeleteMapping("/channels/{handle}")
+    @Operation(summary = "Soft-delete a channel")
+    public ResponseEntity<Map<String, String>> deleteChannel(@PathVariable String handle) {
+        discoveryService.softDeleteChannel(handle);
+        return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
+    }
+
+    @PostMapping("/channels/{handle}/add")
+    @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring, or undelete a previously removed one")
     public ResponseEntity<Map<String, String>> addChannel(
-            @Parameter(description = "YouTube channel ID") @PathVariable String channelId,
-            @Parameter(description = "Channel name") @RequestParam String channelName) {
-        discoveryService.createOrUpdateChannel(channelId, channelName);
+            @PathVariable String handle,
+            @RequestParam String channelName,
+            @RequestParam(required = false, defaultValue = "") String channelUrl,
+            @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
+            @RequestParam(required = false, defaultValue = "") String description) {
+        discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description);
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }
 

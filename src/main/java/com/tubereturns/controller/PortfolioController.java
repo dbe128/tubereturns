@@ -48,7 +48,7 @@ public class PortfolioController {
                     .map(instant -> adjustToTradingDay(instant.atZone(ZoneOffset.UTC).toLocalDate()))
                     .orElse(LocalDate.now());
                 portfolios.add(new PortfolioDto(
-                    channel.getYoutubeChannelId(),
+                    channel.getHandle(),
                     channel.getChannelName(),
                     startDate.toString(),
                     tickers));
@@ -67,7 +67,7 @@ public class PortfolioController {
             return ResponseEntity.ok(buildSpyPrices(from));
         }
 
-        return channelRepository.findByYoutubeChannelId(channelId)
+        return channelRepository.findByHandle(channelId)
             .map(channel -> {
                 List<String> tickers = pickRepository.findDistinctTickersByChannelIdAndSignal(
                     channel.getId(), Pick.Signal.BUY);

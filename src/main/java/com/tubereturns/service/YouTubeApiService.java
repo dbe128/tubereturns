@@ -5,8 +5,10 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.youtube.YouTube;
 import com.google.api.services.youtube.model.PlaylistItem;
 import com.google.api.services.youtube.model.PlaylistItemListResponse;
+import com.google.api.services.youtube.model.SearchResult;
 import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
+import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.YouTubeVideoDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,7 +20,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -31,6 +35,73 @@ public class YouTubeApiService {
     private boolean enabled;
 
     public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl) {}
+
+    public List<ChannelSearchResultDto> searchChannels(String query) {
+        if (!enabled || apiKey == null || apiKey.isBlank()) {
+            return List.of();
+        }
+        try {
+            YouTube youtube = buildClient();
+
+            List<SearchResult> searchItems = youtube.search()
+                    .list(List.of("snippet"))
+                    .setQ(query)
+                    .setType(List.of("channel"))
+                    .setMaxResults(5L)
+                    .setKey(apiKey)
+                    .execute()
+                    .getItems();
+
+            if (searchItems == null || searchItems.isEmpty()) {
+                return List.of();
+            }
+
+            List<String> channelIds = searchItems.stream()
+                    .map(item -> item.getId().getChannelId())
+                    .toList();
+
+            Map<String, com.google.api.services.youtube.model.Channel> detailMap = new HashMap<>();
+            var detailResponse = youtube.channels()
+                    .list(List.of("snippet"))
+                    .setId(channelIds)
+                    .setKey(apiKey)
+                    .execute();
+            if (detailResponse.getItems() != null) {
+                for (var ch : detailResponse.getItems()) {
+                    detailMap.put(ch.getId(), ch);
+                }
+            }
+
+            return searchItems.stream().map(item -> {
+                String channelId = item.getId().getChannelId();
+                var detail = detailMap.get(channelId);
+
+                String thumbnailUrl = null;
+                if (item.getSnippet().getThumbnails() != null) {
+                    var t = item.getSnippet().getThumbnails();
+                    if (t.getHigh() != null) thumbnailUrl = t.getHigh().getUrl();
+                    else if (t.getMedium() != null) thumbnailUrl = t.getMedium().getUrl();
+                    else if (t.getDefault() != null) thumbnailUrl = t.getDefault().getUrl();
+                }
+
+                if (detail == null || detail.getSnippet() == null) {
+                    return null;
+                }
+                String customUrl = detail.getSnippet().getCustomUrl();
+                if (customUrl == null || customUrl.isBlank()) {
+                    return null;
+                }
+                String handle = customUrl.toLowerCase().replaceAll("^@", "").replaceAll("/+$", "");
+                String channelUrl = "https://www.youtube.com/@" + handle;
+                String description = detail.getSnippet().getDescription();
+
+                return new ChannelSearchResultDto(handle, item.getSnippet().getTitle(), channelUrl, thumbnailUrl, description);
+            }).filter(r -> r != null).toList();
+        } catch (Exception e) {
+            log.error("Failed to search channels for '{}': {}", query, e.getMessage(), e);
+            return List.of();
+        }
+    }
 
     public ChannelInfo resolveChannelInfo(String channelUrl) {
         if (!enabled || channelUrl == null || channelUrl.isBlank()) {

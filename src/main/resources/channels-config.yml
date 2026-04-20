@@ -1,6 +1,5 @@
 channels:
-  - youtubeChannelId: "UCrqiGGPNIYHhFWo-Y2ndQDA"
+  - handle: "valuationinvesting"
     channelName: "Valuation Investing"
     description: "Value investing content focusing on fundamental analysis and undervalued stocks"
     enabled: true
-    url: "https://www.youtube.com/@ValuationInvesting/"

@@ -18,10 +18,9 @@ public class ChannelConfig {
     @Getter
     @Setter
     public static class ChannelDefinition {
-        private String youtubeChannelId;
+        private String handle;
         private String channelName;
         private String description;
         private boolean enabled = true;
-        private String url;
     }
 }

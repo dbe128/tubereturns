@@ -2,17 +2,16 @@ import { z } from 'zod';
 
 export const ChannelSchema = z.object({
   id: z.number(),
-  youtubeChannelId: z.string(),
+  handle: z.string(),
   channelName: z.string(),
   description: z.string().nullable(),
-  channelUrl: z.string().nullable(),
   hasThumbnail: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
 export const ChannelStatsSchema = z.object({
-  youtubeChannelId: z.string(),
+  handle: z.string(),
   channelName: z.string(),
   totalVideos: z.number(),
   processedVideos: z.number(),
@@ -54,7 +53,7 @@ export const PickSchema = z.object({
   extractionTimestamp: z.string(),
   videoId: z.string(),
   videoTitle: z.string().nullable(),
-  youtubeChannelId: z.string(),
+  handle: z.string(),
   channelName: z.string().nullable(),
   performance: PerformanceSchema.nullable(),
 });
@@ -77,6 +76,14 @@ export const PortfolioSchema = z.object({
   tickers: z.array(z.string()),
 });
 
+export const ChannelSearchResultSchema = z.object({
+  handle: z.string(),
+  channelName: z.string(),
+  channelUrl: z.string(),
+  thumbnailUrl: z.string().nullable(),
+  description: z.string().nullable(),
+});
+
 export const PipelineStepStatusSchema = z.object({
   step: z.string(),
   label: z.string(),
@@ -97,3 +104,4 @@ export type PricePoint = z.infer<typeof PricePointSchema>;
 export type PortfolioPricePoint = z.infer<typeof PortfolioPricePointSchema>;
 export type Portfolio = z.infer<typeof PortfolioSchema>;
 export type PipelineStepStatus = z.infer<typeof PipelineStepStatusSchema>;
+export type ChannelSearchResult = z.infer<typeof ChannelSearchResultSchema>;

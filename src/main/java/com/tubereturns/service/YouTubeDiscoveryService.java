@@ -43,7 +43,7 @@ public class YouTubeDiscoveryService {
             try {
                 videosProcessed += processChannel(channel, maxVideos - videosProcessed);
             } catch (Exception e) {
-                log.error("Error processing channel {}: {}", channel.getYoutubeChannelId(), e.getMessage(), e);
+                log.error("Error processing channel {}: {}", channel.getHandle(), e.getMessage(), e);
             }
         }
 
@@ -52,10 +52,11 @@ public class YouTubeDiscoveryService {
     }
 
     public int processChannel(Channel channel, int maxVideos) {
-        log.info("Processing channel: {} ({})", channel.getChannelName(), channel.getYoutubeChannelId());
+        String channelUrl = "https://www.youtube.com/@" + channel.getHandle();
+        log.info("Processing channel: {} ({})", channel.getChannelName(), channelUrl);
 
         if (channel.getThumbnailData() == null) {
-            YouTubeApiService.ChannelInfo info = youTubeApiService.resolveChannelInfo(channel.getChannelUrl());
+            YouTubeApiService.ChannelInfo info = youTubeApiService.resolveChannelInfo(channelUrl);
             if (info != null && info.thumbnailUrl() != null) {
                 downloadThumbnail(info.thumbnailUrl(), channel);
                 channelRepository.save(channel);
@@ -66,7 +67,7 @@ public class YouTubeDiscoveryService {
                 ? channel.getLastProcessedAt()
                 : Instant.EPOCH;
         log.info("Fetching videos for channel '{}' since {}", channel.getChannelName(), since);
-        List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channel.getChannelUrl(), since)
+        List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channelUrl, since)
                 .stream().limit(maxVideos).toList();
 
         log.info("Found {} new video(s) for channel '{}'", recentVideos.size(), channel.getChannelName());
@@ -77,14 +78,32 @@ public class YouTubeDiscoveryService {
         return recentVideos.size();
     }
 
-    public Channel createOrUpdateChannel(String channelId, String channelName) {
-        return channelRepository.findByYoutubeChannelId(channelId)
+    public void softDeleteChannel(String handle) {
+        channelRepository.findByHandle(handle).ifPresent(channel -> {
+            channel.setDeletedAt(java.time.Instant.now());
+            channelRepository.save(channel);
+        });
+    }
+
+    public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description) {
+        return channelRepository.findByHandleIncludingDeleted(handle)
             .map(existing -> {
                 existing.setChannelName(channelName);
+                if (description != null && !description.isBlank()) {
+                    existing.setDescription(description);
+                }
+                existing.setDeletedAt(null);
+                if (existing.getThumbnailData() == null && thumbnailUrl != null && !thumbnailUrl.isBlank()) {
+                    downloadThumbnail(thumbnailUrl, existing);
+                }
                 return channelRepository.save(existing);
             })
             .orElseGet(() -> {
-                Channel newChannel = new Channel(channelId, channelName);
+                Channel newChannel = new Channel(handle, channelName);
+                newChannel.setDescription(description);
+                if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
+                    downloadThumbnail(thumbnailUrl, newChannel);
+                }
                 return channelRepository.save(newChannel);
             });
     }

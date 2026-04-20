@@ -49,7 +49,7 @@ public class MockChannelProvider {
     }
 
     public record MockChannelData(
-        String youtubeChannelId,
+        String handle,
         String channelName,
         String description,
         List<MockVideoData> videos

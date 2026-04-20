@@ -71,7 +71,7 @@ public class PickController {
     @Operation(summary = "Get picks by YouTube channel ID")
     public ResponseEntity<List<PickDto>> getPicksByChannel(
             @PathVariable String channelId) {
-        List<Pick> picks = pickRepository.findByYouTubeChannelIdOrderByCreatedAtDesc(channelId);
+        List<Pick> picks = pickRepository.findByHandleOrderByCreatedAtDesc(channelId);
         return ResponseEntity.ok(picks.stream().map(this::toDto).toList());
     }
 
@@ -91,7 +91,7 @@ public class PickController {
             pick.getSignal().name(),
             pick.getVideo().getVideoId(),
             pick.getVideo().getTitle(),
-            pick.getVideo().getChannel().getYoutubeChannelId(),
+            pick.getVideo().getChannel().getHandle(),
             pick.getVideo().getChannel().getChannelName(),
             pick.getCreatedAt()
         );

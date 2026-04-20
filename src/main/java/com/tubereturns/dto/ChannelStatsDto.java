@@ -3,7 +3,7 @@ package com.tubereturns.dto;
 import java.util.List;
 
 public record ChannelStatsDto(
-    String youtubeChannelId,
+    String handle,
     String channelName,
     long totalVideos,
     long processedVideos,

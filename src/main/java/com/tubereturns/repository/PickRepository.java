@@ -19,8 +19,8 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
 
     void deleteByVideoId(Long videoId);
 
-    @Query("SELECT p FROM Pick p WHERE p.video.channel.youtubeChannelId = :youtubeChannelId ORDER BY p.createdAt DESC")
-    List<Pick> findByYouTubeChannelIdOrderByCreatedAtDesc(@Param("youtubeChannelId") String youtubeChannelId);
+    @Query("SELECT p FROM Pick p WHERE p.video.channel.handle = :handle ORDER BY p.createdAt DESC")
+    List<Pick> findByHandleOrderByCreatedAtDesc(@Param("handle") String handle);
 
     @Query("SELECT p FROM Pick p WHERE p.createdAt >= :since ORDER BY p.createdAt DESC")
     List<Pick> findPicksSince(@Param("since") Instant since);

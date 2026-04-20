@@ -35,22 +35,18 @@ public class ChannelInitializationService {
             }
 
             try {
-                Channel existingChannel = channelRepository.findByYoutubeChannelId(channelDef.getYoutubeChannelId()).orElse(null);
+                Channel existingChannel = channelRepository.findByHandle(channelDef.getHandle()).orElse(null);
 
                 if (existingChannel == null) {
-                    Channel newChannel = new Channel(channelDef.getYoutubeChannelId(), channelDef.getChannelName());
+                    Channel newChannel = new Channel(channelDef.getHandle(), channelDef.getChannelName());
                     newChannel.setDescription(channelDef.getDescription());
-                    newChannel.setChannelUrl(channelDef.getUrl());
-
                     channelRepository.save(newChannel);
-                    log.info("Created new channel: {} ({})", channelDef.getChannelName(), channelDef.getYoutubeChannelId());
+                    log.info("Created new channel: {} (@{})", channelDef.getChannelName(), channelDef.getHandle());
                 } else {
                     existingChannel.setChannelName(channelDef.getChannelName());
                     existingChannel.setDescription(channelDef.getDescription());
-                    existingChannel.setChannelUrl(channelDef.getUrl());
-
                     channelRepository.save(existingChannel);
-                    log.info("Updated existing channel: {} ({})", channelDef.getChannelName(), channelDef.getYoutubeChannelId());
+                    log.info("Updated existing channel: {} (@{})", channelDef.getChannelName(), channelDef.getHandle());
                 }
             } catch (Exception e) {
                 log.error("Error initializing channel {}: {}", channelDef.getChannelName(), e.getMessage(), e);

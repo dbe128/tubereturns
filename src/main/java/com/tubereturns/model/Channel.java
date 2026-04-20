@@ -7,6 +7,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.Instant;
 import java.util.List;
@@ -16,6 +17,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "channels")
+@SQLRestriction("deleted_at IS NULL")
 public class Channel {
 
     @Id
@@ -24,8 +26,8 @@ public class Channel {
 
     @NotBlank
     @Size(max = 255)
-    @Column(name = "youtube_channel_id", unique = true, nullable = false)
-    private String youtubeChannelId;
+    @Column(name = "handle", unique = true, nullable = false)
+    private String handle;
 
     @NotBlank
     @Size(max = 500)
@@ -41,9 +43,6 @@ public class Channel {
     @Column(name = "updated_at")
     private Instant updatedAt;
 
-    @Column(name = "channel_url")
-    private String channelUrl;
-
     @Column(name = "thumbnail_data")
     private byte[] thumbnailData;
 
@@ -53,11 +52,14 @@ public class Channel {
     @Column(name = "last_processed_at")
     private Instant lastProcessedAt;
 
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Video> videos;
 
-    public Channel(String youtubeChannelId, String channelName) {
-        this.youtubeChannelId = youtubeChannelId;
+    public Channel(String handle, String channelName) {
+        this.handle = handle;
         this.channelName = channelName;
     }
 

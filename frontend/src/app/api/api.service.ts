@@ -12,8 +12,9 @@ import {
   PortfolioPricePointSchema,
   PortfolioSchema,
   PipelineStepStatusSchema,
+  ChannelSearchResultSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -48,10 +49,10 @@ export class ApiService {
     );
   }
 
-  getChannel(channelId: string): Observable<Channel> {
+  getChannel(handle: string): Observable<Channel> {
     return this.validated(
       ChannelSchema,
-      this.http.get<unknown>(`/api/channels/${channelId}`).pipe(catchError((e) => this.handleError(e))),
+      this.http.get<unknown>(`/api/channels/${handle}`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 
@@ -62,24 +63,24 @@ export class ApiService {
     );
   }
 
-  getChannelStats(channelId: string): Observable<ChannelStats> {
+  getChannelStats(handle: string): Observable<ChannelStats> {
     return this.validated(
       ChannelStatsSchema,
-      this.http.get<unknown>(`/api/channels/${channelId}/stats`).pipe(catchError((e) => this.handleError(e))),
+      this.http.get<unknown>(`/api/channels/${handle}/stats`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 
-  getVideosForChannel(channelId: string): Observable<VideoSummary[]> {
+  getVideosForChannel(handle: string): Observable<VideoSummary[]> {
     return this.validated(
       z.array(VideoSummarySchema),
-      this.http.get<unknown>(`/api/channels/${channelId}/videos`).pipe(catchError((e) => this.handleError(e))),
+      this.http.get<unknown>(`/api/channels/${handle}/videos`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 
-  getPicksForChannel(channelId: string): Observable<Pick[]> {
+  getPicksForChannel(handle: string): Observable<Pick[]> {
     return this.validated(
       z.array(PickSchema),
-      this.http.get<unknown>(`/api/picks/channel/${channelId}`).pipe(catchError((e) => this.handleError(e))),
+      this.http.get<unknown>(`/api/picks/channel/${handle}`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 
@@ -104,6 +105,26 @@ export class ApiService {
 
   reextractVideo(videoId: string): Observable<unknown> {
     return this.http.post<unknown>(`/api/admin/videos/${videoId}/reextract`, null).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  deleteChannel(handle: string): Observable<unknown> {
+    return this.http.delete<unknown>(`/api/admin/channels/${handle}`).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string): Observable<unknown> {
+    const params = new HttpParams()
+      .set('channelName', channelName)
+      .set('channelUrl', channelUrl)
+      .set('thumbnailUrl', thumbnailUrl)
+      .set('description', description);
+    return this.http.post<unknown>(`/api/admin/channels/${handle}/add`, null, { params }).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  searchChannels(q: string): Observable<ChannelSearchResult[]> {
+    return this.validated(
+      z.array(ChannelSearchResultSchema),
+      this.http.get<unknown>('/api/admin/channels/search', { params: new HttpParams().set('q', q) }).pipe(catchError((e) => this.handleError(e))),
+    );
   }
 
   getStockPrices(ticker: string, from: string, to: string): Observable<PricePoint[]> {
