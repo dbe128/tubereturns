@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, signal, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -39,21 +39,21 @@ interface ChannelRow extends Channel {
         <div class="mb-4 flex justify-end">
           @if (!showAddForm()) {
             <button
-              (click)="showAddForm.set(true)"
+              (click)="openAddForm()"
               class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
-            >+ Add channel</button>
+            >+ Add Channel</button>
           } @else {
             <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 w-full">
               <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-gray-700">Add channel</h3>
+                <h3 class="text-sm font-semibold text-gray-700">Add stock picking channel</h3>
                 <button (click)="cancelAddChannel()" class="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">&times;</button>
               </div>
               <input
                 [(ngModel)]="searchQuery"
                 (input)="onSearchInput()"
+                #searchInput
                 placeholder="Search YouTube channels…"
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                autofocus
               />
               @if (searching()) {
                 <div class="flex justify-center py-6">
@@ -254,6 +254,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly pipelineStatus = signal<PipelineStepStatus[]>([]);
   readonly disabledSteps = signal<Set<string>>(new Set());
   readonly showAddForm = signal(false);
+  @ViewChild('searchInput') private searchInputRef?: ElementRef<HTMLInputElement>;
   readonly searchResults = signal<ChannelSearchResult[]>([]);
   readonly searching = signal(false);
   readonly addingChannelId = signal<string | null>(null);
@@ -334,6 +335,11 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
       next: () => this.pollUntilDone(step),
       error: () => {},
     });
+  }
+
+  openAddForm(): void {
+    this.showAddForm.set(true);
+    setTimeout(() => this.searchInputRef?.nativeElement.focus(), 0);
   }
 
   onSearchInput(): void {
