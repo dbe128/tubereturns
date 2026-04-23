@@ -6,5 +6,7 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="db/changelog/001-initial-schema.sql"/>
+    <include file="db/changelog/002-users.sql"/>
+    <include file="db/changelog/003-seed-users.sql"/>
 
 </databaseChangeLog>

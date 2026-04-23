@@ -13,8 +13,11 @@ import {
   PortfolioSchema,
   PipelineStepStatusSchema,
   ChannelSearchResultSchema,
+  RegisterResponseSchema,
+  AuthResponseSchema,
+  MessageResponseSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -23,6 +26,18 @@ export class ApiService {
   private handleError(err: HttpErrorResponse): Observable<never> {
     if (err.status === 0) {
       return throwError(() => new Error('Cannot reach the backend. Make sure the server is running on port 8080.'));
+    }
+    if (err.status === 401) {
+      const msg = (err.error as Record<string, string> | null)?.['message'];
+      return throwError(() => new Error(msg ?? 'Invalid email and password combination'));
+    }
+    if (err.status === 403) {
+      const msg = (err.error as Record<string, string> | null)?.['message'];
+      return throwError(() => new Error(msg ?? 'Access denied'));
+    }
+    if (err.status === 400) {
+      const msg = (err.error as Record<string, string> | null)?.['message'];
+      return throwError(() => new Error(msg ?? 'Please check your input and try again'));
     }
     if (err.status >= 500) {
       return throwError(() => new Error('The service is not available, please try again later.'));
@@ -152,5 +167,45 @@ export class ApiService {
 
   checkHealth(): Observable<unknown> {
     return this.http.get('/api/admin/health');
+  }
+
+  register(firstName: string, email: string, password: string): Observable<RegisterResponse> {
+    return this.validated(
+      RegisterResponseSchema,
+      this.http.post<unknown>('/api/auth/register', { firstName, email, password }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  verifyEmail(token: string): Observable<unknown> {
+    return this.http.get<unknown>('/api/auth/verify', { params: new HttpParams().set('token', token) })
+      .pipe(catchError((e) => this.handleError(e)));
+  }
+
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.validated(
+      AuthResponseSchema,
+      this.http.post<unknown>('/api/auth/login', { email, password }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getMe(): Observable<AuthResponse> {
+    return this.validated(
+      AuthResponseSchema,
+      this.http.get<unknown>('/api/auth/me').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  forgotPassword(email: string): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.post<unknown>('/api/auth/forgot-password', { email }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  resetPassword(token: string, newPassword: string): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.post<unknown>('/api/auth/reset-password', { token, newPassword }).pipe(catchError((e) => this.handleError(e))),
+    );
   }
 }

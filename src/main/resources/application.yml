@@ -5,6 +5,18 @@ spring:
   config:
     import: classpath:channels-config.yml
 
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:tubereturns@gmail.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
   datasource:
     url: jdbc:postgresql://localhost:5432/tubereturns
     username: tubereturns
@@ -43,6 +55,14 @@ tubereturns:
     enabled: true
     provider: openrouter
     api-key: ${OPENROUTER_API_KEY:}
+
+  security:
+    jwt-secret: ${JWT_SECRET}
+    jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+  app:
+    base-url: ${APP_BASE_URL:http://localhost:4200}
+    from-email: ${MAIL_FROM:noreply@tubereturns.com}
 
   pipeline:
     discovery:

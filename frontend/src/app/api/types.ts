@@ -103,5 +103,22 @@ export type Pick = z.infer<typeof PickSchema>;
 export type PricePoint = z.infer<typeof PricePointSchema>;
 export type PortfolioPricePoint = z.infer<typeof PortfolioPricePointSchema>;
 export type Portfolio = z.infer<typeof PortfolioSchema>;
+export const RegisterResponseSchema = z.object({
+  message: z.string(),
+});
+
+export const MessageResponseSchema = z.object({
+  message: z.string(),
+});
+
+export const AuthResponseSchema = z.object({
+  token: z.string(),
+  email: z.string(),
+  firstName: z.string(),
+});
+
 export type PipelineStepStatus = z.infer<typeof PipelineStepStatusSchema>;
 export type ChannelSearchResult = z.infer<typeof ChannelSearchResultSchema>;
+export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
+export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+export type MessageResponse = z.infer<typeof MessageResponseSchema>;
