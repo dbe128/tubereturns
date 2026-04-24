@@ -1,6 +1,5 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tubereturns.dto.StockPickExtractionDto;
 import com.tubereturns.model.Pick;
@@ -114,9 +113,9 @@ public class StockPickExtractionService {
 
         try {
             return objectMapper.readValue(aiResponse, StockPickExtractionDto.class);
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             log.error("Failed to parse AI response for video {}: {}", "https://youtu.be/" + videoId, e.getMessage());
-            return createMockExtraction(videoId, transcriptText);
+            throw new RuntimeException("Failed to parse AI response for video " + videoId, e);
         }
     }
 

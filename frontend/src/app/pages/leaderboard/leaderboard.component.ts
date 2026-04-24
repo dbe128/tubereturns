@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { forkJoin, interval, of, Subject, Subscription } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
+import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
 import type { Channel, ChannelStats, ChannelSearchResult, PipelineStepStatus } from '../../api/types';
@@ -186,6 +187,7 @@ interface ChannelRow extends Channel {
       @if (!error()) {
         <app-spy-chart />
 
+        @if (auth.isAdmin) {
         <div class="mt-10">
           <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Pipeline</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -240,12 +242,14 @@ interface ChannelRow extends Channel {
             }
           </div>
         </div>
+        }
       }
     </div>
   `,
 })
 export class LeaderboardComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
+  readonly auth = inject(AuthService);
   private readonly recovery = inject(BackendRecoveryService);
 
   readonly rows = signal<ChannelRow[]>([]);
@@ -268,8 +272,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
-    this.loadPipelineStatus();
-    this.statusPollSub = interval(15000).subscribe(() => this.loadPipelineStatus());
+    if (this.auth.isAdmin) {
+      this.loadPipelineStatus();
+      this.statusPollSub = interval(15000).subscribe(() => this.loadPipelineStatus());
+    }
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
       switchMap((q) => q.trim().length >= 2 ? this.api.searchChannels(q).pipe(catchError(() => of<ChannelSearchResult[]>([]))) : of<ChannelSearchResult[]>([])),

@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export interface AuthUser {
   email: string;
   firstName: string;
+  role: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -13,6 +14,10 @@ export class AuthService {
 
   get isAuthenticated(): boolean {
     return this.user() !== null;
+  }
+
+  get isAdmin(): boolean {
+    return this.user()?.role === 'ADMIN';
   }
 
   setToken(token: string): void {
@@ -44,7 +49,7 @@ export class AuthService {
         localStorage.removeItem(this.TOKEN_KEY);
         return null;
       }
-      return { email: payload.sub, firstName: payload.firstName };
+      return { email: payload.sub, firstName: payload.firstName, role: payload.role ?? '' };
     } catch {
       return null;
     }

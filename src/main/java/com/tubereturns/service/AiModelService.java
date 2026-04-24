@@ -96,7 +96,7 @@ public class AiModelService {
 
         } catch (Exception e) {
             log.error("OpenRouter API call failed: {}", e.getMessage(), e);
-            return createMockResponse();
+            throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
         }
     }
 
