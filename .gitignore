@@ -47,3 +47,5 @@ bin/
 /src/main/resources/cookies.txt
 /frontend/.angular/
 /.idea/
+/.claude/
+
