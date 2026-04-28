@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
+import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import type { Channel, ChannelStats, VideoSummary } from '../../api/types';
 
@@ -19,7 +20,7 @@ type SortKey = 'index' | 'publishedAt' | 'transcriptStatus' | 'processingStatus'
 type SortDir = 'asc' | 'desc';
 
 const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
-  DOWNLOADED: 0, NO_TRANSCRIPT: 1, PENDING: 2, FAILED: 3,
+  DOWNLOADED: 0, NO_TRANSCRIPT: 1, PENDING: 2, DOWNLOADING: 3, FAILED: 4,
 };
 
 const PROCESSING_ORDER: Record<VideoSummary['processingStatus'], number> = {
@@ -27,6 +28,7 @@ const PROCESSING_ORDER: Record<VideoSummary['processingStatus'], number> = {
 };
 
 const TRANSCRIPT_LABELS: Record<VideoSummary['transcriptStatus'], string> = {
+  DOWNLOADING: 'Downloading',
   DOWNLOADED: 'Downloaded',
   NO_TRANSCRIPT: 'No transcript',
   FAILED: 'Failed',
@@ -41,6 +43,7 @@ const PROCESSING_LABELS: Record<VideoSummary['processingStatus'], string> = {
 };
 
 const TRANSCRIPT_STYLES: Record<VideoSummary['transcriptStatus'], string> = {
+  DOWNLOADING: 'bg-blue-50 text-blue-600 animate-pulse',
   DOWNLOADED: 'bg-primary-50 text-primary-700',
   NO_TRANSCRIPT: 'bg-yellow-50 text-yellow-700',
   FAILED: 'bg-danger-50 text-danger-500',
@@ -101,15 +104,26 @@ interface IndexedVideo {
                 class="text-primary-600 hover:text-primary-700 text-xs mt-0.5 inline-block"
               >youtube.com/@{{ channel()!.handle }} ↗</a>
             </div>
-            <div class="flex gap-8 text-sm text-gray-400 flex-shrink-0">
-              <div class="text-center">
-                <div class="text-2xl font-bold text-gray-800">{{ stats()?.totalVideos ?? '—' }}</div>
-                <div class="text-xs uppercase tracking-wide">Videos</div>
+            <div class="flex items-center gap-6 flex-shrink-0">
+              <div class="flex gap-8 text-sm text-gray-400">
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-gray-800">{{ stats()?.totalVideos ?? '—' }}</div>
+                  <div class="text-xs uppercase tracking-wide">Videos</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold text-primary-600">{{ stats()?.processedVideos ?? '—' }}</div>
+                  <div class="text-xs uppercase tracking-wide">Processed</div>
+                </div>
               </div>
-              <div class="text-center">
-                <div class="text-2xl font-bold text-primary-600">{{ stats()?.processedVideos ?? '—' }}</div>
-                <div class="text-xs uppercase tracking-wide">Processed</div>
-              </div>
+              @if (auth.isAdmin) {
+                <button
+                  (click)="refresh()"
+                  [disabled]="loading()"
+                  title="Refresh"
+                  class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                  [class.animate-spin]="loading()"
+                >↺</button>
+              }
             </div>
           </div>
         </div>
@@ -125,6 +139,7 @@ interface IndexedVideo {
             }
           </div>
           <div class="flex flex-wrap gap-4">
+            @if (auth.isAdmin) {
             <div class="flex flex-col gap-1">
               <label class="text-xs text-gray-500">Transcript status</label>
               <select
@@ -133,6 +148,7 @@ interface IndexedVideo {
                 class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
               >
                 <option value="">All transcript statuses</option>
+                <option value="DOWNLOADING">Downloading</option>
                 <option value="DOWNLOADED">Downloaded</option>
                 <option value="NO_TRANSCRIPT">No transcript</option>
                 <option value="FAILED">Failed</option>
@@ -154,6 +170,7 @@ interface IndexedVideo {
                 <option value="PENDING">Pending</option>
               </select>
             </div>
+            }
 
             <div class="flex flex-col gap-1">
               <label class="text-xs text-gray-500">Ticker</label>
@@ -193,6 +210,7 @@ interface IndexedVideo {
                   class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('publishedAt')"
                 >Upload Date<span class="ml-1" [class.text-primary-500]="sortKey() === 'publishedAt'" [class.text-gray-300]="sortKey() !== 'publishedAt'">{{ sortKey() === 'publishedAt' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                @if (auth.isAdmin) {
                 <th
                   class="px-4 py-3 w-32 cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('transcriptStatus')"
@@ -202,15 +220,18 @@ interface IndexedVideo {
                   (click)="toggleSort('processingStatus')"
                 >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'processingStatus'" [class.text-gray-300]="sortKey() !== 'processingStatus'">{{ sortKey() === 'processingStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
+                }
                 <th class="px-4 py-3 text-primary-600">▲ Buy</th>
                 <th class="px-4 py-3 text-danger-500">▼ Sell</th>
+                @if (auth.isAdmin) {
                 <th class="px-4 py-3 w-10"></th>
+                }
               </tr>
             </thead>
             <tbody>
               @if (sorted().length === 0) {
                 <tr>
-                  <td colspan="10" class="px-4 py-12 text-center text-gray-400">
+                  <td [attr.colspan]="auth.isAdmin ? 10 : 6" class="px-4 py-12 text-center text-gray-400">
                     No videos match the current filters.
                   </td>
                 </tr>
@@ -242,6 +263,7 @@ interface IndexedVideo {
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {{ item.v.publishedAt | date: 'shortDate' }}
                     </td>
+                    @if (auth.isAdmin) {
                     <td class="px-4 py-3">
                       <span
                         class="inline-block px-2 py-0.5 rounded text-xs font-medium cursor-pointer select-none"
@@ -262,6 +284,7 @@ interface IndexedVideo {
                         <span class="text-gray-200">—</span>
                       }
                     </td>
+                    }
                     <td class="px-4 py-3 text-primary-600 font-mono font-medium text-sm">
                       @if (item.v.buyPicks.length > 0) {
                         {{ item.v.buyPicks.join(', ') }}
@@ -276,6 +299,7 @@ interface IndexedVideo {
                         <span class="text-gray-200 font-normal">—</span>
                       }
                     </td>
+                    @if (auth.isAdmin) {
                     <td class="px-4 py-3">
                       <button
                         (click)="handleReextract(item.v.videoId)"
@@ -288,6 +312,7 @@ interface IndexedVideo {
                         [class.hover:text-primary-600]="reextracting() !== item.v.videoId"
                       >↺</button>
                     </td>
+                    }
                   </tr>
                 }
               }
@@ -321,6 +346,7 @@ interface IndexedVideo {
 })
 export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
+  readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly recovery = inject(BackendRecoveryService);
 
@@ -418,6 +444,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
         });
       },
     });
+  }
+
+  refresh(): void {
+    const cid = this.route.snapshot.paramMap.get('channelId');
+    if (cid) this.loadData(cid);
   }
 
   toggleSort(key: SortKey): void {

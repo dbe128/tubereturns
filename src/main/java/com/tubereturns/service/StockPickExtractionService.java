@@ -59,10 +59,40 @@ public class StockPickExtractionService {
 
         TransactionTemplate tx = new TransactionTemplate(txManager);
         for (Video video : readyVideos) {
+            String videoUrl = "https://youtu.be/" + video.getVideoId();
             try {
-                tx.executeWithoutResult(status -> processVideo(video));
+                log.info("Processing video for stock picks: {} ({})", video.getTitle(), videoUrl);
+
+                if (video.getTranscriptText() == null || video.getTranscriptText().trim().isEmpty()) {
+                    log.warn("Video {} has no transcript text available", videoUrl);
+                    tx.executeWithoutResult(s -> {
+                        video.setProcessingStatus(Video.ProcessingStatus.FAILED);
+                        videoRepository.save(video);
+                    });
+                    continue;
+                }
+
+                tx.executeWithoutResult(s -> {
+                    video.setProcessingStatus(Video.ProcessingStatus.PROCESSING);
+                    videoRepository.save(video);
+                });
+
+                StockPickExtractionDto extraction = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
+
+                tx.executeWithoutResult(s -> {
+                    savePicks(video, extraction);
+                    video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
+                    video.setExtractionModel(aiModelService.getModel());
+                    videoRepository.save(video);
+                    advanceLastProcessedAt(video);
+                });
+
             } catch (Exception e) {
-                log.error("Error processing video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
+                log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
+                tx.executeWithoutResult(s -> {
+                    video.setProcessingStatus(Video.ProcessingStatus.FAILED);
+                    videoRepository.save(video);
+                });
             }
         }
         return readyVideos.size();

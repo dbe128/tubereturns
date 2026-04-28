@@ -73,7 +73,7 @@ tubereturns:
       max-items: 5
     extraction:
       cron: "0 30 * * * *"
-      max-items: 100
+      max-items: 1
 
 logging:
   pattern:

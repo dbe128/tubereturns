@@ -8,6 +8,8 @@ import {
   OnDestroy,
   ViewChild,
   ElementRef,
+  Output,
+  EventEmitter,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { forkJoin, of } from 'rxjs';
@@ -80,7 +82,11 @@ interface SeriesData {
       <div class="flex items-start justify-between mb-4 gap-4 flex-wrap">
         <div>
           @if (hasPortfolios()) {
-            <h2 class="text-base font-semibold text-gray-800">Portfolio Comparison</h2>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-semibold text-gray-800">Portfolio Comparison</h2>
+              <button (click)="refresh.emit()" title="Refresh"
+                class="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors text-base leading-none">↺</button>
+            </div>
             <p class="text-xs text-gray-400 mt-0.5">Equal-weighted % return since first pick vs S&amp;P 500</p>
           } @else {
             <div class="flex items-baseline gap-3">
@@ -154,6 +160,8 @@ interface SeriesData {
   `,
 })
 export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
+  @Output() readonly refresh = new EventEmitter<void>();
+
   private readonly api = inject(ApiService);
 
   @ViewChild('chartCanvas') private canvasRef?: ElementRef<HTMLCanvasElement>;

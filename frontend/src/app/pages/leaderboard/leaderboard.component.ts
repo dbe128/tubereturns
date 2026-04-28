@@ -37,66 +37,68 @@ interface ChannelRow extends Channel {
       }
 
       @if (!loading() && !error()) {
-        <div class="mb-4 flex justify-end">
-          @if (!showAddForm()) {
+        @if (auth.isAdmin && !showAddForm()) {
+          <div class="mb-4 flex justify-end">
             <button
               (click)="openAddForm()"
               class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
             >+ Add Channel</button>
-          } @else {
-            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 w-full">
-              <div class="flex items-center justify-between mb-3">
-                <h3 class="text-sm font-semibold text-gray-700">Add stock picking channel</h3>
-                <button (click)="cancelAddChannel()" class="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">&times;</button>
-              </div>
-              <input
-                [(ngModel)]="searchQuery"
-                (input)="onSearchInput()"
-                #searchInput
-                placeholder="Search YouTube channels…"
-                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              @if (searching()) {
-                <div class="flex justify-center py-6">
-                  <div class="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
-                </div>
-              } @else if (searchResults().length > 0) {
-                <ul class="mt-2 divide-y divide-gray-100">
-                  @for (result of searchResults(); track result.handle) {
-                    <li>
-                      <button
-                        (click)="selectChannel(result)"
-                        [disabled]="addingChannelId() !== null"
-                        class="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
-                      >
-                        @if (result.thumbnailUrl) {
-                          <img [src]="result.thumbnailUrl" [alt]="result.channelName"
-                            referrerpolicy="no-referrer"
-                            (error)="$any($event.target).style.display='none'"
-                            class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100" />
-                        } @else {
-                          <div class="w-9 h-9 rounded-full bg-gray-100 flex-shrink-0"></div>
-                        }
-                        <div class="min-w-0 flex-1">
-                          <p class="text-sm font-semibold text-gray-800 truncate">{{ result.channelName }}</p>
-                          <p class="text-xs text-gray-400 truncate">{{ result.channelUrl }}</p>
-                        </div>
-                        @if (addingChannelId() === result.handle) {
-                          <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent flex-shrink-0"></div>
-                        } @else {
-                          <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
-                        }
-                      </button>
-                    </li>
-                  }
-                </ul>
-              }
-              @if (addError()) {
-                <p class="text-xs text-danger-500 mt-2">{{ addError() }}</p>
-              }
+          </div>
+        }
+
+        @if (auth.isAdmin && showAddForm()) {
+          <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 w-full mb-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold text-gray-700">Add stock picking channel</h3>
+              <button (click)="cancelAddChannel()" class="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">&times;</button>
             </div>
-          }
-        </div>
+            <input
+              [(ngModel)]="searchQuery"
+              (input)="onSearchInput()"
+              #searchInput
+              placeholder="Search YouTube channels…"
+              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            @if (searching()) {
+              <div class="flex justify-center py-6">
+                <div class="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
+              </div>
+            } @else if (searchResults().length > 0) {
+              <ul class="mt-2 divide-y divide-gray-100">
+                @for (result of searchResults(); track result.handle) {
+                  <li>
+                    <button
+                      (click)="selectChannel(result)"
+                      [disabled]="addingChannelId() !== null"
+                      class="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
+                    >
+                      @if (result.thumbnailUrl) {
+                        <img [src]="result.thumbnailUrl" [alt]="result.channelName"
+                          referrerpolicy="no-referrer"
+                          (error)="$any($event.target).style.display='none'"
+                          class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100" />
+                      } @else {
+                        <div class="w-9 h-9 rounded-full bg-gray-100 flex-shrink-0"></div>
+                      }
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-800 truncate">{{ result.channelName }}</p>
+                        <p class="text-xs text-gray-400 truncate">{{ result.channelUrl }}</p>
+                      </div>
+                      @if (addingChannelId() === result.handle) {
+                        <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent flex-shrink-0"></div>
+                      } @else {
+                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+            @if (addError()) {
+              <p class="text-xs text-danger-500 mt-2">{{ addError() }}</p>
+            }
+          </div>
+        }
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <table class="w-full">
@@ -185,7 +187,7 @@ interface ChannelRow extends Channel {
       }
 
       @if (!error()) {
-        <app-spy-chart />
+        <app-spy-chart (refresh)="load()" />
 
         @if (auth.isAdmin) {
         <div class="mt-10">

@@ -16,6 +16,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 
 @Slf4j
@@ -75,6 +76,17 @@ public class YouTubeDiscoveryService {
         for (YouTubeVideoDto video : recentVideos) {
             processVideo(channel, video);
         }
+
+        recentVideos.stream()
+                .map(YouTubeVideoDto::publishedAt)
+                .max(Comparator.naturalOrder())
+                .ifPresent(latest -> {
+                    if (channel.getLastProcessedAt() == null || latest.isAfter(channel.getLastProcessedAt())) {
+                        channel.setLastProcessedAt(latest);
+                        channelRepository.save(channel);
+                    }
+                });
+
         return recentVideos.size();
     }
 

@@ -45,10 +45,9 @@ public class TranscriptDownloadService {
         List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, maxItems);
         log.info("Found {} videos pending transcript download", pendingVideos.size());
 
-        TransactionTemplate tx = new TransactionTemplate(txManager);
         for (Video video : pendingVideos) {
             try {
-                tx.executeWithoutResult(status -> downloadTranscript(video));
+                downloadTranscript(video);
             } catch (Exception e) {
                 log.error("Error downloading transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
             }
@@ -57,34 +56,46 @@ public class TranscriptDownloadService {
     }
 
     public boolean downloadTranscript(Video video) {
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+
         if (!enabled) {
             log.warn("yt-dlp is disabled. Skipping transcript for video: {}", "https://youtu.be/" + video.getVideoId());
-            video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-            videoRepository.save(video);
+            tx.executeWithoutResult(s -> {
+                video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
+                videoRepository.save(video);
+            });
             return false;
         }
 
         log.info("Downloading transcript for video: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
 
+        tx.executeWithoutResult(s -> {
+            video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
+            videoRepository.save(video);
+        });
+
         try {
             String transcript = executeYtDlp(video.getVideoId());
 
-            if (transcript != null && !transcript.isBlank()) {
-                video.setTranscriptText(transcript);
-                video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                log.info("Successfully downloaded transcript for video: {}", "https://youtu.be/" + video.getVideoId());
-            } else {
-                video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                log.warn("No transcript available for video: {}", "https://youtu.be/" + video.getVideoId());
-            }
-
-            videoRepository.save(video);
+            tx.executeWithoutResult(s -> {
+                if (transcript != null && !transcript.isBlank()) {
+                    video.setTranscriptText(transcript);
+                    video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
+                    log.info("Successfully downloaded transcript for video: {}", "https://youtu.be/" + video.getVideoId());
+                } else {
+                    video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
+                    log.warn("No transcript available for video: {}", "https://youtu.be/" + video.getVideoId());
+                }
+                videoRepository.save(video);
+            });
             return transcript != null && !transcript.isBlank();
 
         } catch (Exception e) {
             log.error("Failed to download transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage());
-            video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
-            videoRepository.save(video);
+            tx.executeWithoutResult(s -> {
+                video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
+                videoRepository.save(video);
+            });
             return false;
         }
     }
@@ -129,6 +140,9 @@ public class TranscriptDownloadService {
             int exitCode = process.exitValue();
             if (exitCode != 0) {
                 log.warn("yt-dlp exited with code {} for video {}:\n{}", exitCode, "https://youtu.be/" + videoId, ytDlpOutput);
+                if (ytDlpOutput.contains("HTTP Error 429")) {
+                    throw new RuntimeException("Rate limited by YouTube (429) for video " + videoId);
+                }
             } else {
                 log.debug("yt-dlp output for {}:\n{}", "https://youtu.be/" + videoId, ytDlpOutput);
             }
