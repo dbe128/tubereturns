@@ -26,9 +26,9 @@ The system:
 
 - **Angular (latest stable version)**
 - **TypeScript (strict mode enabled)**
-- **Vite** (or equivalent modern bundler)
+- **Angular CLI** (build tooling and dev server)
 - **Zod** for all runtime validations
-- **Charting library**: Recharts (recommended) or equivalent
+- **Charting library**: Chart.js (via ng2-charts or direct canvas integration)
 - **Styling**: TailwindCSS (recommended) or equivalent modern utility CSS
 
 Constraints:
