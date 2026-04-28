@@ -46,3 +46,4 @@ bin/
 /.gradle/
 /src/main/resources/cookies.txt
 /frontend/.angular/
+/.idea/
