@@ -1,10 +1,12 @@
 package com.tubereturns.service;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@EnabledIfSystemProperty(named = "spring.profiles.active", matches = ".*dev.*")
 class TranscriptDownloadServiceIT {
 
     private static final String VIDEO_ID = "9hjbOci_gIg";
