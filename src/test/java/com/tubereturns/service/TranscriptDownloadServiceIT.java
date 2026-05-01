@@ -14,12 +14,11 @@ class TranscriptDownloadServiceIT {
     @Test
     void transcript_isDownloadedAndComplete() throws Exception {
         TranscriptDownloadService service = new TranscriptDownloadService(null, null);
-        ReflectionTestUtils.setField(service, "ytDlpPath", "yt-dlp");
-        ReflectionTestUtils.setField(service, "timeoutSeconds", 300);
+        ReflectionTestUtils.setField(service, "ytbsdPath", "youtube_transcript_api");
+        ReflectionTestUtils.setField(service, "timeoutSeconds", 120);
         ReflectionTestUtils.setField(service, "enabled", true);
-        ReflectionTestUtils.setField(service, "cookiesPath", "src/main/resources/cookies.txt");
 
-        String transcript = service.executeYtDlp(VIDEO_ID);
+        String transcript = service.fetchTranscript(VIDEO_ID);
 
         assertThat(transcript).isNotBlank();
         assertThat(transcript).endsWith("Thank you guys for watching this video.");

@@ -45,11 +45,10 @@ tubereturns:
     enabled: true
     api-key: ${YOUTUBE_API_KEY:}
 
-  yt-dlp:
+  transcript:
     enabled: true
-    path: yt-dlp
-    timeout-seconds: 300
-    cookies-path: src/main/resources/cookies.txt
+    ytbsd-path: /app/ytbsd.py
+    timeout-seconds: 120
 
   ai:
     enabled: true

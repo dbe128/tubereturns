@@ -49,4 +49,6 @@ bin/
 /frontend/.angular/
 /.idea/
 /.claude/
-
+.env
+/scripts/subtitles/
+/subtitles/

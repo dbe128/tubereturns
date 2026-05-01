@@ -12,11 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -26,20 +22,16 @@ import java.util.stream.Stream;
 public class TranscriptDownloadService {
 
     private final PlatformTransactionManager txManager;
+    private final VideoRepository videoRepository;
 
-    @Value("${tubereturns.yt-dlp.path:yt-dlp}")
-    private String ytDlpPath;
+    @Value("${tubereturns.transcript.ytbsd-path:/app/ytbsd.py}")
+    private String ytbsdPath;
 
-    @Value("${tubereturns.yt-dlp.timeout-seconds:300}")
+    @Value("${tubereturns.transcript.timeout-seconds:120}")
     private int timeoutSeconds;
 
-    @Value("${tubereturns.yt-dlp.enabled:true}")
+    @Value("${tubereturns.transcript.enabled:true}")
     private boolean enabled;
-
-    @Value("${tubereturns.yt-dlp.cookies-path:}")
-    private String cookiesPath;
-
-    private final VideoRepository videoRepository;
 
     public int downloadPendingTranscripts(int maxItems) {
         List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, maxItems);
@@ -59,7 +51,7 @@ public class TranscriptDownloadService {
         TransactionTemplate tx = new TransactionTemplate(txManager);
 
         if (!enabled) {
-            log.warn("yt-dlp is disabled. Skipping transcript for video: {}", "https://youtu.be/" + video.getVideoId());
+            log.warn("Transcript download is disabled. Skipping video: {}", "https://youtu.be/" + video.getVideoId());
             tx.executeWithoutResult(s -> {
                 video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
                 videoRepository.save(video);
@@ -75,7 +67,7 @@ public class TranscriptDownloadService {
         });
 
         try {
-            String transcript = executeYtDlp(video.getVideoId());
+            String transcript = fetchTranscript(video.getVideoId());
 
             tx.executeWithoutResult(s -> {
                 if (transcript != null && !transcript.isBlank()) {
@@ -100,142 +92,92 @@ public class TranscriptDownloadService {
         }
     }
 
-    String executeYtDlp(String videoId) throws IOException, InterruptedException {
-        String videoUrl = "https://www.youtube.com/watch?v=" + videoId;
-        Path tempDir = Files.createTempDirectory("tubereturns-transcript-");
+    String fetchTranscript(String videoId) throws IOException, InterruptedException {
+        List<String> cmd = List.of("python3", ytbsdPath, "--mode", "single", "--url", videoId, "--no-proxy-refresh");
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.redirectErrorStream(true);
 
-        try {
-            int sleepSeconds = 10 + new Random().nextInt(6);
-            List<String> cmd = new ArrayList<>(List.of(
-                ytDlpPath,
-                "--write-subs",
-                "--write-auto-subs",
-                "--sub-lang", "en",
-                "--sub-format", "vtt",
-                "--skip-download",
-                "--remote-components", "ejs:github",
-                "--sleep-subtitles", String.valueOf(sleepSeconds),
-                "-o", tempDir.resolve("%(id)s.%(ext)s").toString()
-            ));
-            if (cookiesPath != null && !cookiesPath.isBlank()) {
-                Path resolvedCookies = Path.of(cookiesPath).toAbsolutePath();
-                log.info("Cookies file: {} (exists: {})", resolvedCookies, Files.exists(resolvedCookies));
-                cmd.add("--cookies");
-                cmd.add(resolvedCookies.toString());
-            }
-            cmd.add(videoUrl);
-            ProcessBuilder pb = new ProcessBuilder(cmd);
-            pb.redirectErrorStream(true);
+        log.info("Running ytbsd.py: {}", cmd);
+        Process process = pb.start();
+        String output = new String(process.getInputStream().readAllBytes());
 
-            log.info("Running yt-dlp: {}", cmd);
-            Process process = pb.start();
-            String ytDlpOutput = new String(process.getInputStream().readAllBytes());
-
-            boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
-            if (!finished) {
-                process.destroyForcibly();
-                throw new RuntimeException("yt-dlp timed out after " + timeoutSeconds + "s for video " + videoId);
-            }
-
-            int exitCode = process.exitValue();
-            if (exitCode != 0) {
-                log.warn("yt-dlp exited with code {} for video {}:\n{}", exitCode, "https://youtu.be/" + videoId, ytDlpOutput);
-                if (ytDlpOutput.contains("HTTP Error 429")) {
-                    throw new RuntimeException("Rate limited by YouTube (429) for video " + videoId);
-                }
-                if (ytDlpOutput.contains("Sign in to confirm you're not a bot")) {
-                    throw new RuntimeException("YouTube bot-check failed (cookies expired or invalidated) for video " + videoId);
-                }
-            } else {
-                log.debug("yt-dlp output for {}:\n{}", "https://youtu.be/" + videoId, ytDlpOutput);
-            }
-
-            Optional<Path> vttFile;
-            try (Stream<Path> files = Files.list(tempDir)) {
-                vttFile = files
-                        .filter(f -> f.toString().endsWith(".vtt"))
-                        .min(Comparator.comparingInt(p -> p.toString().contains(".auto.") ? 1 : 0));
-            }
-
-            if (vttFile.isEmpty()) {
-                log.warn("No .vtt file produced for video {}", "https://youtu.be/" + videoId);
-                return null;
-            }
-
-            String vttContent = Files.readString(vttFile.get());
-            String plainText = cleanVtt(vttContent);
-            log.info("Transcript [{}] ({} chars): {}", "https://youtu.be/" + videoId, plainText.length(),
-                    plainText.length() > 200 ? plainText.substring(0, 200) + "…" : plainText);
-            return plainText;
-
-        } finally {
-            deleteDir(tempDir);
+        boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+        if (!finished) {
+            process.destroyForcibly();
+            throw new RuntimeException("ytbsd.py timed out after " + timeoutSeconds + "s for video " + videoId);
         }
-    }
 
-    /**
-     * Cleans a VTT subtitle file to plain text.
-     * Equivalent to:
-     *   sed -E '/^WEBVTT/d; /^Kind:/d; /^Language:/d; /^[0-9]+$/d;
-     *           /^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} -->/d;
-     *           s/<[^>]+>//g; s/[[:space:]]+$//; /^$/d'
-     *   | awk '!(NR>1 && $0==prev){print} {prev=$0}'
-     */
-    static String cleanVtt(String vttContent) {
-        if (vttContent == null || vttContent.isBlank()) {
+        int exitCode = process.exitValue();
+        if (exitCode != 0) {
+            log.warn("ytbsd.py exited with code {} for video {}:\n{}", exitCode, "https://youtu.be/" + videoId, output);
+            throw new RuntimeException("ytbsd.py failed for video " + videoId + ": " + output.trim());
+        }
+
+        log.debug("ytbsd.py output for {}:\n{}", "https://youtu.be/" + videoId, output);
+
+        Path subtitlesDir = Path.of(ytbsdPath).toAbsolutePath().getParent().resolve("subtitles");
+        Path mdFile = findOutputFile(subtitlesDir, videoId);
+
+        if (mdFile == null) {
+            log.warn("No output file found for video {} under {}", "https://youtu.be/" + videoId, subtitlesDir);
             return null;
         }
 
-        String[] rawLines = vttContent.split("\r?\n");
-        List<String> result = new ArrayList<>();
-        String prev = null;
-
-        for (String rawLine : rawLines) {
-            String line = rawLine.stripTrailing();
-
-            if (line.startsWith("WEBVTT")) {
-                continue;
+        try {
+            String markdown = Files.readString(mdFile);
+            String transcript = parseMarkdownTranscript(markdown);
+            if (transcript != null) {
+                log.info("Transcript [{}] ({} chars): {}", "https://youtu.be/" + videoId, transcript.length(),
+                        transcript.length() > 200 ? transcript.substring(0, 200) + "…" : transcript);
             }
-            if (line.startsWith("Kind:")) {
-                continue;
-            }
-            if (line.startsWith("Language:")) {
-                continue;
-            }
-            if (line.matches("\\d+")) {
-                continue;
-            }
-            if (line.matches("\\d{2}:\\d{2}:\\d{2}\\.\\d{3} -->.*")) {
-                continue;
-            }
-
-            // strip HTML / timing tags like <00:00:01.000> or <c.colorname>
-            line = line.replaceAll("<[^>]+>", "");
-            line = line.stripTrailing();
-
-            if (line.isEmpty()) {
-                continue;
-            }
-
-            // deduplicate consecutive identical lines (common in auto-captions)
-            if (!line.equals(prev)) {
-                result.add(line);
-                prev = line;
-            }
+            return transcript;
+        } finally {
+            deleteOutputFile(mdFile);
         }
-
-        String text = String.join(" ", result).strip();
-        return text.isEmpty() ? null : text;
     }
 
-    private void deleteDir(Path dir) {
-        try (Stream<Path> walk = Files.walk(dir)) {
-            walk.sorted(Comparator.reverseOrder()).forEach(p -> {
-                try {
-                    Files.delete(p);
-                } catch (IOException ignored) {
+    private Path findOutputFile(Path subtitlesDir, String videoId) throws IOException {
+        if (!Files.isDirectory(subtitlesDir)) {
+            return null;
+        }
+        try (Stream<Path> files = Files.walk(subtitlesDir, 2)) {
+            return files
+                    .filter(p -> p.getFileName().toString().startsWith(videoId))
+                    .filter(p -> p.toString().endsWith(".md"))
+                    .findFirst()
+                    .orElse(null);
+        }
+    }
+
+    private String parseMarkdownTranscript(String markdown) {
+        int start = markdown.indexOf("### Transcript");
+        if (start == -1) {
+            return null;
+        }
+        start = markdown.indexOf("\n\n", start);
+        if (start == -1) {
+            return null;
+        }
+        start += 2;
+        int end = markdown.indexOf("\n\n---", start);
+        if (end == -1) {
+            end = markdown.length();
+        }
+        String text = markdown.substring(start, end).strip();
+        return text.isBlank() ? null : text;
+    }
+
+    private void deleteOutputFile(Path file) {
+        try {
+            Files.deleteIfExists(file);
+            Path parent = file.getParent();
+            if (parent != null) {
+                try (Stream<Path> entries = Files.list(parent)) {
+                    if (entries.findAny().isEmpty()) {
+                        Files.deleteIfExists(parent);
+                    }
                 }
-            });
+            }
         } catch (IOException ignored) {
         }
     }

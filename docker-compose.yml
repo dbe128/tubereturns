@@ -14,16 +14,15 @@ services:
       retries: 10
 
   backend:
+    platform: linux/amd64
     build: .
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/tubereturns
       SPRING_DATASOURCE_USERNAME: tubereturns
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
-      TUBERETURNS_YT_DLP_COOKIES_PATH: /run/secrets/cookies.txt
+      JWT_SECRET: ${JWT_SECRET}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-    volumes:
-      - ./src/main/resources/cookies.txt:/run/secrets/cookies.txt:ro
     depends_on:
       db:
         condition: service_healthy

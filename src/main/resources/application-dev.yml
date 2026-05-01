@@ -18,5 +18,8 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
 
 tubereturns:
+  transcript:
+    ytbsd-path: scripts/ytbsd.py
+
   ai:
     enabled: true
