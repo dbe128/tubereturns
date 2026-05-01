@@ -143,6 +143,9 @@ public class TranscriptDownloadService {
                 if (ytDlpOutput.contains("HTTP Error 429")) {
                     throw new RuntimeException("Rate limited by YouTube (429) for video " + videoId);
                 }
+                if (ytDlpOutput.contains("Sign in to confirm you're not a bot")) {
+                    throw new RuntimeException("YouTube bot-check failed (cookies expired or invalidated) for video " + videoId);
+                }
             } else {
                 log.debug("yt-dlp output for {}:\n{}", "https://youtu.be/" + videoId, ytDlpOutput);
             }
