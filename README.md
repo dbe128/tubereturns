@@ -1,153 +1,100 @@
 # TubeReturns
 
-TubeReturns is a web application that ranks finance YouTubers based on their historical investing performance by automatically parsing stock picks from video transcripts and tracking their performance over time.
-
-## Features
-
-- **Automatic Video Discovery**: Discovers new videos from configured YouTube channels
-- **Transcript Extraction**: Downloads video transcripts using yt-dlp
-- **AI-Powered Stock Pick Extraction**: Extracts stock picks (ticker symbols, buy/sell signals) from transcripts
-- **Performance Tracking**: Calculates and tracks investment performance over multiple time periods
-- **REST API**: Comprehensive API for accessing channel rankings, stock picks, and performance data
-- **Financial Dashboards**: React frontend with charts and visualizations
+TubeReturns ranks finance YouTubers based on their historical investing performance by automatically parsing stock picks from video transcripts and tracking returns over time.
 
 ## Tech Stack
 
 ### Backend
-- **Java 25** with **Spring Boot 4.0.3**
-- **PostgreSQL** database with **Liquibase** migrations
-- **Spring Data JPA** for data access
-- **OpenAPI/Swagger** for API documentation
-- **Bean Validation** for input validation
+- **Java 25** · **Spring Boot 4.0.3**
+- **PostgreSQL** with **Liquibase** migrations
+- **Spring Data JPA** · **Bean Validation** · **OpenAPI/Swagger**
+- **Gradle** (Kotlin DSL)
 
 ### Frontend
-- **React 19** with **TypeScript**
-- **Vite** for build tooling
-- **TailwindCSS** for styling
-- **Recharts** for financial charts
-- **Axios** for API calls
-- **Zod** for runtime validation
+- **Angular** (latest stable) · **TypeScript** (strict)
+- **TailwindCSS** · **Chart.js** · **Zod**
 
-### External Tools
-- **yt-dlp** for transcript download
-- **AI model integration** for stock pick extraction
-- **Stock data APIs** for performance calculation
+### External
+- **ytbsd.py** — transcript download
+- **OpenRouter** — AI-powered stock pick extraction
 
-## Getting Started
+## Running Locally
 
 ### Prerequisites
 - Java 25
-- Node.js 18+
-- PostgreSQL 12+
-- yt-dlp installed and available in PATH
+- Node.js 20+
+- Python 3 + ytbsd.py (for transcript downloads)
 
-### Database Setup
-1. Create PostgreSQL database:
-```sql
-CREATE DATABASE tubereturns;
-CREATE USER tubereturns WITH PASSWORD 'tubereturns_dev';
-GRANT ALL PRIVILEGES ON DATABASE tubereturns TO tubereturns;
-```
-
-### Backend Setup
-1. Clone the repository
-2. Configure database connection in `application-dev.yml`
-3. Run the application:
+### Backend (dev profile — uses H2)
 ```bash
 ./gradlew bootRun --args='--spring.profiles.active=dev'
 ```
+Available at `http://localhost:8080`. Swagger UI: `http://localhost:8080/swagger-ui.html`
 
-### Frontend Setup
+### Frontend
 ```bash
-cd frontend
-npm install
-npm run dev
+cd frontend && npm start
 ```
+Available at `http://localhost:4200` (proxies `/api` to `:8080`).
+
+## Running with Docker
+
+```bash
+cp .env.example .env   # fill in secrets
+docker compose up -d
+```
+
+The app is served at `http://localhost:80`.
+
+### Required environment variables
+| Variable | Description |
+|---|---|
+| `POSTGRES_PASSWORD` | PostgreSQL password |
+| `JWT_SECRET` | Secret for signing JWT tokens |
+| `YOUTUBE_API_KEY` | YouTube Data API v3 key |
+| `OPENROUTER_API_KEY` | OpenRouter API key for AI extraction |
+
+## Pipeline
+
+The ingestion pipeline runs automatically on a schedule:
+
+1. **Video Discovery** — fetches new videos from configured channels
+2. **Transcript Download** — runs ytbsd.py; transcripts stored in `transcripts/` (local) or the `transcripts_data` Docker volume
+3. **Pick Extraction** — sends transcripts to AI; extracts ticker symbols and buy/sell signals
+4. **Performance Calculation** — computes returns from pick date forward
+
+Each step can also be triggered manually via `POST /api/admin/pipeline/{step}/trigger`.
 
 ## Configuration
 
-The application supports multiple configuration profiles:
+| Profile | Database | Notes |
+|---|---|---|
+| `dev` | H2 in-memory | No external services required |
+| *(default)* | PostgreSQL | Used by Docker Compose |
 
-- `dev`: Development mode with mock data and debug logging
-- `prod`: Production mode with real APIs and optimized logging
-
-### Environment Variables (Production)
-- `DB_HOST`, `DB_PORT`, `DB_NAME`: Database connection
-- `DB_USERNAME`, `DB_PASSWORD`: Database credentials
-- `YOUTUBE_API_KEY`: YouTube Data API key
-- `AI_API_KEY`: AI model API key (OpenAI, etc.)
-- `STOCK_API_KEY`: Stock data API key (Alpha Vantage, etc.)
-
-## API Documentation
-
-Once the application is running, API documentation is available at:
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
-
-## Key API Endpoints
-
-- `GET /api/channels` - List all active channels
-- `GET /api/channels/top-performers` - Get top performing channels
-- `GET /api/picks` - Get recent stock picks
-- `GET /api/picks/ticker/{ticker}` - Get picks for specific stock
-- `GET /api/performance/top-performers` - Get best performing picks
-- `POST /api/admin/ingestion/run` - Manually trigger data ingestion
-
-## Data Pipeline
-
-The application runs an automated data ingestion pipeline:
-
-1. **Channel Discovery** (hourly): Discovers new videos from configured channels
-2. **Transcript Download** (hourly): Downloads transcripts for new videos
-3. **Stock Pick Extraction** (hourly): Extracts stock picks using AI
-4. **Performance Calculation** (hourly): Calculates returns for new picks
-5. **Performance Updates** (every 15 minutes): Updates existing performance data
+Transcript and AI settings are under `tubereturns.transcript` and `tubereturns.ai` in `application.yml`.
 
 ## Architecture
 
-The application follows a layered architecture:
-
 ```
-├── Controller Layer (REST endpoints)
-├── Service Layer (business logic)
-├── Repository Layer (data access)
-└── Model Layer (domain entities)
+├── Controller Layer  (REST endpoints)
+├── Service Layer     (business logic)
+├── Repository Layer  (data access)
+└── Model Layer       (domain entities)
 ```
 
 Key services:
-- `YouTubeDiscoveryService`: Channel and video discovery
-- `TranscriptDownloadService`: yt-dlp integration
-- `StockPickExtractionService`: AI-powered extraction
-- `StockPerformanceService`: Performance calculation
-- `DataIngestionOrchestrationService`: Pipeline orchestration
+- `YouTubeDiscoveryService` — channel and video discovery
+- `TranscriptDownloadService` — ytbsd.py integration
+- `StockPickExtractionService` — AI-powered pick extraction
+- `PipelineSchedulerService` — pipeline orchestration and scheduling
 
 ## Database Schema
 
-- `channels`: YouTube channel metadata
-- `videos`: Video information and transcripts
-- `picks`: Extracted stock picks
-- `performance`: Performance metrics and returns
+- `channels` — YouTube channel metadata
+- `videos` — video info, transcript text, and processing status
+- `picks` — extracted stock picks (ticker, signal, video)
+- `stocks` / `stock_prices` — stock metadata and historical prices
+- `roles` / `users` — authentication
 
-## Development
-
-### Running Tests
-```bash
-./gradlew test
-```
-
-### Code Style
-- Java: Follow Spring Boot conventions
-- TypeScript: Strict mode enabled, no `any` types
-- Use Bean Validation and Zod for input validation
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-## License
-
-This project is licensed under the MIT License.
+Migrations are managed by Liquibase (`db/changelog/001-initial-schema.sql`).

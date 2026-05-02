@@ -5,6 +5,8 @@ services:
       POSTGRES_DB: tubereturns
       POSTGRES_USER: tubereturns
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -23,6 +25,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - transcripts_data:/app/transcripts
     depends_on:
       db:
         condition: service_healthy
@@ -37,3 +41,4 @@ services:
 
 volumes:
   postgres_data:
+  transcripts_data:

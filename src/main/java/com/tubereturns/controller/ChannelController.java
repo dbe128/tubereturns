@@ -119,7 +119,8 @@ public class ChannelController {
             video.getExtractionModel(),
             buyPicks,
             sellPicks,
-            video.getTranscriptStatus() == Video.TranscriptStatus.DOWNLOADED ? video.getTranscriptText() : null
+            video.getTranscriptStatus() == Video.TranscriptStatus.DOWNLOADED ? video.getTranscriptText() : null,
+            video.isExcluded()
         );
     }
 

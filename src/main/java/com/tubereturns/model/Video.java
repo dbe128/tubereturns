@@ -64,6 +64,9 @@ public class Video {
     @Column(name = "extraction_model", length = 100)
     private String extractionModel;
 
+    @Column(nullable = false)
+    private boolean excluded = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

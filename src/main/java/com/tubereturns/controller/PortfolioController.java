@@ -71,7 +71,7 @@ public class PortfolioController {
             .map(channel -> {
                 List<String> tickers = pickRepository.findDistinctTickersByChannelIdAndSignal(
                     channel.getId(), Pick.Signal.BUY);
-                LocalDate startDate = pickRepository.findEarliestBuyPickPublishedAt(channel.getId())
+                LocalDate startDate = pickRepository.findEarliestBuyPickPublishedAtAllTime(channel.getId())
                     .map(instant -> adjustToTradingDay(instant.atZone(ZoneOffset.UTC).toLocalDate()))
                     .orElse(LocalDate.now());
                 LocalDate clipFrom = from != null ? LocalDate.parse(from) : null;

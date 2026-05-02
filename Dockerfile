@@ -34,7 +34,7 @@ RUN pip3 install --break-system-packages \
     webdriver-manager \
     rich
 
-COPY scripts/ytbsd.py /app/ytbsd.py
+COPY scripts/ytbsd.py /app/scripts/ytbsd.py
 COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8080

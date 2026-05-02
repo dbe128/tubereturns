@@ -186,6 +186,18 @@ interface IndexedVideo {
               </select>
             </div>
 
+            <div class="flex items-end pb-1">
+              <label class="flex items-center gap-2 text-sm text-gray-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  [ngModel]="showExcluded()"
+                  (ngModelChange)="showExcluded.set($event)"
+                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
+                />
+                Show excluded
+              </label>
+            </div>
+
             @if (filterTranscript() || filterProcessing() || filterPick()) {
               <div class="flex items-end">
                 <span class="text-xs text-gray-400 pb-2">
@@ -224,7 +236,7 @@ interface IndexedVideo {
                 <th class="px-4 py-3 text-primary-600">▲ Buy</th>
                 <th class="px-4 py-3 text-danger-500">▼ Sell</th>
                 @if (auth.isAdmin) {
-                <th class="px-4 py-3 w-10"></th>
+                <th class="px-4 py-3 w-24">Actions</th>
                 }
               </tr>
             </thead>
@@ -237,7 +249,7 @@ interface IndexedVideo {
                 </tr>
               } @else {
                 @for (item of sorted(); track item.v.videoId) {
-                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <tr class="border-b border-gray-100" [class.hover:bg-gray-50]="!item.v.excluded" [class.bg-amber-50]="item.v.excluded" [class.hover:bg-amber-100]="item.v.excluded">
                     <td class="px-4 py-3 text-gray-400 font-mono">{{ item.originalIndex }}</td>
                     <td class="px-4 py-3">
                       <a
@@ -266,7 +278,9 @@ interface IndexedVideo {
                     @if (auth.isAdmin) {
                     <td class="px-4 py-3">
                       <span
-                        class="inline-block px-2 py-0.5 rounded text-xs font-medium cursor-pointer select-none"
+                        class="inline-block px-2 py-0.5 rounded text-xs font-medium select-none"
+                        [class.cursor-pointer]="item.v.transcriptStatus === 'DOWNLOADED'"
+                        [class.cursor-default]="item.v.transcriptStatus !== 'DOWNLOADED'"
                         [ngClass]="transcriptStyle(item.v.transcriptStatus)"
                         (click)="openTranscript(item.v)"
                       >{{ transcriptLabel(item.v.transcriptStatus) }}</span>
@@ -285,32 +299,73 @@ interface IndexedVideo {
                       }
                     </td>
                     }
-                    <td class="px-4 py-3 text-primary-600 font-mono font-medium text-sm">
+                    <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-primary-600]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
                       @if (item.v.buyPicks.length > 0) {
                         {{ item.v.buyPicks.join(', ') }}
                       } @else {
-                        <span class="text-gray-200 font-normal">—</span>
+                        <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
                       }
                     </td>
-                    <td class="px-4 py-3 text-danger-500 font-mono font-medium text-sm">
+                    <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-danger-500]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
                       @if (item.v.sellPicks.length > 0) {
                         {{ item.v.sellPicks.join(', ') }}
                       } @else {
-                        <span class="text-gray-200 font-normal">—</span>
+                        <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
                       }
                     </td>
                     @if (auth.isAdmin) {
                     <td class="px-4 py-3">
-                      <button
-                        (click)="handleReextract(item.v.videoId)"
-                        [disabled]="reextracting() === item.v.videoId"
-                        title="Re-extract picks"
-                        class="text-lg leading-none transition-colors"
-                        [class.text-primary-500]="reextracting() === item.v.videoId"
-                        [class.animate-spin]="reextracting() === item.v.videoId"
-                        [class.text-gray-400]="reextracting() !== item.v.videoId"
-                        [class.hover:text-primary-600]="reextracting() !== item.v.videoId"
-                      >↺</button>
+                      <div class="flex items-center gap-2">
+                        @if (!item.v.excluded && item.v.transcriptStatus !== 'DOWNLOADING') {
+                          <button
+                            (click)="handleRedownloadTranscript(item.v)"
+                            [disabled]="redownloading() === item.v.videoId"
+                            [title]="item.v.transcriptStatus === 'PENDING' ? 'Download transcript' : 'Re-download transcript'"
+                            class="p-1 rounded transition-colors text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                            [class.opacity-40]="redownloading() === item.v.videoId"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                              <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                              <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+                            </svg>
+                          </button>
+                          @if (item.v.transcriptStatus === 'DOWNLOADED' && item.v.processingStatus !== 'PROCESSING') {
+                            <button
+                              (click)="handleReextract(item.v.videoId)"
+                              [disabled]="reextracting() === item.v.videoId"
+                              title="Re-extract picks"
+                              class="text-lg leading-none transition-colors"
+                              [class.text-primary-500]="reextracting() === item.v.videoId"
+                              [class.animate-spin]="reextracting() === item.v.videoId"
+                              [class.text-gray-400]="reextracting() !== item.v.videoId"
+                              [class.hover:text-primary-600]="reextracting() !== item.v.videoId"
+                            >↺</button>
+                          }
+                        }
+                        <button
+                          (click)="handleToggleExclusion(item.v)"
+                          [disabled]="togglingExclusion() === item.v.videoId"
+                          [title]="item.v.excluded ? 'Include in returns' : 'Exclude from returns'"
+                          class="p-1 rounded transition-colors"
+                          [class.text-yellow-600]="!item.v.excluded"
+                          [class.hover:bg-yellow-100]="!item.v.excluded"
+                          [class.text-gray-400]="item.v.excluded"
+                          [class.hover:bg-gray-100]="item.v.excluded"
+                          [class.opacity-40]="togglingExclusion() === item.v.videoId"
+                        >
+                          @if (item.v.excluded) {
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                              <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" />
+                              <path fill-rule="evenodd" d="M.664 10.59a1.651 1.651 0 0 1 0-1.186A10.004 10.004 0 0 1 10 3c4.257 0 7.893 2.66 9.336 6.41.147.381.146.804 0 1.186A10.004 10.004 0 0 1 10 17c-4.257 0-7.893-2.66-9.336-6.41Z" clip-rule="evenodd" />
+                            </svg>
+                          } @else {
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                              <path fill-rule="evenodd" d="M3.28 2.22a.75.75 0 0 0-1.06 1.06l14.5 14.5a.75.75 0 1 0 1.06-1.06l-1.745-1.745a10.029 10.029 0 0 0 3.3-4.38 1.651 1.651 0 0 0 0-1.185A10.004 10.004 0 0 0 9.999 3a9.956 9.956 0 0 0-4.744 1.194L3.28 2.22ZM7.752 6.69l1.092 1.092a2.5 2.5 0 0 1 3.374 3.373l1.091 1.092a4 4 0 0 0-5.557-5.557Z" clip-rule="evenodd" />
+                              <path d="m10.748 13.93 2.523 2.523a9.987 9.987 0 0 1-3.27.547c-4.258 0-7.894-2.66-9.337-6.41a1.651 1.651 0 0 1 0-1.186A10.007 10.007 0 0 1 2.839 6.02L6.07 9.252a4 4 0 0 0 4.678 4.678Z" />
+                            </svg>
+                          }
+                        </button>
+                      </div>
                     </td>
                     }
                   </tr>
@@ -356,12 +411,15 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly reextracting = signal<string | null>(null);
+  readonly togglingExclusion = signal<string | null>(null);
+  readonly redownloading = signal<string | null>(null);
 
   readonly sortKey = signal<SortKey>('publishedAt');
   readonly sortDir = signal<SortDir>('desc');
   readonly filterTranscript = signal<VideoSummary['transcriptStatus'] | ''>('');
   readonly filterProcessing = signal<VideoSummary['processingStatus'] | ''>('');
   readonly filterPick = signal('');
+  readonly showExcluded = signal(false);
 
   readonly transcriptPopup = signal<string | null>(null);
   readonly transcriptPopupPos = signal({ top: 0, left: 0, width: 520, maxHeight: 600 });
@@ -377,6 +435,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
 
   readonly filtered = computed(() =>
     this.videos().filter((v) => {
+      if (!this.showExcluded() && v.excluded) return false;
       if (this.filterTranscript() && v.transcriptStatus !== this.filterTranscript()) return false;
       if (this.filterProcessing() && v.processingStatus !== this.filterProcessing()) return false;
       if (this.filterPick() && !v.buyPicks.includes(this.filterPick()) && !v.sellPicks.includes(this.filterPick())) return false;
@@ -464,6 +523,44 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.filterTranscript.set('');
     this.filterProcessing.set('');
     this.filterPick.set('');
+    this.showExcluded.set(false);
+  }
+
+  handleToggleExclusion(video: VideoSummary): void {
+    const newExcluded = !video.excluded;
+    this.togglingExclusion.set(video.videoId);
+    this.api.setVideoExcluded(video.videoId, newExcluded).subscribe({
+      next: () => {
+        this.videos.update(list =>
+          list.map(v => v.videoId === video.videoId ? { ...v, excluded: newExcluded } : v)
+        );
+        this.togglingExclusion.set(null);
+      },
+      error: () => {
+        this.togglingExclusion.set(null);
+      },
+    });
+  }
+
+  handleRedownloadTranscript(video: VideoSummary): void {
+    this.redownloading.set(video.videoId);
+    this.api.redownloadTranscript(video.videoId).subscribe({
+      next: () => {
+        this.redownloading.set(null);
+        this.reloadVideos();
+      },
+      error: () => {
+        this.redownloading.set(null);
+      },
+    });
+  }
+
+  private reloadVideos(): void {
+    const handle = this.route.snapshot.paramMap.get('channelId');
+    if (!handle) return;
+    this.api.getVideosForChannel(handle).subscribe({
+      next: (videos) => this.videos.set(videos),
+    });
   }
 
   handleReextract(videoId: string): void {
@@ -471,8 +568,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.api.reextractVideo(videoId).subscribe({
       next: () => {
         this.reextracting.set(null);
-        const cid = this.route.snapshot.paramMap.get('channelId');
-        if (cid) this.loadData(cid);
+        this.reloadVideos();
       },
       error: () => {
         this.reextracting.set(null);

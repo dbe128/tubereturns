@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
@@ -42,16 +41,6 @@ public class StockPickExtractionService {
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
     private final PlatformTransactionManager txManager;
-
-    @Transactional
-    public List<Pick> reprocessVideo(String youtubeVideoId) {
-        Video video = videoRepository.findByVideoId(youtubeVideoId)
-                .orElseThrow(() -> new IllegalArgumentException("Video not found: " + youtubeVideoId));
-        pickRepository.deleteByVideoId(video.getId());
-        video.setProcessingStatus(Video.ProcessingStatus.PENDING);
-        videoRepository.save(video);
-        return processVideo(video);
-    }
 
     public int processVideosWithTranscripts(int maxItems) {
         List<Video> readyVideos = videoRepository.findVideosReadyForProcessing(maxItems);

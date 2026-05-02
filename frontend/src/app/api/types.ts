@@ -29,6 +29,7 @@ export const VideoSummarySchema = z.object({
   buyPicks: z.array(z.string()),
   sellPicks: z.array(z.string()),
   transcriptText: z.string().nullable(),
+  excluded: z.boolean(),
 });
 
 export const PerformanceSchema = z.object({

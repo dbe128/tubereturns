@@ -20,6 +20,7 @@ spring:
 tubereturns:
   transcript:
     ytbsd-path: scripts/ytbsd.py
+    transcripts-dir: transcripts
 
   ai:
     enabled: true

@@ -17,11 +17,14 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
 
     Optional<Video> findByVideoId(String videoId);
 
+    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.videoId = :videoId")
+    Optional<Video> findByVideoIdWithChannel(@Param("videoId") String videoId);
+
     List<Video> findByChannelIdOrderByPublishedAtDesc(Long channelId);
 
     Page<Video> findByChannelIdOrderByPublishedAtDesc(Long channelId, Pageable pageable);
 
-    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status ORDER BY v.publishedAt ASC LIMIT :limit")
+    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
     List<Video> findByTranscriptStatus(@Param("status") Video.TranscriptStatus status, @Param("limit") int limit);
 
     @Query("SELECT v FROM Video v WHERE v.processingStatus = :status")
@@ -30,7 +33,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.publishedAt >= :since ORDER BY v.publishedAt DESC")
     List<Video> findVideosPublishedSince(@Param("since") Instant since);
 
-    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' ORDER BY v.publishedAt ASC LIMIT :limit")
+    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
     List<Video> findVideosReadyForProcessing(@Param("limit") int limit);
 
     boolean existsByVideoId(String videoId);

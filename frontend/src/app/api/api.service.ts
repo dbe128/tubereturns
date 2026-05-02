@@ -122,6 +122,15 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/videos/${videoId}/reextract`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
+  redownloadTranscript(videoId: string): Observable<unknown> {
+    return this.http.post<unknown>(`/api/admin/videos/${videoId}/redownload-transcript`, null).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  setVideoExcluded(videoId: string, excluded: boolean): Observable<unknown> {
+    const params = new HttpParams().set('excluded', excluded.toString());
+    return this.http.patch<unknown>(`/api/admin/videos/${videoId}/excluded`, null, { params }).pipe(catchError((e) => this.handleError(e)));
+  }
+
   deleteChannel(handle: string): Observable<unknown> {
     return this.http.delete<unknown>(`/api/admin/channels/${handle}`).pipe(catchError((e) => this.handleError(e)));
   }

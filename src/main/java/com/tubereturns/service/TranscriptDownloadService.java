@@ -24,8 +24,11 @@ public class TranscriptDownloadService {
     private final PlatformTransactionManager txManager;
     private final VideoRepository videoRepository;
 
-    @Value("${tubereturns.transcript.ytbsd-path:/app/ytbsd.py}")
+    @Value("${tubereturns.transcript.ytbsd-path:/app/scripts/ytbsd.py}")
     private String ytbsdPath;
+
+    @Value("${tubereturns.transcript.transcripts-dir:/app/transcripts}")
+    private String transcriptsDirPath;
 
     @Value("${tubereturns.transcript.timeout-seconds:120}")
     private int timeoutSeconds;
@@ -93,7 +96,7 @@ public class TranscriptDownloadService {
     }
 
     String fetchTranscript(String videoId) throws IOException, InterruptedException {
-        List<String> cmd = List.of("python3", ytbsdPath, "--mode", "single", "--url", videoId, "--no-proxy-refresh");
+        List<String> cmd = List.of("python3", ytbsdPath, "--mode", "single", "--url", videoId);
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
 
@@ -113,13 +116,13 @@ public class TranscriptDownloadService {
             throw new RuntimeException("ytbsd.py failed for video " + videoId + ": " + output.trim());
         }
 
-        log.debug("ytbsd.py output for {}:\n{}", "https://youtu.be/" + videoId, output);
+        log.info("ytbsd.py output for {}:\n{}", "https://youtu.be/" + videoId, output);
 
-        Path subtitlesDir = Path.of(ytbsdPath).toAbsolutePath().getParent().resolve("subtitles");
-        Path mdFile = findOutputFile(subtitlesDir, videoId);
+        Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
+        Path mdFile = findOutputFile(transcriptsDir, videoId);
 
         if (mdFile == null) {
-            log.warn("No output file found for video {} under {}", "https://youtu.be/" + videoId, subtitlesDir);
+            log.warn("No output file found for video {} under {}", "https://youtu.be/" + videoId, transcriptsDir);
             return null;
         }
 
@@ -136,11 +139,11 @@ public class TranscriptDownloadService {
         }
     }
 
-    private Path findOutputFile(Path subtitlesDir, String videoId) throws IOException {
-        if (!Files.isDirectory(subtitlesDir)) {
+    private Path findOutputFile(Path transcriptsDir, String videoId) throws IOException {
+        if (!Files.isDirectory(transcriptsDir)) {
             return null;
         }
-        try (Stream<Path> files = Files.walk(subtitlesDir, 2)) {
+        try (Stream<Path> files = Files.walk(transcriptsDir, 2)) {
             return files
                     .filter(p -> p.getFileName().toString().startsWith(videoId))
                     .filter(p -> p.toString().endsWith(".md"))
