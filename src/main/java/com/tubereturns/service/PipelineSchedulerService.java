@@ -1,5 +1,6 @@
 package com.tubereturns.service;
 
+import com.tubereturns.repository.VideoRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.function.IntSupplier;
 
@@ -37,12 +39,26 @@ public class PipelineSchedulerService {
     private final TranscriptDownloadService transcriptService;
     private final StockPickExtractionService extractionService;
     private final PipelineStatusRegistry registry;
+    private final VideoRepository videoRepository;
 
     @PostConstruct
     void registerSteps() {
         registry.registerStep("discovery", discoveryCron, discoveryMaxItems);
         registry.registerStep("transcript", transcriptCron, transcriptMaxItems);
         registry.registerStep("extraction", extractionCron, extractionMaxItems);
+    }
+
+    @PostConstruct
+    @Transactional
+    void resetStaleStatuses() {
+        int transcriptReset = videoRepository.resetStaleTranscriptStatuses();
+        int processingReset = videoRepository.resetStaleProcessingStatuses();
+        if (transcriptReset > 0) {
+            log.info("Reset {} video(s) from DOWNLOADING → PENDING (transcript)", transcriptReset);
+        }
+        if (processingReset > 0) {
+            log.info("Reset {} video(s) from PROCESSING → PENDING (extraction)", processingReset);
+        }
     }
 
     @Scheduled(cron = "${tubereturns.pipeline.discovery.cron}")

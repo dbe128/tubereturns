@@ -4,6 +4,7 @@ import com.tubereturns.model.Video;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -37,6 +38,14 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     List<Video> findVideosReadyForProcessing(@Param("limit") int limit);
 
     boolean existsByVideoId(String videoId);
+
+    @Modifying
+    @Query("UPDATE Video v SET v.transcriptStatus = 'PENDING' WHERE v.transcriptStatus = 'DOWNLOADING'")
+    int resetStaleTranscriptStatuses();
+
+    @Modifying
+    @Query("UPDATE Video v SET v.processingStatus = 'PENDING' WHERE v.processingStatus = 'PROCESSING'")
+    int resetStaleProcessingStatuses();
 
     @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
