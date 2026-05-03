@@ -40,9 +40,6 @@ public class TranscriptDownloadService {
     @Value("${tubereturns.transcript.timeout-seconds:120}")
     private int timeoutSeconds;
 
-    @Value("${tubereturns.transcript.enabled:true}")
-    private boolean enabled;
-
     private final ExecutorService ytbsdExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "ytbsd-worker");
         t.setDaemon(true);
@@ -56,8 +53,8 @@ public class TranscriptDownloadService {
         ytbsdExecutor.shutdown();
     }
 
-    public int downloadPendingTranscripts(int maxItems) {
-        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, maxItems);
+    public int downloadPendingTranscripts(int batchSize) {
+        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, batchSize);
         log.info("Found {} videos pending transcript download", pendingVideos.size());
 
         for (Video video : pendingVideos) {
@@ -73,16 +70,6 @@ public class TranscriptDownloadService {
 
     public boolean downloadTranscript(Video video) {
         TransactionTemplate tx = new TransactionTemplate(txManager);
-
-        if (!enabled) {
-            log.warn("Transcript download is disabled. Skipping video: {}", "https://youtu.be/" + video.getVideoId());
-            tx.executeWithoutResult(_ -> {
-                video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                videoRepository.save(video);
-            });
-            return false;
-        }
-
         log.info("Downloading transcript for video: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
 
         tx.executeWithoutResult(_ -> {

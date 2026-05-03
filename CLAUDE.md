@@ -1,5 +1,7 @@
 # claude.md — TubeReturns (Consolidated MVP Spec)
 
+After completing every task, run: `afplay /System/Library/Sounds/Glass.aiff`
+
 TubeReturns is a web application that helps retail investors **rank finance YouTubers based on their historical investing performance** and visualize the results with clean, compelling financial dashboards.
 
 This document defines the **single source of truth** for MVP architecture, scope, constraints, and tech stack.

@@ -29,7 +29,7 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.discovery.max-items}")
     private int discoveryMaxItems;
 
-    @Value("${tubereturns.pipeline.transcript.max-items}")
+    @Value("${tubereturns.pipeline.transcript.batch-size}")
     private int transcriptMaxItems;
 
     @Value("${tubereturns.pipeline.extraction.max-items}")

@@ -46,7 +46,6 @@ tubereturns:
     api-key: ${YOUTUBE_API_KEY:}
 
   transcript:
-    enabled: true
     ytbsd-path: /app/scripts/ytbsd.py
     transcripts-dir: /app/transcripts
     timeout-seconds: 120
@@ -70,7 +69,7 @@ tubereturns:
       max-items: 100
     transcript:
       cron: "0 15 * * * *"
-      max-items: 2
+      batch-size: 2
     extraction:
       cron: "0 30 * * * *"
       max-items: 1
