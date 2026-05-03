@@ -1439,24 +1439,25 @@ def download_transcripts_parallel(videos: list[dict], source_name: str, source_t
 
     # Launch workers
     errors = []
+    executor = ThreadPoolExecutor(max_workers=num_threads)
     try:
         with status_manager.get_live_context():
-            with ThreadPoolExecutor(max_workers=num_threads) as executor:
-                # Submit worker threads
-                futures = [executor.submit(worker_thread) for _ in range(num_threads)]
-
-                # Wait for all workers to complete
-                for future in as_completed(futures):
+            futures = [executor.submit(worker_thread) for _ in range(num_threads)]
+            while not work_queue.is_all_work_done() and not all(f.done() for f in futures):
+                time.sleep(0.1)
+            for f in futures:
+                if f.done():
                     try:
-                        future.result()
+                        f.result()
                     except Exception as e:
                         errors.append(f"Worker error: {e}")
-
     except KeyboardInterrupt:
         stop_flag.set()
         status_manager.stop_display()
         print("\n\n** Download interrupted by user **")
         was_interrupted = True
+    finally:
+        executor.shutdown(wait=False, cancel_futures=True)
 
     # Stop status display
     status_manager.stop_display()
