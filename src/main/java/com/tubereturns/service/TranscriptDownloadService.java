@@ -33,6 +33,7 @@ public class TranscriptDownloadService {
 
     private final PlatformTransactionManager txManager;
     private final VideoRepository videoRepository;
+    private final StockPickExtractionService extractionService;
 
     @Value("${tubereturns.transcript.ytbsd-path:/app/scripts/ytbsd.py}")
     private String ytbsdPath;
@@ -182,6 +183,7 @@ public class TranscriptDownloadService {
                 return;
             }
 
+            List<String> downloadedIds = new ArrayList<>();
             Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
             for (String videoId : videoIds) {
                 try {
@@ -191,6 +193,7 @@ public class TranscriptDownloadService {
                             if (transcript != null && !transcript.isBlank()) {
                                 v.setTranscriptText(transcript);
                                 v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
+                                downloadedIds.add(videoId);
                                 log.info("Transcript downloaded: https://youtu.be/{}", videoId);
                             } else {
                                 v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
@@ -209,6 +212,7 @@ public class TranscriptDownloadService {
                     );
                 }
             }
+            downloadedIds.forEach(extractionService::enqueueVideo);
         } finally {
             ytbsdRunning = false;
             ytbsdCurrentBatchSize = null;

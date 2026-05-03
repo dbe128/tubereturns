@@ -20,7 +20,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -46,7 +45,7 @@ public class AdminController {
         return List.of(
                 toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
-                toDto("extraction", "Pick Extraction", null, null)
+                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null)
         );
     }
 
@@ -89,17 +88,15 @@ public class AdminController {
     }
 
     @PostMapping("/videos/{videoId}/reextract")
-    @Operation(summary = "Re-extract picks from a video", description = "Deletes existing picks, sets status to PROCESSING, and re-runs extraction asynchronously")
+    @Operation(summary = "Re-extract picks from a video", description = "Deletes existing picks, resets status to PENDING, and enqueues for extraction")
     public ResponseEntity<Map<String, String>> reextractVideo(@PathVariable String videoId) {
         return videoRepository.findByVideoId(videoId)
                 .map(video -> {
                     pickRepository.deleteByVideoId(video.getId());
-                    video.setProcessingStatus(Video.ProcessingStatus.PROCESSING);
+                    video.setProcessingStatus(Video.ProcessingStatus.PENDING);
                     video.setExtractionModel(null);
                     videoRepository.save(video);
-                    CompletableFuture.runAsync(() ->
-                        videoRepository.findByVideoIdWithChannel(videoId).ifPresent(stockPickExtractionService::processVideo)
-                    );
+                    stockPickExtractionService.enqueueVideo(videoId);
                     return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Re-extraction started for video: " + videoId));
                 })
                 .orElse(ResponseEntity.notFound().build());

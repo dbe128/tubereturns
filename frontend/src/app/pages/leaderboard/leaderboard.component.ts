@@ -259,12 +259,12 @@ interface ChannelRow extends Channel {
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Last processed</dt>
                     @if (step.ytbsdStats) {
-                      <dd class="font-mono" [class]="step.ytbsdStats.lastBatchSize !== null && step.ytbsdStats.lastBatchSize >= step.limit ? 'text-amber-600' : 'text-gray-700'">
-                        {{ step.ytbsdStats.lastBatchSize !== null ? step.ytbsdStats.lastBatchSize + ' / ' + step.limit : '—' }}
+                      <dd class="font-mono" [class]="step.limit !== null && step.ytbsdStats.lastBatchSize !== null && step.ytbsdStats.lastBatchSize >= step.limit ? 'text-amber-600' : 'text-gray-700'">
+                        {{ step.ytbsdStats.lastBatchSize !== null ? (step.limit !== null ? step.ytbsdStats.lastBatchSize + ' / ' + step.limit : step.ytbsdStats.lastBatchSize) : '—' }}
                       </dd>
                     } @else {
-                      <dd class="font-mono" [class]="step.lastRunCount !== null && step.lastRunCount >= step.limit ? 'text-amber-600' : 'text-gray-700'">
-                        {{ step.lastRunCount !== null ? step.lastRunCount + ' / ' + step.limit : '—' }}
+                      <dd class="font-mono" [class]="step.limit !== null && step.lastRunCount !== null && step.lastRunCount >= step.limit ? 'text-amber-600' : 'text-gray-700'">
+                        {{ step.lastRunCount !== null ? (step.limit !== null ? step.lastRunCount + ' / ' + step.limit : step.lastRunCount) : '—' }}
                       </dd>
                     }
                   </div>

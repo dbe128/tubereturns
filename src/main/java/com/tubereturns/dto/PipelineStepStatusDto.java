@@ -8,7 +8,7 @@ public record PipelineStepStatusDto(
         String nextRunAt,
         boolean running,
         Integer lastRunCount,
-        int limit,
+        Integer limit,
         Integer queueSize,
         YtbsdStatsDto ytbsdStats
 ) {}

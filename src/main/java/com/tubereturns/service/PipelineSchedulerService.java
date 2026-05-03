@@ -34,9 +34,6 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.transcript.batch-size}")
     private int transcriptMaxItems;
 
-    @Value("${tubereturns.pipeline.extraction.max-items}")
-    private int extractionMaxItems;
-
     private final YouTubeDiscoveryService discoveryService;
     private final TranscriptDownloadService transcriptService;
     private final StockPickExtractionService extractionService;
@@ -47,7 +44,7 @@ public class PipelineSchedulerService {
     void registerSteps() {
         registry.registerStep("discovery", discoveryCron, discoveryMaxItems);
         registry.registerStep("transcript", transcriptCron, transcriptMaxItems);
-        registry.registerStep("extraction", extractionCron, extractionMaxItems);
+        registry.registerStep("extraction", extractionCron, null);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -75,7 +72,7 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.extraction.cron}")
     public void runExtraction() {
-        runStep("extraction", () -> extractionService.processVideosWithTranscripts(extractionMaxItems));
+        extractionService.enqueueAllPending();
     }
 
     @Async
@@ -90,7 +87,7 @@ public class PipelineSchedulerService {
 
     @Async
     public void triggerExtraction() {
-        runStep("extraction", () -> extractionService.processVideosWithTranscripts(extractionMaxItems));
+        extractionService.enqueueAllPending();
     }
 
     private void runStep(String step, IntSupplier task) {

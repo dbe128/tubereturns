@@ -72,7 +72,6 @@ tubereturns:
       batch-size: 2
     extraction:
       cron: "0 30 * * * *"
-      max-items: 1
 
 logging:
   pattern:

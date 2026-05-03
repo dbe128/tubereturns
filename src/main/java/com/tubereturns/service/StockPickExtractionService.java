@@ -11,17 +11,22 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.VideoRepository;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -40,61 +45,96 @@ public class StockPickExtractionService {
     private final ChannelRepository channelRepository;
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
-    private final PlatformTransactionManager txManager;
+    private final PipelineStatusRegistry registry;
 
-    public int processVideosWithTranscripts(int maxItems) {
-        List<Video> readyVideos = videoRepository.findVideosReadyForProcessing(maxItems);
-        log.info("Found {} videos ready for stock pick extraction", readyVideos.size());
+    private final ExecutorService extractionExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "extraction-worker");
+        t.setDaemon(true);
+        return t;
+    });
 
-        TransactionTemplate tx = new TransactionTemplate(txManager);
-        for (Video video : readyVideos) {
-            String videoUrl = "https://youtu.be/" + video.getVideoId();
-            try {
-                log.info("Processing video for stock picks: {} ({})", video.getTitle(), videoUrl);
+    private final LinkedList<String> pendingVideoIds = new LinkedList<>();
+    private final Set<String> queuedVideoIds = new HashSet<>();
+    private final Object queueLock = new Object();
+    private boolean draining = false;
+    private final AtomicInteger sessionCount = new AtomicInteger();
 
-                if (video.getTranscriptText() == null || video.getTranscriptText().trim().isEmpty()) {
-                    log.warn("Video {} has no transcript text available", videoUrl);
-                    tx.executeWithoutResult(s -> {
-                        video.setProcessingStatus(Video.ProcessingStatus.FAILED);
-                        videoRepository.save(video);
-                    });
-                    continue;
-                }
-
-                tx.executeWithoutResult(s -> {
-                    video.setProcessingStatus(Video.ProcessingStatus.PROCESSING);
-                    videoRepository.save(video);
-                });
-
-                StockPickExtractionDto extraction = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
-
-                tx.executeWithoutResult(s -> {
-                    savePicks(video, extraction);
-                    video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
-                    video.setExtractionModel(aiModelService.getModel());
-                    videoRepository.save(video);
-                    advanceLastProcessedAt(video);
-                });
-
-            } catch (Exception e) {
-                log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
-                tx.executeWithoutResult(s -> {
-                    video.setProcessingStatus(Video.ProcessingStatus.FAILED);
-                    videoRepository.save(video);
-                });
-            }
+    public int getQueueSize() {
+        synchronized (queueLock) {
+            return pendingVideoIds.size();
         }
-        return readyVideos.size();
     }
 
-    public List<Pick> processVideo(Video video) {
-        log.info("Processing video for stock picks: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
+    @PreDestroy
+    public void shutdown() {
+        extractionExecutor.shutdown();
+    }
 
-        if (video.getTranscriptText() == null || video.getTranscriptText().trim().isEmpty()) {
-            log.warn("Video {} has no transcript text available", "https://youtu.be/" + video.getVideoId());
+    public void enqueueAllPending() {
+        List<Video> readyVideos = videoRepository.findAllVideosReadyForProcessing();
+        if (readyVideos.isEmpty()) {
+            return;
+        }
+        log.info("Found {} video(s) ready for pick extraction", readyVideos.size());
+        readyVideos.forEach(v -> enqueue(v.getVideoId()));
+    }
+
+    public void enqueueVideo(String videoId) {
+        enqueue(videoId);
+    }
+
+    private void enqueue(String videoId) {
+        synchronized (queueLock) {
+            if (queuedVideoIds.contains(videoId)) {
+                return;
+            }
+            queuedVideoIds.add(videoId);
+            pendingVideoIds.addLast(videoId);
+            if (!draining) {
+                draining = true;
+                sessionCount.set(0);
+                registry.markStarted("extraction");
+                extractionExecutor.submit(this::drainNext);
+            }
+        }
+    }
+
+    private void drainNext() {
+        String videoId;
+        synchronized (queueLock) {
+            videoId = pendingVideoIds.pollFirst();
+            if (videoId == null) {
+                registry.markFinished("extraction", sessionCount.get());
+                draining = false;
+                return;
+            }
+        }
+
+        try {
+            videoRepository.findByVideoIdWithChannel(videoId).ifPresent(this::doProcessVideo);
+            sessionCount.incrementAndGet();
+        } finally {
+            synchronized (queueLock) {
+                queuedVideoIds.remove(videoId);
+                if (!pendingVideoIds.isEmpty()) {
+                    extractionExecutor.submit(this::drainNext);
+                } else {
+                    registry.markFinished("extraction", sessionCount.get());
+                    draining = false;
+                }
+            }
+        }
+    }
+
+    private void doProcessVideo(Video video) {
+        String videoUrl = "https://youtu.be/" + video.getVideoId();
+        log.info("Processing video for stock picks: {} ({})", video.getTitle(), videoUrl);
+
+        if (video.getTranscriptText() == null || video.getTranscriptText().isBlank()) {
+            log.warn("Video {} has no transcript text available", videoUrl);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
-            return List.of();
+            return;
         }
 
         video.setProcessingStatus(Video.ProcessingStatus.PROCESSING);
@@ -102,21 +142,15 @@ public class StockPickExtractionService {
 
         try {
             StockPickExtractionDto extraction = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
-            List<Pick> createdPicks = savePicks(video, extraction);
-
+            savePicks(video, extraction);
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
             video.setExtractionModel(aiModelService.getModel());
             videoRepository.save(video);
-
             advanceLastProcessedAt(video);
-
-            return createdPicks;
-
         } catch (Exception e) {
-            log.error("Failed to extract stock picks from video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
+            log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
-            return List.of();
         }
     }
 

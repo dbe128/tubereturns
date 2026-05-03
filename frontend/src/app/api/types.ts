@@ -103,7 +103,7 @@ export const PipelineStepStatusSchema = z.object({
   nextRunAt: z.string().nullable(),
   running: z.boolean(),
   lastRunCount: z.number().nullable(),
-  limit: z.number(),
+  limit: z.number().nullable(),
   queueSize: z.number().nullable(),
   ytbsdStats: YtbsdStatsSchema.nullable(),
 });

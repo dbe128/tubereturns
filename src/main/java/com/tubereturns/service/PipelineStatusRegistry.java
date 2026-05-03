@@ -18,9 +18,11 @@ public class PipelineStatusRegistry {
     private final Map<String, Integer> lastRunCounts = new ConcurrentHashMap<>();
     private final Map<String, Integer> limits = new ConcurrentHashMap<>();
 
-    public void registerStep(String step, String cron, int limit) {
+    public void registerStep(String step, String cron, Integer limit) {
         cronExpressions.put(step, cron);
-        limits.put(step, limit);
+        if (limit != null) {
+            limits.put(step, limit);
+        }
     }
 
     public void markStarted(String step) {
@@ -65,7 +67,7 @@ public class PipelineStatusRegistry {
         return lastRunCounts.get(step);
     }
 
-    public int getLimit(String step) {
-        return limits.getOrDefault(step, 0);
+    public Integer getLimit(String step) {
+        return limits.get(step);
     }
 }
