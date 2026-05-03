@@ -5,5 +5,7 @@ public record YtbsdStatsDto(
         int successfulRuns,
         int failedRuns,
         Long lastDurationMs,
-        Integer lastBatchSize
+        Integer lastBatchSize,
+        boolean running,
+        Integer currentBatchSize
 ) {}

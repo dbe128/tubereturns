@@ -91,6 +91,8 @@ export const YtbsdStatsSchema = z.object({
   failedRuns: z.number(),
   lastDurationMs: z.number().nullable(),
   lastBatchSize: z.number().nullable(),
+  running: z.boolean(),
+  currentBatchSize: z.number().nullable(),
 });
 
 export const PipelineStepStatusSchema = z.object({

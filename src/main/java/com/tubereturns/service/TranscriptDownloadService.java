@@ -61,6 +61,8 @@ public class TranscriptDownloadService {
     private final AtomicInteger ytbsdFailedRuns = new AtomicInteger();
     private volatile Long ytbsdLastDurationMs = null;
     private volatile Integer ytbsdLastBatchSize = null;
+    private volatile boolean ytbsdRunning = false;
+    private volatile Integer ytbsdCurrentBatchSize = null;
 
     public int getQueueSize() {
         synchronized (batchLock) {
@@ -68,10 +70,10 @@ public class TranscriptDownloadService {
         }
     }
 
-    public record YtbsdStats(int totalRuns, int successfulRuns, int failedRuns, Long lastDurationMs, Integer lastBatchSize) {}
+    public record YtbsdStats(int totalRuns, int successfulRuns, int failedRuns, Long lastDurationMs, Integer lastBatchSize, boolean running, Integer currentBatchSize) {}
 
     public YtbsdStats getYtbsdStats() {
-        return new YtbsdStats(ytbsdTotalRuns.get(), ytbsdSuccessfulRuns.get(), ytbsdFailedRuns.get(), ytbsdLastDurationMs, ytbsdLastBatchSize);
+        return new YtbsdStats(ytbsdTotalRuns.get(), ytbsdSuccessfulRuns.get(), ytbsdFailedRuns.get(), ytbsdLastDurationMs, ytbsdLastBatchSize, ytbsdRunning, ytbsdCurrentBatchSize);
     }
 
     @PreDestroy
@@ -156,47 +158,54 @@ public class TranscriptDownloadService {
 
     private void processBatch(List<String> videoIds) {
         log.info("Processing ytbsd batch of {} video(s): {}", videoIds.size(), videoIds);
+        ytbsdRunning = true;
+        ytbsdCurrentBatchSize = videoIds.size();
         TransactionTemplate tx = new TransactionTemplate(txManager);
 
         try {
-            invokeYtbsd(videoIds);
-        } catch (Exception e) {
-            log.error("ytbsd batch failed for {}: {}", videoIds, e.getMessage(), e);
-            tx.executeWithoutResult(_ ->
-                videoIds.forEach(videoId -> videoRepository.findByVideoId(videoId).ifPresent(v -> {
-                    v.setTranscriptStatus(Video.TranscriptStatus.FAILED);
-                    videoRepository.save(v);
-                }))
-            );
-            return;
-        }
-
-        Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
-        for (String videoId : videoIds) {
             try {
-                String transcript = readTranscriptFromOutput(transcriptsDir, videoId);
-                tx.executeWithoutResult(_ ->
-                    videoRepository.findByVideoId(videoId).ifPresent(v -> {
-                        if (transcript != null && !transcript.isBlank()) {
-                            v.setTranscriptText(transcript);
-                            v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                            log.info("Transcript downloaded: https://youtu.be/{}", videoId);
-                        } else {
-                            v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                            log.warn("No transcript for: https://youtu.be/{}", videoId);
-                        }
-                        videoRepository.save(v);
-                    })
-                );
+                invokeYtbsd(videoIds);
             } catch (Exception e) {
-                log.error("Error processing transcript output for {}: {}", videoId, e.getMessage(), e);
+                log.error("ytbsd batch failed for {}: {}", videoIds, e.getMessage(), e);
                 tx.executeWithoutResult(_ ->
-                    videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                    videoIds.forEach(videoId -> videoRepository.findByVideoId(videoId).ifPresent(v -> {
                         v.setTranscriptStatus(Video.TranscriptStatus.FAILED);
                         videoRepository.save(v);
-                    })
+                    }))
                 );
+                return;
             }
+
+            Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
+            for (String videoId : videoIds) {
+                try {
+                    String transcript = readTranscriptFromOutput(transcriptsDir, videoId);
+                    tx.executeWithoutResult(_ ->
+                        videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                            if (transcript != null && !transcript.isBlank()) {
+                                v.setTranscriptText(transcript);
+                                v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
+                                log.info("Transcript downloaded: https://youtu.be/{}", videoId);
+                            } else {
+                                v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
+                                log.warn("No transcript for: https://youtu.be/{}", videoId);
+                            }
+                            videoRepository.save(v);
+                        })
+                    );
+                } catch (Exception e) {
+                    log.error("Error processing transcript output for {}: {}", videoId, e.getMessage(), e);
+                    tx.executeWithoutResult(_ ->
+                        videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                            v.setTranscriptStatus(Video.TranscriptStatus.FAILED);
+                            videoRepository.save(v);
+                        })
+                    );
+                }
+            }
+        } finally {
+            ytbsdRunning = false;
+            ytbsdCurrentBatchSize = null;
         }
     }
 

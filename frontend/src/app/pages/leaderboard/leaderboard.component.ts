@@ -197,10 +197,10 @@ interface ChannelRow extends Channel {
               <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="font-semibold text-gray-800 text-sm">{{ step.label }}</h3>
-                  @if (step.running) {
+                  @if (step.ytbsdStats ? step.ytbsdStats.running : step.running) {
                     <span class="flex items-center gap-1.5 text-xs text-primary-600 font-medium">
                       <span class="animate-spin inline-block h-3 w-3 border border-primary-500 border-t-transparent rounded-full"></span>
-                      Running
+                      Running@if (step.ytbsdStats?.currentBatchSize) { ({{ step.ytbsdStats!.currentBatchSize }})}
                     </span>
                   } @else {
                     <span class="text-xs text-gray-300">Idle</span>
@@ -258,14 +258,20 @@ interface ChannelRow extends Channel {
                   }
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Last processed</dt>
-                    <dd class="font-mono" [class]="step.lastRunCount !== null && step.lastRunCount >= step.limit ? 'text-amber-600' : 'text-gray-700'">
-                      {{ step.lastRunCount !== null ? step.lastRunCount + ' / ' + step.limit : '—' }}
-                    </dd>
+                    @if (step.ytbsdStats) {
+                      <dd class="font-mono" [class]="step.ytbsdStats.lastBatchSize !== null && step.ytbsdStats.lastBatchSize >= step.limit ? 'text-amber-600' : 'text-gray-700'">
+                        {{ step.ytbsdStats.lastBatchSize !== null ? step.ytbsdStats.lastBatchSize + ' / ' + step.limit : '—' }}
+                      </dd>
+                    } @else {
+                      <dd class="font-mono" [class]="step.lastRunCount !== null && step.lastRunCount >= step.limit ? 'text-amber-600' : 'text-gray-700'">
+                        {{ step.lastRunCount !== null ? step.lastRunCount + ' / ' + step.limit : '—' }}
+                      </dd>
+                    }
                   </div>
                 </dl>
                 <button
                   (click)="triggerStep(step.step)"
-                  [disabled]="step.running || disabledSteps().has(step.step)"
+                  [disabled]="(step.ytbsdStats ? step.ytbsdStats.running : step.running) || disabledSteps().has(step.step)"
                   class="w-full px-3 py-1.5 bg-gray-800 text-white rounded-lg text-xs font-semibold
                          hover:bg-gray-700 disabled:opacity-40 transition-colors"
                 >
