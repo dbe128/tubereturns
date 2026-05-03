@@ -2,6 +2,7 @@ package com.tubereturns.service;
 
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.VideoRepository;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +13,13 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -36,13 +43,27 @@ public class TranscriptDownloadService {
     @Value("${tubereturns.transcript.enabled:true}")
     private boolean enabled;
 
+    private final ExecutorService ytbsdExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "ytbsd-worker");
+        t.setDaemon(true);
+        return t;
+    });
+
+    private Instant lastProxyRefreshAt = null;
+
+    @PreDestroy
+    public void shutdown() {
+        ytbsdExecutor.shutdown();
+    }
+
     public int downloadPendingTranscripts(int maxItems) {
         List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, maxItems);
         log.info("Found {} videos pending transcript download", pendingVideos.size());
 
         for (Video video : pendingVideos) {
             try {
-                downloadTranscript(video);
+                boolean ok = downloadTranscript(video);
+                log.info("Transcript download {}: {}", ok ? "succeeded" : "yielded no transcript", "https://youtu.be/" + video.getVideoId());
             } catch (Exception e) {
                 log.error("Error downloading transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
             }
@@ -55,7 +76,7 @@ public class TranscriptDownloadService {
 
         if (!enabled) {
             log.warn("Transcript download is disabled. Skipping video: {}", "https://youtu.be/" + video.getVideoId());
-            tx.executeWithoutResult(s -> {
+            tx.executeWithoutResult(_ -> {
                 video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
                 videoRepository.save(video);
             });
@@ -64,7 +85,7 @@ public class TranscriptDownloadService {
 
         log.info("Downloading transcript for video: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
 
-        tx.executeWithoutResult(s -> {
+        tx.executeWithoutResult(_ -> {
             video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
             videoRepository.save(video);
         });
@@ -72,7 +93,7 @@ public class TranscriptDownloadService {
         try {
             String transcript = fetchTranscript(video.getVideoId());
 
-            tx.executeWithoutResult(s -> {
+            tx.executeWithoutResult(_ -> {
                 if (transcript != null && !transcript.isBlank()) {
                     video.setTranscriptText(transcript);
                     video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
@@ -87,7 +108,7 @@ public class TranscriptDownloadService {
 
         } catch (Exception e) {
             log.error("Failed to download transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage());
-            tx.executeWithoutResult(s -> {
+            tx.executeWithoutResult(_ -> {
                 video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
                 videoRepository.save(video);
             });
@@ -96,7 +117,33 @@ public class TranscriptDownloadService {
     }
 
     String fetchTranscript(String videoId) throws IOException, InterruptedException {
-        List<String> cmd = List.of("python3", ytbsdPath, "--mode", "single", "--url", videoId);
+        log.info("Queuing ytbsd job for video: https://youtu.be/{}", videoId);
+        try {
+            return ytbsdExecutor.submit(() -> runYtbsd(videoId)).get();
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            if (cause instanceof IOException ioe) throw ioe;
+            if (cause instanceof InterruptedException ie) throw ie;
+            throw new RuntimeException(cause.getMessage(), cause);
+        }
+    }
+
+    private String runYtbsd(String videoId) throws IOException, InterruptedException {
+        boolean skipProxyRefresh = lastProxyRefreshAt != null &&
+                Duration.between(lastProxyRefreshAt, Instant.now()).toMinutes() < 10;
+
+        if (skipProxyRefresh) {
+            log.info("Skipping proxy refresh — last refresh was {} min ago", Duration.between(lastProxyRefreshAt, Instant.now()).toMinutes());
+        } else {
+            log.info("Refreshing proxies (last refresh: {})", lastProxyRefreshAt != null ? lastProxyRefreshAt : "never");
+            lastProxyRefreshAt = Instant.now();
+        }
+
+        List<String> cmd = new ArrayList<>(List.of("python3", ytbsdPath, "--mode", "batch", "--urls", videoId));
+        if (skipProxyRefresh) {
+            cmd.add("--no-proxy-refresh");
+        }
+
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);
 

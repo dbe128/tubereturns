@@ -539,7 +539,9 @@ class VideoWorkQueue:
                         'transcript': None,
                         'language': None,
                         'method': 'failed',
-                        'error_detail': f"Failed after {self.proxy_refresh_count} proxy refresh cycles"
+                        'error_detail': f"Failed after {self.proxy_refresh_count} proxy refresh cycles",
+                        'source_name': video.get('source_name', ''),
+                        'source_id': video.get('source_id', ''),
                     })
             return results
 
@@ -621,7 +623,7 @@ def get_video_ids_from_url(url: str, mode: str, proxy_pool: ProxyPool = None) ->
             # Try direct connection first
             info = extract_video_info_with_timeout(url, ydl_opts, timeout=VIDEO_INFO_TIMEOUT)
 
-            if mode == "single":
+            if mode == "batch":
                 videos = [{'id': info.get('id'), 'title': info.get('title', 'Unknown')}]
                 source_name = sanitize_filename(info.get('channel') or info.get('uploader', 'unknown'))
                 source_id = info.get('channel_id') or info.get('uploader_id') or ''
@@ -679,7 +681,7 @@ def get_video_ids_from_url(url: str, mode: str, proxy_pool: ProxyPool = None) ->
                 # Use timeout wrapper to prevent hanging on slow/bad proxies
                 info = extract_video_info_with_timeout(url, ydl_opts, timeout=VIDEO_INFO_TIMEOUT)
 
-                if mode == "single":
+                if mode == "batch":
                     videos = [{'id': info.get('id'), 'title': info.get('title', 'Unknown')}]
                     source_name = sanitize_filename(info.get('channel') or info.get('uploader', 'unknown'))
                     source_id = info.get('channel_id') or info.get('uploader_id') or ''
@@ -1129,7 +1131,9 @@ def download_single_video_with_proxy(video: dict, proxy: str, status_callback=No
         'transcript': None,
         'language': None,
         'method': None,
-        'error_detail': None
+        'error_detail': None,
+        'source_name': video.get('source_name', ''),
+        'source_id': video.get('source_id', ''),
     }
 
     proxy_ip = proxy.split(':')[0] if proxy else "Direct"
@@ -1572,7 +1576,7 @@ def get_user_choice(has_unfinished: bool) -> int:
 
 def _suggest_threads(mode: str = "") -> int:
     """Return suggested thread count based on mode and proxy file without prompting."""
-    if mode == "single":
+    if mode == "batch":
         return 10
     if not os.path.exists(PROXY_FILE):
         return DEFAULT_THREADS
@@ -1599,7 +1603,7 @@ def get_threading_choice(mode: str = "") -> int:
     except Exception:
         pass
 
-    suggested_threads = _suggest_threads(mode) if mode == "single" else (
+    suggested_threads = _suggest_threads(mode) if mode == "batch" else (
         max(MIN_THREADS, min(proxy_count, MAX_THREADS)) if proxy_count > 0 else DEFAULT_THREADS
     )
 
@@ -1621,7 +1625,7 @@ def get_threading_choice(mode: str = "") -> int:
 def get_url(mode: str) -> str:
     """Get URL from user based on mode."""
     prompts = {
-        "single": "Enter YouTube video URL or ID: ",
+        "batch": "Enter YouTube video URL or ID: ",
         "playlist": "Enter YouTube playlist URL: ",
         "channel": "Enter YouTube channel URL (e.g., https://www.youtube.com/@channelname): "
     }
@@ -1758,29 +1762,50 @@ def finalize_output(videos_data: list[dict], source_name: str, source_type: str,
                 f.write(content)
             filepaths.append(filepath)
     else:
-        if source_type == "single":
-            # Place in a {channel_id}_{channel_name}/ subfolder, named by video ID + title
-            clean_name = sanitize_filename(source_name)
-            folder_name = f"{source_id}_{clean_name}" if source_id else clean_name
-            single_dir = os.path.join(output_dir, folder_name)
-            os.makedirs(single_dir, exist_ok=True)
-            video = videos_data[0] if videos_data else {}
-            video_title = sanitize_filename(video.get('title', source_name))
-            video_id = video.get('id', '')
-            base = f"{video_id}_{video_title}" if video_id else video_title
-            filepath = os.path.join(single_dir, sanitize_filename(base) + ".md")
-        elif source_type == "playlist":
-            filename = sanitize_filename(f"playlist_{source_name}_{timestamp}.md")
-            filepath = os.path.join(output_dir, filename)
+        if source_type == "single" and len(videos_data) > 1:
+            # Batch mode: one file per video, same layout as single-video mode
+            for video in videos_data:
+                video_id = video.get('id', '')
+                video_title = sanitize_filename(video.get('title', video_id))
+                v_source_name = video.get('source_name', '') or 'unknown'
+                v_source_id = video.get('source_id', '')
+                clean_name = sanitize_filename(v_source_name)
+                folder_name = f"{v_source_id}_{clean_name}" if v_source_id else clean_name
+                video_dir = os.path.join(output_dir, folder_name)
+                os.makedirs(video_dir, exist_ok=True)
+                base = f"{video_id}_{video_title}" if video_id else video_title
+                filepath = os.path.join(video_dir, sanitize_filename(base) + ".md")
+                content = create_markdown_output([video], v_source_name, source_type)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    f.write(content)
+                filepaths.append(filepath)
         else:
-            filename = sanitize_filename(f"channel_{source_name}_{timestamp}.md")
-            filepath = os.path.join(output_dir, filename)
+            if source_type == "single":
+                # Place in a {channel_id}_{channel_name}/ subfolder, named by video ID + title
+                video0 = videos_data[0] if videos_data else {}
+                eff_source_name = video0.get('source_name') or source_name
+                eff_source_id = video0.get('source_id') if video0.get('source_id') is not None else source_id
+                clean_name = sanitize_filename(eff_source_name)
+                folder_name = f"{eff_source_id}_{clean_name}" if eff_source_id else clean_name
+                single_dir = os.path.join(output_dir, folder_name)
+                os.makedirs(single_dir, exist_ok=True)
+                video_title = sanitize_filename(video0.get('title', eff_source_name))
+                video_id = video0.get('id', '')
+                base = f"{video_id}_{video_title}" if video_id else video_title
+                filepath = os.path.join(single_dir, sanitize_filename(base) + ".md")
+                content = create_markdown_output(videos_data, eff_source_name, source_type)
+            elif source_type == "playlist":
+                filename = sanitize_filename(f"playlist_{source_name}_{timestamp}.md")
+                filepath = os.path.join(output_dir, filename)
+                content = create_markdown_output(videos_data, source_name, source_type)
+            else:
+                filename = sanitize_filename(f"channel_{source_name}_{timestamp}.md")
+                filepath = os.path.join(output_dir, filename)
+                content = create_markdown_output(videos_data, source_name, source_type)
 
-        content = create_markdown_output(videos_data, source_name, source_type)
-
-        with open(filepath, 'w', encoding='utf-8') as f:
-            f.write(content)
-        filepaths.append(filepath)
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(content)
+            filepaths.append(filepath)
 
     if not was_interrupted:
         clear_progress()
@@ -1819,19 +1844,50 @@ def finalize_output(videos_data: list[dict], source_name: str, source_type: str,
 
 def run_new_job(mode: str, cli_args=None) -> bool:
     """Start a new download job. Returns True to continue to menu, False to exit."""
-    url = cli_args.url if cli_args and cli_args.url else get_url(mode)
+    raw_urls = cli_args.urls if cli_args and cli_args.urls else [get_url(mode)]
+    if isinstance(raw_urls, str):
+        raw_urls = [raw_urls]
+
+    url = raw_urls[0] if raw_urls else ''
     if not url:
         print("Error: No URL provided.")
         return True
 
-    if mode == "single":
-        url = f"https://www.youtube.com/watch?v={extract_video_id(url)}"
-
     # Initialize proxy pool early for video info fetching
     proxy_pool = ProxyPool(PROXY_FILE, validate=False)
 
+    # Batch mode: one or more video URLs
+    if mode == "batch":
+        videos = []
+        for raw_url in raw_urls:
+            vid_id = extract_video_id(raw_url)
+            full_url = f"https://www.youtube.com/watch?v={vid_id}"
+            try:
+                ydl_opts = {'quiet': True, 'no_warnings': True}
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(full_url, download=False)
+                sname = sanitize_filename(info.get('channel') or info.get('uploader') or vid_id)
+                sid = info.get('channel_id') or info.get('uploader_id') or ''
+                videos.append({
+                    'id': info.get('id', vid_id),
+                    'title': info.get('title', vid_id),
+                    'source_name': sname,
+                    'source_id': sid,
+                })
+            except Exception as e:
+                print(f"Warning: could not fetch info for {vid_id}: {e}")
+                videos.append({'id': vid_id, 'title': vid_id, 'source_name': vid_id, 'source_id': ''})
+        if len(videos) == 1:
+            source_name = videos[0].get('source_name', '')
+            source_id = videos[0].get('source_id', '')
+        else:
+            source_name = "batch"
+            source_id = ""
+        source_type = "single"
+        print(f"\nBatch mode: {len(videos)} video(s) queued")
+
     # Handle channel content type selection
-    if mode == "channel":
+    elif mode == "channel":
         # Normalize the URL first (remove any existing /videos, /shorts, etc.)
         url = normalize_channel_url(url)
         content_type = cli_args.content if cli_args else get_channel_content_type()
@@ -1970,9 +2026,9 @@ def resume_job(progress: dict, cli_args=None) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description='YT Bulk Subtitles Downloader')
-    parser.add_argument('--mode', '-m', choices=['single', 'playlist', 'channel'],
+    parser.add_argument('--mode', '-m', choices=['batch', 'playlist', 'channel'],
                         help='Download mode')
-    parser.add_argument('--url', '-u', help='YouTube URL or video ID')
+    parser.add_argument('--urls', '-u', nargs='+', help='YouTube URL(s) or video ID(s)')
     parser.add_argument('--content', choices=['videos', 'shorts', 'both'], default='videos',
                         help='Channel content type (default: videos)')
     parser.add_argument('--threads', '-t', type=int, default=None,
@@ -1987,7 +2043,7 @@ def main():
                         help='Skip downloading a fresh proxy list on startup')
     args = parser.parse_args()
 
-    cli_mode = bool(args.mode or args.url or args.resume)
+    cli_mode = bool(args.mode or args.urls or args.resume)
 
     os.makedirs(PROGRESS_DIR, exist_ok=True)
     if not args.no_proxy_refresh:
@@ -2003,8 +2059,8 @@ def main():
         else:
             if not args.mode:
                 parser.error("--mode is required when not using --resume")
-            if not args.url:
-                parser.error("--url is required when not using --resume")
+            if not args.urls:
+                parser.error("--urls is required when not using --resume")
             run_new_job(args.mode, cli_args=args)
         return
 
@@ -2032,7 +2088,7 @@ def main():
                 print("\nGoodbye!")
                 return
         else:
-            mode_map = {1: "single", 2: "playlist", 3: "channel"}
+            mode_map = {1: "batch", 2: "playlist", 3: "channel"}
             if not run_new_job(mode_map[choice]):
                 print("\nGoodbye!")
                 return
