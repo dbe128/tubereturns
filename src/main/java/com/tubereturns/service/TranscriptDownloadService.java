@@ -16,11 +16,12 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -40,13 +41,38 @@ public class TranscriptDownloadService {
     @Value("${tubereturns.transcript.timeout-seconds:120}")
     private int timeoutSeconds;
 
+    @Value("${tubereturns.pipeline.transcript.batch-size:1}")
+    private int batchSize;
+
     private final ExecutorService ytbsdExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "ytbsd-worker");
         t.setDaemon(true);
         return t;
     });
 
+    private final LinkedList<List<String>> pendingBatches = new LinkedList<>();
+    private final Object batchLock = new Object();
+    private boolean draining = false;
+
     private Instant lastProxyRefreshAt = null;
+
+    private final AtomicInteger ytbsdTotalRuns = new AtomicInteger();
+    private final AtomicInteger ytbsdSuccessfulRuns = new AtomicInteger();
+    private final AtomicInteger ytbsdFailedRuns = new AtomicInteger();
+    private volatile Long ytbsdLastDurationMs = null;
+    private volatile Integer ytbsdLastBatchSize = null;
+
+    public int getQueueSize() {
+        synchronized (batchLock) {
+            return pendingBatches.stream().mapToInt(List::size).sum();
+        }
+    }
+
+    public record YtbsdStats(int totalRuns, int successfulRuns, int failedRuns, Long lastDurationMs, Integer lastBatchSize) {}
+
+    public YtbsdStats getYtbsdStats() {
+        return new YtbsdStats(ytbsdTotalRuns.get(), ytbsdSuccessfulRuns.get(), ytbsdFailedRuns.get(), ytbsdLastDurationMs, ytbsdLastBatchSize);
+    }
 
     @PreDestroy
     public void shutdown() {
@@ -55,67 +81,126 @@ public class TranscriptDownloadService {
 
     public int downloadPendingTranscripts(int batchSize) {
         List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, batchSize);
-        log.info("Found {} videos pending transcript download", pendingVideos.size());
-
-        for (Video video : pendingVideos) {
-            try {
-                boolean ok = downloadTranscript(video);
-                log.info("Transcript download {}: {}", ok ? "succeeded" : "yielded no transcript", "https://youtu.be/" + video.getVideoId());
-            } catch (Exception e) {
-                log.error("Error downloading transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage(), e);
-            }
+        if (pendingVideos.isEmpty()) {
+            return 0;
         }
+        log.info("Found {} video(s) pending transcript download", pendingVideos.size());
+
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+        tx.executeWithoutResult(_ -> {
+            for (Video video : pendingVideos) {
+                video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
+                videoRepository.save(video);
+            }
+        });
+
+        enqueue(pendingVideos.stream().map(Video::getVideoId).toList(), batchSize);
         return pendingVideos.size();
     }
 
-    public boolean downloadTranscript(Video video) {
+    public void downloadTranscript(Video video) {
         TransactionTemplate tx = new TransactionTemplate(txManager);
-        log.info("Downloading transcript for video: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
+        log.info("Enqueueing transcript download for: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
 
         tx.executeWithoutResult(_ -> {
             video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
             videoRepository.save(video);
         });
 
-        try {
-            String transcript = fetchTranscript(video.getVideoId());
+        enqueue(List.of(video.getVideoId()), batchSize);
+    }
 
-            tx.executeWithoutResult(_ -> {
-                if (transcript != null && !transcript.isBlank()) {
-                    video.setTranscriptText(transcript);
-                    video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                    log.info("Successfully downloaded transcript for video: {}", "https://youtu.be/" + video.getVideoId());
-                } else {
-                    video.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                    log.warn("No transcript available for video: {}", "https://youtu.be/" + video.getVideoId());
+    private void enqueue(List<String> videoIds, int batchSize) {
+        synchronized (batchLock) {
+            List<String> remaining = new ArrayList<>(videoIds);
+            if (!pendingBatches.isEmpty()) {
+                List<String> last = pendingBatches.getLast();
+                int space = batchSize - last.size();
+                if (space > 0) {
+                    int n = Math.min(space, remaining.size());
+                    last.addAll(remaining.subList(0, n));
+                    remaining = new ArrayList<>(remaining.subList(n, remaining.size()));
                 }
-                videoRepository.save(video);
-            });
-            return transcript != null && !transcript.isBlank();
-
-        } catch (Exception e) {
-            log.error("Failed to download transcript for video {}: {}", "https://youtu.be/" + video.getVideoId(), e.getMessage());
-            tx.executeWithoutResult(_ -> {
-                video.setTranscriptStatus(Video.TranscriptStatus.FAILED);
-                videoRepository.save(video);
-            });
-            return false;
+            }
+            for (int i = 0; i < remaining.size(); i += batchSize) {
+                pendingBatches.addLast(new ArrayList<>(remaining.subList(i, Math.min(i + batchSize, remaining.size()))));
+            }
+            log.info("Batch queue: {} item(s) pending after enqueue, draining={}", pendingBatches.size(), draining);
+            if (!draining) {
+                draining = true;
+                ytbsdExecutor.submit(this::drainNextBatch);
+            }
         }
     }
 
-    String fetchTranscript(String videoId) throws IOException, InterruptedException {
-        log.info("Queuing ytbsd job for video: https://youtu.be/{}", videoId);
+    private void drainNextBatch() {
+        List<String> batch;
+        synchronized (batchLock) {
+            batch = pendingBatches.pollFirst();
+            if (batch == null) {
+                draining = false;
+                return;
+            }
+        }
+
+        processBatch(batch);
+
+        synchronized (batchLock) {
+            if (!pendingBatches.isEmpty()) {
+                ytbsdExecutor.submit(this::drainNextBatch);
+            } else {
+                draining = false;
+            }
+        }
+    }
+
+    private void processBatch(List<String> videoIds) {
+        log.info("Processing ytbsd batch of {} video(s): {}", videoIds.size(), videoIds);
+        TransactionTemplate tx = new TransactionTemplate(txManager);
+
         try {
-            return ytbsdExecutor.submit(() -> runYtbsd(videoId)).get();
-        } catch (ExecutionException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof IOException ioe) throw ioe;
-            if (cause instanceof InterruptedException ie) throw ie;
-            throw new RuntimeException(cause.getMessage(), cause);
+            invokeYtbsd(videoIds);
+        } catch (Exception e) {
+            log.error("ytbsd batch failed for {}: {}", videoIds, e.getMessage(), e);
+            tx.executeWithoutResult(_ ->
+                videoIds.forEach(videoId -> videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                    v.setTranscriptStatus(Video.TranscriptStatus.FAILED);
+                    videoRepository.save(v);
+                }))
+            );
+            return;
+        }
+
+        Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
+        for (String videoId : videoIds) {
+            try {
+                String transcript = readTranscriptFromOutput(transcriptsDir, videoId);
+                tx.executeWithoutResult(_ ->
+                    videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                        if (transcript != null && !transcript.isBlank()) {
+                            v.setTranscriptText(transcript);
+                            v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
+                            log.info("Transcript downloaded: https://youtu.be/{}", videoId);
+                        } else {
+                            v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
+                            log.warn("No transcript for: https://youtu.be/{}", videoId);
+                        }
+                        videoRepository.save(v);
+                    })
+                );
+            } catch (Exception e) {
+                log.error("Error processing transcript output for {}: {}", videoId, e.getMessage(), e);
+                tx.executeWithoutResult(_ ->
+                    videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                        v.setTranscriptStatus(Video.TranscriptStatus.FAILED);
+                        videoRepository.save(v);
+                    })
+                );
+            }
         }
     }
 
-    private String runYtbsd(String videoId) throws IOException, InterruptedException {
+    private void invokeYtbsd(List<String> videoIds) throws IOException, InterruptedException {
         boolean skipProxyRefresh = lastProxyRefreshAt != null &&
                 Duration.between(lastProxyRefreshAt, Instant.now()).toMinutes() < 10;
 
@@ -126,7 +211,9 @@ public class TranscriptDownloadService {
             lastProxyRefreshAt = Instant.now();
         }
 
-        List<String> cmd = new ArrayList<>(List.of("python3", ytbsdPath, "--mode", "batch", "--urls", videoId));
+        int threads = Math.min(videoIds.size() * 20, 300);
+        List<String> cmd = new ArrayList<>(List.of("python3", ytbsdPath, "--mode", "batch", "--threads", String.valueOf(threads), "--urls"));
+        cmd.addAll(videoIds);
         if (skipProxyRefresh) {
             cmd.add("--no-proxy-refresh");
         }
@@ -135,31 +222,39 @@ public class TranscriptDownloadService {
         pb.redirectErrorStream(true);
 
         log.info("Running ytbsd.py: {}", cmd);
+        Instant start = Instant.now();
         Process process = pb.start();
         String output = new String(process.getInputStream().readAllBytes());
 
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
+        long durationMs = Duration.between(start, Instant.now()).toMillis();
+        ytbsdTotalRuns.incrementAndGet();
+        ytbsdLastBatchSize = videoIds.size();
+        ytbsdLastDurationMs = durationMs;
+
         if (!finished) {
             process.destroyForcibly();
-            throw new RuntimeException("ytbsd.py timed out after " + timeoutSeconds + "s for video " + videoId);
+            ytbsdFailedRuns.incrementAndGet();
+            throw new RuntimeException("ytbsd.py timed out after " + timeoutSeconds + "s for videos " + videoIds);
         }
 
         int exitCode = process.exitValue();
         if (exitCode != 0) {
-            log.warn("ytbsd.py exited with code {} for video {}:\n{}", exitCode, "https://youtu.be/" + videoId, output);
-            throw new RuntimeException("ytbsd.py failed for video " + videoId + ": " + output.trim());
+            ytbsdFailedRuns.incrementAndGet();
+            log.warn("ytbsd.py exited with code {} for {}:\n{}", exitCode, videoIds, output);
+            throw new RuntimeException("ytbsd.py failed for videos " + videoIds + ": " + output.trim());
         }
 
-        log.info("ytbsd.py output for {}:\n{}", "https://youtu.be/" + videoId, output);
+        ytbsdSuccessfulRuns.incrementAndGet();
+        log.info("ytbsd.py output for {}:\n{}", videoIds, output);
+    }
 
-        Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
+    private String readTranscriptFromOutput(Path transcriptsDir, String videoId) throws IOException {
         Path mdFile = findOutputFile(transcriptsDir, videoId);
-
         if (mdFile == null) {
             log.warn("No output file found for video {} under {}", "https://youtu.be/" + videoId, transcriptsDir);
             return null;
         }
-
         try {
             String markdown = Files.readString(mdFile);
             String transcript = parseMarkdownTranscript(markdown);

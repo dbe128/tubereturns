@@ -85,6 +85,14 @@ export const ChannelSearchResultSchema = z.object({
   description: z.string().nullable(),
 });
 
+export const YtbsdStatsSchema = z.object({
+  totalRuns: z.number(),
+  successfulRuns: z.number(),
+  failedRuns: z.number(),
+  lastDurationMs: z.number().nullable(),
+  lastBatchSize: z.number().nullable(),
+});
+
 export const PipelineStepStatusSchema = z.object({
   step: z.string(),
   label: z.string(),
@@ -94,6 +102,8 @@ export const PipelineStepStatusSchema = z.object({
   running: z.boolean(),
   lastRunCount: z.number().nullable(),
   limit: z.number(),
+  queueSize: z.number().nullable(),
+  ytbsdStats: YtbsdStatsSchema.nullable(),
 });
 
 export type Channel = z.infer<typeof ChannelSchema>;
@@ -104,6 +114,7 @@ export type Pick = z.infer<typeof PickSchema>;
 export type PricePoint = z.infer<typeof PricePointSchema>;
 export type PortfolioPricePoint = z.infer<typeof PortfolioPricePointSchema>;
 export type Portfolio = z.infer<typeof PortfolioSchema>;
+export type YtbsdStats = z.infer<typeof YtbsdStatsSchema>;
 export const RegisterResponseSchema = z.object({
   message: z.string(),
 });

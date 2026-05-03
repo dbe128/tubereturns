@@ -220,11 +220,42 @@ interface ChannelRow extends Channel {
                     </dd>
                   </div>
                   <div class="flex justify-between">
-                    <dt class="text-gray-400">Next run</dt>
+                    <dt class="text-gray-400">Next scheduled run</dt>
                     <dd class="text-gray-700 font-mono">
                       {{ step.nextRunAt ? (step.nextRunAt | date:'HH:mm:ss, dd MMM') : '—' }}
                     </dd>
                   </div>
+                  @if (step.queueSize !== null) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">Items in queue</dt>
+                    <dd class="text-gray-700 font-mono">{{ step.queueSize }}</dd>
+                  </div>
+                  }
+                  @if (step.ytbsdStats) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">YTBSD runs</dt>
+                    <dd class="text-gray-700 font-mono">
+                      {{ step.ytbsdStats.totalRuns }}
+                      <span class="text-green-600">({{ step.ytbsdStats.successfulRuns }} ok</span>
+                      @if (step.ytbsdStats.failedRuns > 0) {
+                        <span class="text-red-500">, {{ step.ytbsdStats.failedRuns }} failed</span>
+                      }
+                      <span class="text-green-600">)</span>
+                    </dd>
+                  </div>
+                  @if (step.ytbsdStats.lastDurationMs !== null) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">Last run duration</dt>
+                    <dd class="text-gray-700 font-mono">{{ (step.ytbsdStats.lastDurationMs / 1000) | number:'1.1-1' }}s</dd>
+                  </div>
+                  }
+                  @if (step.ytbsdStats.lastBatchSize !== null) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">Last batch size</dt>
+                    <dd class="text-gray-700 font-mono">{{ step.ytbsdStats.lastBatchSize }}</dd>
+                  </div>
+                  }
+                  }
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Last processed</dt>
                     <dd class="font-mono" [class]="step.lastRunCount !== null && step.lastRunCount >= step.limit ? 'text-amber-600' : 'text-gray-700'">

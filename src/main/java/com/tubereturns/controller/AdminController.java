@@ -2,6 +2,7 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
+import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.VideoRepository;
@@ -40,10 +41,12 @@ public class AdminController {
     @GetMapping("/pipeline/status")
     @Operation(summary = "Get pipeline status", description = "Returns last/next run timestamps and running state for each pipeline step")
     public List<PipelineStepStatusDto> getPipelineStatus() {
+        TranscriptDownloadService.YtbsdStats stats = transcriptDownloadService.getYtbsdStats();
+        YtbsdStatsDto ytbsdStatsDto = new YtbsdStatsDto(stats.totalRuns(), stats.successfulRuns(), stats.failedRuns(), stats.lastDurationMs(), stats.lastBatchSize());
         return List.of(
-                toDto("discovery", "Video Discovery"),
-                toDto("transcript", "Transcript Download"),
-                toDto("extraction", "Pick Extraction")
+                toDto("discovery", "Video Discovery", null, null),
+                toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
+                toDto("extraction", "Pick Extraction", null, null)
         );
     }
 
@@ -112,9 +115,7 @@ public class AdminController {
                     video.setProcessingStatus(Video.ProcessingStatus.PENDING);
                     video.setExtractionModel(null);
                     videoRepository.save(video);
-                    CompletableFuture.runAsync(() ->
-                        videoRepository.findByVideoId(videoId).ifPresent(transcriptDownloadService::downloadTranscript)
-                    );
+                    transcriptDownloadService.downloadTranscript(video);
                     return ResponseEntity.ok(Map.of("message", "Transcript download started for video: " + videoId));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -140,7 +141,7 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "TubeReturns is running"));
     }
 
-    private PipelineStepStatusDto toDto(String step, String label) {
-        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), registry.isRunning(step), registry.getLastRunCount(step), registry.getLimit(step));
+    private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {
+        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), registry.isRunning(step), registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats);
     }
 }
