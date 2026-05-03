@@ -5,6 +5,7 @@ import com.tubereturns.model.Channel;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.VideoRepository;
+import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,18 +19,76 @@ import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
-@Transactional
 public class YouTubeDiscoveryService {
 
     private final ChannelRepository channelRepository;
     private final VideoRepository videoRepository;
     private final YouTubeApiService youTubeApiService;
+    private final PipelineStatusRegistry registry;
+    private final TranscriptDownloadService transcriptDownloadService;
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
+    private final ExecutorService discoveryExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "discovery-worker");
+        t.setDaemon(true);
+        return t;
+    });
+
+    private final Object queueLock = new Object();
+    private boolean draining = false;
+    private boolean pendingRun = false;
+
+    public int getQueueSize() {
+        synchronized (queueLock) {
+            return pendingRun ? 1 : 0;
+        }
+    }
+
+    public void scheduleDiscovery(int maxVideos) {
+        synchronized (queueLock) {
+            if (!draining) {
+                draining = true;
+                discoveryExecutor.submit(() -> drainAndRun(maxVideos));
+                log.info("Discovery scheduled");
+            } else if (!pendingRun) {
+                pendingRun = true;
+                log.info("Discovery already running, queued one pending run");
+            } else {
+                log.info("Discovery already running with a pending run, skipping duplicate");
+            }
+        }
+    }
+
+    private void drainAndRun(int maxVideos) {
+        registry.markStarted("discovery");
+        int count = 0;
+        try {
+            count = discoverAndProcessChannels(maxVideos);
+        } catch (Exception e) {
+            log.error("Discovery failed: {}", e.getMessage(), e);
+        } finally {
+            registry.markFinished("discovery", count);
+            if (count > 0) {
+                transcriptDownloadService.downloadPendingTranscripts();
+            }
+            synchronized (queueLock) {
+                if (pendingRun) {
+                    pendingRun = false;
+                    discoveryExecutor.submit(() -> drainAndRun(maxVideos));
+                } else {
+                    draining = false;
+                }
+            }
+        }
+    }
+
+    @Transactional
     public int discoverAndProcessChannels(int maxVideos) {
         log.info("Starting channel discovery process");
 
@@ -52,6 +111,7 @@ public class YouTubeDiscoveryService {
         return videosProcessed;
     }
 
+    @Transactional
     public int processChannel(Channel channel, int maxVideos) {
         String channelUrl = "https://www.youtube.com/@" + channel.getHandle();
         log.info("Processing channel: {} ({})", channel.getChannelName(), channelUrl);
@@ -90,6 +150,7 @@ public class YouTubeDiscoveryService {
         return recentVideos.size();
     }
 
+    @Transactional
     public void softDeleteChannel(String handle) {
         channelRepository.findByHandle(handle).ifPresent(channel -> {
             channel.setDeletedAt(java.time.Instant.now());
@@ -97,6 +158,7 @@ public class YouTubeDiscoveryService {
         });
     }
 
+    @Transactional
     public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description) {
         return channelRepository.findByHandleIncludingDeleted(handle)
             .map(existing -> {
@@ -118,6 +180,11 @@ public class YouTubeDiscoveryService {
                 }
                 return channelRepository.save(newChannel);
             });
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        discoveryExecutor.shutdown();
     }
 
     private void downloadThumbnail(String url, Channel channel) {

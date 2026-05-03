@@ -65,7 +65,7 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.discovery.cron}")
     public void runDiscovery() {
-        runStep("discovery", () -> discoveryService.discoverAndProcessChannels(discoveryMaxItems));
+        discoveryService.scheduleDiscovery(discoveryMaxItems);
     }
 
     @Scheduled(cron = "${tubereturns.pipeline.transcript.cron}")
@@ -80,7 +80,7 @@ public class PipelineSchedulerService {
 
     @Async
     public void triggerDiscovery() {
-        runStep("discovery", () -> discoveryService.discoverAndProcessChannels(discoveryMaxItems));
+        discoveryService.scheduleDiscovery(discoveryMaxItems);
     }
 
     @Async

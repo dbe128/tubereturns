@@ -16,8 +16,10 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +53,7 @@ public class TranscriptDownloadService {
     });
 
     private final LinkedList<List<String>> pendingBatches = new LinkedList<>();
+    private final Set<String> queuedVideoIds = new HashSet<>();
     private final Object batchLock = new Object();
     private boolean draining = false;
 
@@ -81,40 +84,36 @@ public class TranscriptDownloadService {
         ytbsdExecutor.shutdown();
     }
 
+    public int downloadPendingTranscripts() {
+        return downloadPendingTranscripts(batchSize);
+    }
+
     public int downloadPendingTranscripts(int batchSize) {
-        List<Video> pendingVideos = videoRepository.findByTranscriptStatus(Video.TranscriptStatus.PENDING, batchSize);
+        List<Video> pendingVideos = videoRepository.findAllByTranscriptStatus(Video.TranscriptStatus.PENDING);
         if (pendingVideos.isEmpty()) {
             return 0;
         }
         log.info("Found {} video(s) pending transcript download", pendingVideos.size());
-
-        TransactionTemplate tx = new TransactionTemplate(txManager);
-        tx.executeWithoutResult(_ -> {
-            for (Video video : pendingVideos) {
-                video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
-                videoRepository.save(video);
-            }
-        });
-
         enqueue(pendingVideos.stream().map(Video::getVideoId).toList(), batchSize);
         return pendingVideos.size();
     }
 
     public void downloadTranscript(Video video) {
-        TransactionTemplate tx = new TransactionTemplate(txManager);
         log.info("Enqueueing transcript download for: {} ({})", video.getTitle(), "https://youtu.be/" + video.getVideoId());
-
-        tx.executeWithoutResult(_ -> {
-            video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
-            videoRepository.save(video);
-        });
-
         enqueue(List.of(video.getVideoId()), batchSize);
     }
 
     private void enqueue(List<String> videoIds, int batchSize) {
         synchronized (batchLock) {
-            List<String> remaining = new ArrayList<>(videoIds);
+            List<String> toAdd = videoIds.stream()
+                    .filter(id -> !queuedVideoIds.contains(id))
+                    .toList();
+            if (toAdd.isEmpty()) {
+                return;
+            }
+            queuedVideoIds.addAll(toAdd);
+
+            List<String> remaining = new ArrayList<>(toAdd);
             if (!pendingBatches.isEmpty()) {
                 List<String> last = pendingBatches.getLast();
                 int space = batchSize - last.size();
@@ -163,6 +162,13 @@ public class TranscriptDownloadService {
         TransactionTemplate tx = new TransactionTemplate(txManager);
 
         try {
+            tx.executeWithoutResult(_ ->
+                videoIds.forEach(videoId -> videoRepository.findByVideoId(videoId).ifPresent(v -> {
+                    v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADING);
+                    videoRepository.save(v);
+                }))
+            );
+
             try {
                 invokeYtbsd(videoIds);
             } catch (Exception e) {
@@ -206,6 +212,9 @@ public class TranscriptDownloadService {
         } finally {
             ytbsdRunning = false;
             ytbsdCurrentBatchSize = null;
+            synchronized (batchLock) {
+                videoIds.forEach(queuedVideoIds::remove);
+            }
         }
     }
 
@@ -221,11 +230,12 @@ public class TranscriptDownloadService {
         }
 
         int threads = Math.min(videoIds.size() * 20, 300);
-        List<String> cmd = new ArrayList<>(List.of("python3", ytbsdPath, "--mode", "batch", "--threads", String.valueOf(threads), "--urls"));
-        cmd.addAll(videoIds);
+        List<String> cmd = new ArrayList<>(List.of("python3", ytbsdPath, "--mode", "batch", "--threads", String.valueOf(threads)));
         if (skipProxyRefresh) {
             cmd.add("--no-proxy-refresh");
         }
+        cmd.add("--urls");
+        videoIds.stream().map(id -> "https://youtu.be/" + id).forEach(cmd::add);
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectErrorStream(true);

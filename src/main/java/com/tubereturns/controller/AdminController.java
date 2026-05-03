@@ -44,7 +44,7 @@ public class AdminController {
         TranscriptDownloadService.YtbsdStats stats = transcriptDownloadService.getYtbsdStats();
         YtbsdStatsDto ytbsdStatsDto = new YtbsdStatsDto(stats.totalRuns(), stats.successfulRuns(), stats.failedRuns(), stats.lastDurationMs(), stats.lastBatchSize(), stats.running(), stats.currentBatchSize());
         return List.of(
-                toDto("discovery", "Video Discovery", null, null),
+                toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
                 toDto("extraction", "Pick Extraction", null, null)
         );
@@ -84,6 +84,7 @@ public class AdminController {
             @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
             @RequestParam(required = false, defaultValue = "") String description) {
         discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description);
+        scheduler.triggerDiscovery();
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }
 

@@ -28,6 +28,9 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
     List<Video> findByTranscriptStatus(@Param("status") Video.TranscriptStatus status, @Param("limit") int limit);
 
+    @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status AND v.excluded = false ORDER BY v.publishedAt ASC")
+    List<Video> findAllByTranscriptStatus(@Param("status") Video.TranscriptStatus status);
+
     @Query("SELECT v FROM Video v WHERE v.processingStatus = :status")
     List<Video> findByProcessingStatus(@Param("status") Video.ProcessingStatus status);
 
