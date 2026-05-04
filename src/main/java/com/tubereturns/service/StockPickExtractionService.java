@@ -12,6 +12,7 @@ import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.VideoRepository;
 import jakarta.annotation.PreDestroy;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,7 +57,9 @@ public class StockPickExtractionService {
     private final Set<String> queuedVideoIds = new HashSet<>();
     private final Object queueLock = new Object();
     private boolean draining = false;
-    private final AtomicInteger sessionCount = new AtomicInteger();
+    @Getter
+    private volatile boolean workerRunning = false;
+    private final java.util.concurrent.atomic.AtomicInteger sessionCount = new java.util.concurrent.atomic.AtomicInteger();
 
     public int getQueueSize() {
         synchronized (queueLock) {
@@ -73,6 +75,10 @@ public class StockPickExtractionService {
     public void enqueueAllPending() {
         List<Video> readyVideos = videoRepository.findAllVideosReadyForProcessing();
         if (readyVideos.isEmpty()) {
+            if (!workerRunning) {
+                registry.markStarted("extraction");
+                registry.markFinished("extraction", 0);
+            }
             return;
         }
         log.info("Found {} video(s) ready for pick extraction", readyVideos.size());
@@ -93,7 +99,6 @@ public class StockPickExtractionService {
             if (!draining) {
                 draining = true;
                 sessionCount.set(0);
-                registry.markStarted("extraction");
                 extractionExecutor.submit(this::drainNext);
             }
         }
@@ -104,29 +109,36 @@ public class StockPickExtractionService {
         synchronized (queueLock) {
             videoId = pendingVideoIds.pollFirst();
             if (videoId == null) {
-                registry.markFinished("extraction", sessionCount.get());
+                workerRunning = false;
                 draining = false;
                 return;
             }
         }
 
+        if (!workerRunning) {
+            workerRunning = true;
+            registry.markStarted("extraction");
+        }
+        int result = 0;
         try {
-            videoRepository.findByVideoIdWithChannel(videoId).ifPresent(this::doProcessVideo);
+            result = videoRepository.findByVideoIdWithChannel(videoId).map(this::doProcessVideo).orElse(false) ? 1 : 0;
             sessionCount.incrementAndGet();
+            registry.markProgress("extraction", result);
         } finally {
             synchronized (queueLock) {
                 queuedVideoIds.remove(videoId);
                 if (!pendingVideoIds.isEmpty()) {
                     extractionExecutor.submit(this::drainNext);
                 } else {
-                    registry.markFinished("extraction", sessionCount.get());
+                    registry.markFinished("extraction", result);
+                    workerRunning = false;
                     draining = false;
                 }
             }
         }
     }
 
-    private void doProcessVideo(Video video) {
+    private boolean doProcessVideo(Video video) {
         String videoUrl = "https://youtu.be/" + video.getVideoId();
         log.info("Processing video for stock picks: {} ({})", video.getTitle(), videoUrl);
 
@@ -134,7 +146,7 @@ public class StockPickExtractionService {
             log.warn("Video {} has no transcript text available", videoUrl);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
-            return;
+            return false;
         }
 
         video.setProcessingStatus(Video.ProcessingStatus.PROCESSING);
@@ -147,10 +159,12 @@ public class StockPickExtractionService {
             video.setExtractionModel(aiModelService.getModel());
             videoRepository.save(video);
             advanceLastProcessedAt(video);
+            return true;
         } catch (Exception e) {
             log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
+            return false;
         }
     }
 

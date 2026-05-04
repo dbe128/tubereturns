@@ -44,7 +44,7 @@ public class PipelineSchedulerService {
     void registerSteps() {
         registry.registerStep("discovery", discoveryCron, discoveryMaxItems);
         registry.registerStep("transcript", transcriptCron, transcriptMaxItems);
-        registry.registerStep("extraction", extractionCron, null);
+        registry.registerStep("extraction", extractionCron, 1);
     }
 
     @EventListener(ApplicationReadyEvent.class)

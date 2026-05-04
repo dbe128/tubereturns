@@ -45,7 +45,7 @@ public class AdminController {
         return List.of(
                 toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
-                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null)
+                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null, stockPickExtractionService.isWorkerRunning())
         );
     }
 
@@ -140,6 +140,10 @@ public class AdminController {
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {
-        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), registry.isRunning(step), registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats);
+        return toDto(step, label, queueSize, ytbsdStats, registry.isRunning(step));
+    }
+
+    private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running) {
+        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats);
     }
 }

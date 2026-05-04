@@ -36,6 +36,12 @@ public class PipelineStatusRegistry {
         running.put(step, false);
     }
 
+    public void markProgress(String step, int count) {
+        lastFinishedAt.put(step, Instant.now());
+        lastRunCounts.put(step, count);
+    }
+
+
     public boolean isRunning(String step) {
         return Boolean.TRUE.equals(running.get(step));
     }
