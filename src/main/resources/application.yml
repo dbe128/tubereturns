@@ -44,6 +44,7 @@ tubereturns:
   youtube:
     enabled: true
     api-key: ${YOUTUBE_API_KEY:}
+    channel-filter-keywords: "investing,finance,investor,stocks,stock market,stock analysis,trading,portfolio,dividend,etf,befektetés,pénzügy,befektető,részvény,tőzsde,részvényelemzés,kereskedés,portfólió,osztalék,investieren,geldanlage,finanzen,anleger,aktien,börse,aktienmarkt,aktienanalyse,dividende,depot"
 
   transcript:
     ytbsd-path: /app/scripts/ytbsd.py

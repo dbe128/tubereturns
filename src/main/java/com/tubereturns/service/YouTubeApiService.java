@@ -34,9 +34,12 @@ public class YouTubeApiService {
     @Value("${tubereturns.youtube.enabled:false}")
     private boolean enabled;
 
+    @Value("${tubereturns.youtube.channel-filter-keywords:}")
+    private List<String> channelFilterKeywords;
+
     public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl) {}
 
-    public List<ChannelSearchResultDto> searchChannels(String query) {
+    public List<ChannelSearchResultDto> searchChannels(String query, boolean filterByKeywords) {
         if (!enabled || apiKey == null || apiKey.isBlank()) {
             return List.of();
         }
@@ -62,7 +65,7 @@ public class YouTubeApiService {
 
             Map<String, com.google.api.services.youtube.model.Channel> detailMap = new HashMap<>();
             var detailResponse = youtube.channels()
-                    .list(List.of("snippet"))
+                    .list(List.of("snippet", "brandingSettings"))
                     .setId(channelIds)
                     .setKey(apiKey)
                     .execute();
@@ -94,6 +97,15 @@ public class YouTubeApiService {
                 String handle = customUrl.toLowerCase().replaceAll("^@", "").replaceAll("/+$", "");
                 String channelUrl = "https://www.youtube.com/@" + handle;
                 String description = detail.getSnippet().getDescription();
+
+                String channelTags = detail.getBrandingSettings() != null
+                        && detail.getBrandingSettings().getChannel() != null
+                        ? detail.getBrandingSettings().getChannel().getKeywords()
+                        : null;
+
+                if (filterByKeywords && !matchesFinanceKeywords(channelTags, description)) {
+                    return null;
+                }
 
                 return new ChannelSearchResultDto(handle, item.getSnippet().getTitle(), channelUrl, thumbnailUrl, description);
             }).filter(r -> r != null).toList();
@@ -145,6 +157,15 @@ public class YouTubeApiService {
             log.error("Failed to discover videos for {}: {}", channelUrl, e.getMessage(), e);
             return List.of();
         }
+    }
+
+    private boolean matchesFinanceKeywords(String channelTags, String description) {
+        if (channelFilterKeywords == null || channelFilterKeywords.isEmpty()) {
+            return true;
+        }
+        String haystack = (channelTags != null ? channelTags : "") + " " + (description != null ? description : "");
+        String lower = haystack.toLowerCase();
+        return channelFilterKeywords.stream().anyMatch(kw -> lower.contains(kw.toLowerCase()));
     }
 
     private YouTube buildClient() throws GeneralSecurityException, IOException {

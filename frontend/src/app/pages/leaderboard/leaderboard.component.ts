@@ -59,6 +59,10 @@ interface ChannelRow extends Channel {
               placeholder="Search YouTube channels…"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
+            <label class="flex items-center gap-2 mt-2 text-xs text-gray-500 select-none cursor-pointer w-fit">
+              <input type="checkbox" [(ngModel)]="filterByKeywords" (change)="onSearchInput()" class="accent-primary-600" />
+              Filter by finance keywords
+            </label>
             @if (searching()) {
               <div class="flex justify-center py-6">
                 <div class="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
@@ -303,6 +307,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly addingChannelId = signal<string | null>(null);
   readonly addError = signal<string | null>(null);
   searchQuery = '';
+  filterByKeywords = true;
   private readonly searchSubject = new Subject<string>();
   private searchSub?: Subscription;
 
@@ -317,7 +322,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     }
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
-      switchMap((q) => q.trim().length >= 2 ? this.api.searchChannels(q).pipe(catchError(() => of<ChannelSearchResult[]>([]))) : of<ChannelSearchResult[]>([])),
+      switchMap((q) => q.trim().length >= 2 ? this.api.searchChannels(q, this.filterByKeywords).pipe(catchError(() => of<ChannelSearchResult[]>([]))) : of<ChannelSearchResult[]>([])),
     ).subscribe((results) => {
       this.searchResults.set(results);
       this.searching.set(false);

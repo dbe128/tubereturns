@@ -63,8 +63,10 @@ public class AdminController {
 
     @GetMapping("/channels/search")
     @Operation(summary = "Search YouTube channels", description = "Returns up to 5 YouTube channels matching the query")
-    public List<ChannelSearchResultDto> searchChannels(@RequestParam String q) {
-        return youTubeApiService.searchChannels(q);
+    public List<ChannelSearchResultDto> searchChannels(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "true") boolean filterByKeywords) {
+        return youTubeApiService.searchChannels(q, filterByKeywords);
     }
 
     @DeleteMapping("/channels/{handle}")
