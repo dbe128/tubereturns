@@ -256,7 +256,11 @@ public class YouTubeApiService {
 
             if (response.getItems() != null) {
                 for (Video video : response.getItems()) {
-                    result.add(toDto(video));
+                    YouTubeVideoDto dto = toDto(video);
+                    if (dto.durationSeconds() != null && dto.durationSeconds() <= 60) {
+                        continue;
+                    }
+                    result.add(dto);
                 }
             }
         }
