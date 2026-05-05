@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.tubereturns"
-version = "0.0.1-SNAPSHOT"
+version = "0.1.1"
 
 java {
     toolchain {
@@ -51,6 +51,10 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+springBoot {
+    buildInfo()
 }
 
 tasks.withType<Test> {

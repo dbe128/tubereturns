@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { z } from 'zod';
 import {
@@ -171,6 +171,13 @@ export class ApiService {
     return this.validated(
       z.array(PortfolioPricePointSchema),
       this.http.get<unknown>(`/api/portfolios/${channelId}/prices`, { params }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getVersion(): Observable<string> {
+    return this.http.get<{ version: string }>('/api/version').pipe(
+      map((r) => r.version),
+      catchError(() => of('?')),
     );
   }
 

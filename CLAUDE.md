@@ -2,6 +2,14 @@
 
 After completing every task, run: `afplay /System/Library/Sounds/Glass.aiff`
 
+## Versioning
+
+- **Patch** — auto-bumped by pre-commit hook on every commit
+- **Minor** — bump manually when a new user-facing feature ships (new page, new pipeline step, new data source)
+- **Major** — bump manually at public launch or when a breaking API/data-model change is made
+
+Minor and major bumps are done manually by editing `version` in `build.gradle.kts`; the pre-commit hook then auto-increments the patch from that new base.
+
 TubeReturns is a web application that helps retail investors **rank finance YouTubers based on their historical investing performance** and visualize the results with clean, compelling financial dashboards.
 
 This document defines the **single source of truth** for MVP architecture, scope, constraints, and tech stack.
