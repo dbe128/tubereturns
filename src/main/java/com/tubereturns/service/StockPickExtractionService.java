@@ -159,7 +159,7 @@ public class StockPickExtractionService {
         log.info("Processing video for stock picks: {} ({})", video.getTitle(), videoUrl);
 
         if (video.getTranscriptText() == null || video.getTranscriptText().isBlank()) {
-            log.warn("Video {} has no transcript text available", videoUrl);
+            log.warn("No transcript text for {} ({})", video.getTitle(), videoUrl);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);
             videoRepository.save(video);
             return false;
@@ -194,19 +194,20 @@ public class StockPickExtractionService {
     }
 
     private StockPickExtractionDto extractStockPicks(String videoId, String videoTitle, String transcriptText) {
+        String videoUrl = "https://youtu.be/" + videoId;
         if (!aiEnabled) {
-            log.info("Using mock extraction for video: {}", "https://youtu.be/" + videoId);
+            log.info("Using mock extraction for {} ({})", videoTitle, videoUrl);
             return createMockExtraction(videoId, transcriptText);
         }
 
-        log.info("Sending transcript to AI for extraction: {}", "https://youtu.be/" + videoId);
+        log.info("Sending transcript to AI for extraction: {} ({})", videoTitle, videoUrl);
         String aiResponse = aiModelService.extractStockPicks(videoTitle, transcriptText);
-        log.info("AI response for video {}: {}", "https://youtu.be/" + videoId, aiResponse);
+        log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResponse);
 
         try {
             return objectMapper.readValue(aiResponse, StockPickExtractionDto.class);
         } catch (Exception e) {
-            log.error("Failed to parse AI response for video {}: {}", "https://youtu.be/" + videoId, e.getMessage());
+            log.error("Failed to parse AI response for {} ({}): {}", videoTitle, videoUrl, e.getMessage());
             throw new RuntimeException("Failed to parse AI response for video " + videoId, e);
         }
     }

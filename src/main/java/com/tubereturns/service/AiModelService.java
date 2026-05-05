@@ -82,7 +82,8 @@ public class AiModelService {
             "model", MODEL,
             "messages", List.of(
                 Map.of("role", "user", "content", prompt)
-            )
+            ),
+            "provider", Map.of("prefer_cache", true)
         );
 
         try {

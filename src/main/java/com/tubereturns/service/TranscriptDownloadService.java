@@ -186,18 +186,19 @@ public class TranscriptDownloadService {
             List<String> downloadedIds = new ArrayList<>();
             Path transcriptsDir = Path.of(transcriptsDirPath).toAbsolutePath();
             for (String videoId : videoIds) {
+                String videoTitle = videoRepository.findByVideoId(videoId).map(Video::getTitle).orElse(videoId);
                 try {
-                    String transcript = readTranscriptFromOutput(transcriptsDir, videoId);
+                    String transcript = readTranscriptFromOutput(transcriptsDir, videoId, videoTitle);
                     tx.executeWithoutResult(_ ->
                         videoRepository.findByVideoId(videoId).ifPresent(v -> {
                             if (transcript != null && !transcript.isBlank()) {
                                 v.setTranscriptText(transcript);
                                 v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
                                 downloadedIds.add(videoId);
-                                log.info("Transcript downloaded: https://youtu.be/{}", videoId);
+                                log.info("Transcript downloaded: {} (https://youtu.be/{})", v.getTitle(), videoId);
                             } else {
                                 v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
-                                log.warn("No transcript for: https://youtu.be/{}", videoId);
+                                log.warn("No transcript for: {} (https://youtu.be/{})", v.getTitle(), videoId);
                             }
                             videoRepository.save(v);
                         })
@@ -272,17 +273,17 @@ public class TranscriptDownloadService {
         log.info("ytbsd.py output for {}:\n{}", videoIds, output);
     }
 
-    private String readTranscriptFromOutput(Path transcriptsDir, String videoId) throws IOException {
+    private String readTranscriptFromOutput(Path transcriptsDir, String videoId, String videoTitle) throws IOException {
         Path mdFile = findOutputFile(transcriptsDir, videoId);
         if (mdFile == null) {
-            log.warn("No output file found for video {} under {}", "https://youtu.be/" + videoId, transcriptsDir);
+            log.warn("No output file found for {} (https://youtu.be/{})", videoTitle, videoId);
             return null;
         }
         try {
             String markdown = Files.readString(mdFile);
             String transcript = parseMarkdownTranscript(markdown);
             if (transcript != null) {
-                log.info("Transcript [{}] ({} chars): {}", "https://youtu.be/" + videoId, transcript.length(),
+                log.info("Transcript for {} (https://youtu.be/{}) — {} chars: {}", videoTitle, videoId, transcript.length(),
                         transcript.length() > 200 ? transcript.substring(0, 200) + "…" : transcript);
             }
             return transcript;
