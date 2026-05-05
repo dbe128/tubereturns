@@ -83,8 +83,9 @@ public class AiModelService {
             )
         );
 
+        String response = null;
         try {
-            String response = restClient.post()
+            response = restClient.post()
                 .uri("https://openrouter.ai/api/v1/chat/completions")
                 .header("Authorization", "Bearer " + apiKey)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -103,10 +104,10 @@ public class AiModelService {
                 log.error("OpenRouter returned 402 Payment Required — insufficient credits");
                 throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
             }
-            log.error("OpenRouter API call failed: {}", e.getMessage(), e);
+            log.error("OpenRouter API call failed: {}\nResponse: {}", e.getMessage(), response, e);
             throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("OpenRouter API call failed: {}", e.getMessage(), e);
+            log.error("OpenRouter API call failed: {}\nResponse: {}", e.getMessage(), response, e);
             throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
         }
     }

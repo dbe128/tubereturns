@@ -213,7 +213,7 @@ public class StockPickExtractionService {
         try {
             return new ExtractionWithModel(objectMapper.readValue(aiResult.content(), StockPickExtractionDto.class), aiResult.model());
         } catch (Exception e) {
-            log.error("Failed to parse AI response for {} ({}): {}", videoTitle, videoUrl, e.getMessage());
+            log.error("Failed to parse AI response for {} ({}): {}\nResponse: {}", videoTitle, videoUrl, e.getMessage(), aiResult.content());
             throw new RuntimeException("Failed to parse AI response for video " + videoId, e);
         }
     }
