@@ -173,11 +173,11 @@ public class StockPickExtractionService {
         videoRepository.save(video);
 
         try {
-            StockPickExtractionDto extraction = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
-            savePicks(video, extraction);
+            var result = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
+            savePicks(video, result.dto());
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
-            video.setExtractionModel(aiModelService.getModel());
-            if (extraction.externalPositions()) {
+            video.setExtractionModel(result.model());
+            if (result.dto().externalPositions()) {
                 log.info("Video {} contains only external positions — auto-excluding", videoUrl);
                 video.setExcluded(true);
                 video.setExclusionReason("External Positions");
@@ -197,19 +197,21 @@ public class StockPickExtractionService {
         }
     }
 
-    private StockPickExtractionDto extractStockPicks(String videoId, String videoTitle, String transcriptText) {
+    private record ExtractionWithModel(StockPickExtractionDto dto, String model) {}
+
+    private ExtractionWithModel extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         String videoUrl = "https://youtu.be/" + videoId;
         if (!aiEnabled) {
             log.info("Using mock extraction for {} ({})", videoTitle, videoUrl);
-            return createMockExtraction(videoId, transcriptText);
+            return new ExtractionWithModel(createMockExtraction(videoId, transcriptText), "mock");
         }
 
         log.info("Sending transcript to AI for extraction: {} ({})", videoTitle, videoUrl);
-        String aiResponse = aiModelService.extractStockPicks(videoTitle, transcriptText);
-        log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResponse);
+        AiModelService.ExtractionResult aiResult = aiModelService.extractStockPicks(videoTitle, transcriptText);
+        log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResult.content());
 
         try {
-            return objectMapper.readValue(aiResponse, StockPickExtractionDto.class);
+            return new ExtractionWithModel(objectMapper.readValue(aiResult.content(), StockPickExtractionDto.class), aiResult.model());
         } catch (Exception e) {
             log.error("Failed to parse AI response for {} ({}): {}", videoTitle, videoUrl, e.getMessage());
             throw new RuntimeException("Failed to parse AI response for video " + videoId, e);

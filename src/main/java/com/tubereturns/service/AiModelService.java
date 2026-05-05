@@ -63,18 +63,16 @@ public class AiModelService {
     private final RestClient restClient = RestClient.create();
     private final ObjectMapper objectMapper;
 
-    public String getModel() {
-        return "openrouter".equals(aiProvider) ? MODEL : "mock";
-    }
+    public record ExtractionResult(String content, String model) {}
 
-    public String extractStockPicks(String videoTitle, String transcriptText) {
+    public ExtractionResult extractStockPicks(String videoTitle, String transcriptText) {
         return switch (aiProvider) {
             case "openrouter" -> callOpenRouter(videoTitle, transcriptText);
-            default           -> createMockResponse();
+            default           -> new ExtractionResult(createMockResponse(), "mock");
         };
     }
 
-    private String callOpenRouter(String videoTitle, String transcriptText) {
+    private ExtractionResult callOpenRouter(String videoTitle, String transcriptText) {
         log.info("Calling OpenRouter API with model {}", MODEL);
 
         String prompt = EXTRACTION_PROMPT_TEMPLATE.formatted(videoTitle) + transcriptText;
@@ -95,8 +93,10 @@ public class AiModelService {
                 .body(String.class);
 
             JsonNode root = objectMapper.readTree(response);
+            String actualModel = root.path("model").asText(MODEL);
+            log.info("OpenRouter used model: {}", actualModel);
             String text = root.path("choices").get(0).path("message").path("content").asText();
-            return stripJsonFences(text);
+            return new ExtractionResult(stripJsonFences(text), actualModel);
 
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
