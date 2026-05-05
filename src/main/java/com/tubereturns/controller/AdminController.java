@@ -98,7 +98,7 @@ public class AdminController {
                     video.setProcessingStatus(Video.ProcessingStatus.PENDING);
                     video.setExtractionModel(null);
                     videoRepository.save(video);
-                    stockPickExtractionService.enqueueVideo(videoId);
+                    stockPickExtractionService.enqueueForReextraction(videoId);
                     return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Re-extraction started for video: " + videoId));
                 })
                 .orElse(ResponseEntity.notFound().build());

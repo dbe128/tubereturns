@@ -213,7 +213,7 @@ public class TranscriptDownloadService {
                     );
                 }
             }
-            downloadedIds.forEach(extractionService::enqueueVideo);
+            downloadedIds.forEach(extractionService::enqueueForProcessing);
         } finally {
             ytbsdRunning = false;
             ytbsdCurrentBatchSize = null;

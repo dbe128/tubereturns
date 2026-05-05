@@ -86,7 +86,11 @@ public class StockPickExtractionService {
         readyVideos.forEach(v -> enqueue(v.getVideoId()));
     }
 
-    public void enqueueVideo(String videoId) {
+    public void enqueueForReextraction(String videoId) {
+        enqueue(videoId);
+    }
+
+    public void enqueueForProcessing(String videoId) {
         enqueue(videoId);
     }
 
