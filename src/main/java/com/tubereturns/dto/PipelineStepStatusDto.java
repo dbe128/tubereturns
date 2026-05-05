@@ -10,5 +10,6 @@ public record PipelineStepStatusDto(
         Integer lastRunCount,
         Integer limit,
         Integer queueSize,
-        YtbsdStatsDto ytbsdStats
+        YtbsdStatsDto ytbsdStats,
+        String fatalError
 ) {}

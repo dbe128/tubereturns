@@ -106,6 +106,7 @@ export const PipelineStepStatusSchema = z.object({
   limit: z.number().nullable(),
   queueSize: z.number().nullable(),
   ytbsdStats: YtbsdStatsSchema.nullable(),
+  fatalError: z.string().nullable(),
 });
 
 export type Channel = z.infer<typeof ChannelSchema>;

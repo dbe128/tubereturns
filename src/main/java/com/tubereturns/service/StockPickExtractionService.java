@@ -59,6 +59,7 @@ public class StockPickExtractionService {
     private boolean draining = false;
     @Getter
     private volatile boolean workerRunning = false;
+    private volatile boolean halted = false;
     private final java.util.concurrent.atomic.AtomicInteger sessionCount = new java.util.concurrent.atomic.AtomicInteger();
 
     public int getQueueSize() {
@@ -90,6 +91,10 @@ public class StockPickExtractionService {
     }
 
     private void enqueue(String videoId) {
+        if (halted) {
+            log.warn("Extraction is halted due to a fatal error — skipping video {}", videoId);
+            return;
+        }
         synchronized (queueLock) {
             if (queuedVideoIds.contains(videoId)) {
                 return;
@@ -124,6 +129,17 @@ public class StockPickExtractionService {
             result = videoRepository.findByVideoIdWithChannel(videoId).map(this::doProcessVideo).orElse(false) ? 1 : 0;
             sessionCount.incrementAndGet();
             registry.markProgress("extraction", result);
+        } catch (PaymentRequiredException e) {
+            log.error("Extraction halted: {}", e.getMessage());
+            halted = true;
+            synchronized (queueLock) {
+                pendingVideoIds.clear();
+                queuedVideoIds.clear();
+                workerRunning = false;
+                draining = false;
+            }
+            registry.markFatalError("extraction", e.getMessage());
+            return;
         } finally {
             synchronized (queueLock) {
                 queuedVideoIds.remove(videoId);
@@ -160,6 +176,10 @@ public class StockPickExtractionService {
             videoRepository.save(video);
             advanceLastProcessedAt(video);
             return true;
+        } catch (PaymentRequiredException e) {
+            video.setProcessingStatus(Video.ProcessingStatus.FAILED);
+            videoRepository.save(video);
+            throw e;
         } catch (Exception e) {
             log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
             video.setProcessingStatus(Video.ProcessingStatus.FAILED);

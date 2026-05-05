@@ -206,6 +206,8 @@ interface ChannelRow extends Channel {
                       <span class="animate-spin inline-block h-3 w-3 border border-primary-500 border-t-transparent rounded-full"></span>
                       Running@if (step.ytbsdStats?.currentBatchSize) { ({{ step.ytbsdStats!.currentBatchSize }})}
                     </span>
+                  } @else if (step.fatalError) {
+                    <span class="text-xs text-red-600 font-medium">Fatal Error</span>
                   } @else {
                     <span class="text-xs text-gray-300">Idle</span>
                   }
@@ -233,6 +235,12 @@ interface ChannelRow extends Channel {
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Items in queue</dt>
                     <dd class="text-gray-700 font-mono">{{ step.queueSize }}</dd>
+                  </div>
+                  }
+                  @if (step.fatalError) {
+                  <div class="flex justify-between gap-4">
+                    <dt class="text-gray-400 shrink-0">Error</dt>
+                    <dd class="text-red-600 font-mono text-right break-all">{{ step.fatalError }}</dd>
                   </div>
                   }
                   @if (step.ytbsdStats) {

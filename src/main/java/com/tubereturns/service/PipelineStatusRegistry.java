@@ -17,6 +17,7 @@ public class PipelineStatusRegistry {
     private final Map<String, String> cronExpressions = new ConcurrentHashMap<>();
     private final Map<String, Integer> lastRunCounts = new ConcurrentHashMap<>();
     private final Map<String, Integer> limits = new ConcurrentHashMap<>();
+    private final Map<String, String> fatalErrors = new ConcurrentHashMap<>();
 
     public void registerStep(String step, String cron, Integer limit) {
         cronExpressions.put(step, cron);
@@ -28,12 +29,23 @@ public class PipelineStatusRegistry {
     public void markStarted(String step) {
         lastStartedAt.put(step, Instant.now());
         running.put(step, true);
+        fatalErrors.remove(step);
     }
 
     public void markFinished(String step, int count) {
         lastFinishedAt.put(step, Instant.now());
         lastRunCounts.put(step, count);
         running.put(step, false);
+    }
+
+    public void markFatalError(String step, String reason) {
+        lastFinishedAt.put(step, Instant.now());
+        running.put(step, false);
+        fatalErrors.put(step, reason);
+    }
+
+    public String getFatalError(String step) {
+        return fatalErrors.get(step);
     }
 
     public void markProgress(String step, int count) {

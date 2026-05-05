@@ -5,8 +5,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -94,6 +96,13 @@ public class AiModelService {
             String text = root.path("choices").get(0).path("message").path("content").asText();
             return stripJsonFences(text);
 
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
+                log.error("OpenRouter returned 402 Payment Required — insufficient credits");
+                throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
+            }
+            log.error("OpenRouter API call failed: {}", e.getMessage(), e);
+            throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
         } catch (Exception e) {
             log.error("OpenRouter API call failed: {}", e.getMessage(), e);
             throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
