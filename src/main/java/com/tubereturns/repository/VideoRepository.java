@@ -31,6 +31,9 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status AND v.excluded = false ORDER BY v.publishedAt ASC")
     List<Video> findAllByTranscriptStatus(@Param("status") Video.TranscriptStatus status);
 
+    @Query("SELECT v FROM Video v WHERE v.transcriptStatus IN :statuses AND v.excluded = false ORDER BY v.publishedAt ASC")
+    List<Video> findAllByTranscriptStatusIn(@Param("statuses") List<Video.TranscriptStatus> statuses);
+
     @Query("SELECT v FROM Video v WHERE v.processingStatus = :status")
     List<Video> findByProcessingStatus(@Param("status") Video.ProcessingStatus status);
 
@@ -40,7 +43,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
     List<Video> findVideosReadyForProcessing(@Param("limit") int limit);
 
-    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' AND v.excluded = false ORDER BY v.publishedAt ASC")
+    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus IN ('PENDING', 'FAILED') AND v.excluded = false ORDER BY v.publishedAt ASC")
     List<Video> findAllVideosReadyForProcessing();
 
     boolean existsByVideoId(String videoId);

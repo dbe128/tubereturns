@@ -90,11 +90,12 @@ public class TranscriptDownloadService {
     }
 
     public int downloadPendingTranscripts(int batchSize) {
-        List<Video> pendingVideos = videoRepository.findAllByTranscriptStatus(Video.TranscriptStatus.PENDING);
+        List<Video> pendingVideos = videoRepository.findAllByTranscriptStatusIn(
+                List.of(Video.TranscriptStatus.PENDING, Video.TranscriptStatus.FAILED));
         if (pendingVideos.isEmpty()) {
             return 0;
         }
-        log.info("Found {} video(s) pending transcript download", pendingVideos.size());
+        log.info("Found {} video(s) pending or failed transcript download", pendingVideos.size());
         enqueue(pendingVideos.stream().map(Video::getVideoId).toList(), batchSize);
         return pendingVideos.size();
     }
