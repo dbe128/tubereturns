@@ -391,7 +391,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     setTimeout(() => this.disabledSteps.update((s) => { const n = new Set(s); n.delete(step); return n; }), 5000);
     this.api.triggerPipelineStep(step).subscribe({
       next: () => this.pollUntilDone(step),
-      error: () => {},
+      error: () => {
+        this.disabledSteps.update((s) => { const n = new Set(s); n.delete(step); return n; });
+      },
     });
   }
 
@@ -440,7 +442,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     }
     this.api.deleteChannel(channelId).subscribe({
       next: () => this.load(),
-      error: () => {},
+      error: () => {
+        this.load();
+        alert(`Failed to remove "${channelName}". Please try again.`);
+      },
     });
   }
 

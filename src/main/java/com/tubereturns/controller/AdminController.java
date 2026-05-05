@@ -129,6 +129,7 @@ public class AdminController {
         return videoRepository.findByVideoId(videoId)
                 .map(video -> {
                     video.setExcluded(excluded);
+                    video.setExclusionReason(excluded ? "Manual" : null);
                     videoRepository.save(video);
                     return ResponseEntity.ok(Map.of("message", "Video " + videoId + " excluded=" + excluded));
                 })

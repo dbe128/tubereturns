@@ -173,6 +173,11 @@ public class StockPickExtractionService {
             savePicks(video, extraction);
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
             video.setExtractionModel(aiModelService.getModel());
+            if (extraction.externalPositions()) {
+                log.info("Video {} contains only external positions — auto-excluding", videoUrl);
+                video.setExcluded(true);
+                video.setExclusionReason("External Positions");
+            }
             videoRepository.save(video);
             advanceLastProcessedAt(video);
             return true;
@@ -215,7 +220,7 @@ public class StockPickExtractionService {
             extractions.add(new StockPickExtractionDto.PickExtractionDto("SPY", "SPDR S&P 500 ETF", "BUY"));
         }
 
-        return new StockPickExtractionDto(videoId, extractions);
+        return new StockPickExtractionDto(videoId, extractions, false);
     }
 
     private List<StockPickExtractionDto.PickExtractionDto> extractTickersWithRegex(String text) {

@@ -67,6 +67,9 @@ public class Video {
     @Column(nullable = false)
     private boolean excluded = false;
 
+    @Column(name = "exclusion_reason", length = 255)
+    private String exclusionReason;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

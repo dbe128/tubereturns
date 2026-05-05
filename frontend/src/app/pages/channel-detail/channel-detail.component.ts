@@ -217,7 +217,7 @@ interface IndexedVideo {
                   (click)="toggleSort('index')"
                 >#<span class="ml-1" [class.text-primary-500]="sortKey() === 'index'" [class.text-gray-300]="sortKey() !== 'index'">{{ sortKey() === 'index' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-44"></th>
-                <th class="px-4 py-3">Video</th>
+                <th class="px-4 py-3 w-52">Video</th>
                 <th
                   class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('publishedAt')"
@@ -233,9 +233,10 @@ interface IndexedVideo {
                 >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'processingStatus'" [class.text-gray-300]="sortKey() !== 'processingStatus'">{{ sortKey() === 'processingStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
                 }
-                <th class="px-4 py-3 text-primary-600">▲ Buy</th>
-                <th class="px-4 py-3 text-danger-500">▼ Sell</th>
+                <th class="px-4 py-3 text-primary-600 whitespace-nowrap">▲ Buy</th>
+                <th class="px-4 py-3 text-danger-500 whitespace-nowrap">▼ Sell</th>
                 @if (auth.isAdmin) {
+                <th class="px-4 py-3 w-32 whitespace-nowrap">Excl. Reason</th>
                 <th class="px-4 py-3 w-24">Actions</th>
                 }
               </tr>
@@ -243,7 +244,7 @@ interface IndexedVideo {
             <tbody>
               @if (sorted().length === 0) {
                 <tr>
-                  <td [attr.colspan]="auth.isAdmin ? 10 : 6" class="px-4 py-12 text-center text-gray-400">
+                  <td [attr.colspan]="auth.isAdmin ? 11 : 6" class="px-4 py-12 text-center text-gray-400">
                     No videos match the current filters.
                   </td>
                 </tr>
@@ -264,12 +265,13 @@ interface IndexedVideo {
                         />
                       </a>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-4 py-3 max-w-0">
                       <a
                         [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
                         target="_blank"
                         rel="noreferrer"
-                        class="text-gray-900 hover:text-primary-600 whitespace-nowrap overflow-hidden text-ellipsis block max-w-xl"
+                        [title]="item.v.title"
+                        class="text-gray-900 hover:text-primary-600 block truncate"
                       >{{ item.v.title }}</a>
                     </td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
@@ -293,7 +295,7 @@ interface IndexedVideo {
                     </td>
                     <td class="px-4 py-3 text-gray-400 font-mono text-xs">
                       @if (item.v.extractionModel) {
-                        {{ item.v.extractionModel }}
+                        {{ item.v.extractionModel.replace('openrouter/', '') }}
                       } @else {
                         <span class="text-gray-200">—</span>
                       }
@@ -314,6 +316,13 @@ interface IndexedVideo {
                       }
                     </td>
                     @if (auth.isAdmin) {
+                    <td class="px-4 py-3">
+                      @if (item.v.exclusionReason) {
+                        <span class="text-xs text-amber-600 font-medium whitespace-nowrap">{{ item.v.exclusionReason }}</span>
+                      } @else {
+                        <span class="text-gray-200">—</span>
+                      }
+                    </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-2">
                         @if (!item.v.excluded && item.v.transcriptStatus !== 'DOWNLOADING') {
@@ -532,7 +541,9 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.api.setVideoExcluded(video.videoId, newExcluded).subscribe({
       next: () => {
         this.videos.update(list =>
-          list.map(v => v.videoId === video.videoId ? { ...v, excluded: newExcluded } : v)
+          list.map(v => v.videoId === video.videoId
+            ? { ...v, excluded: newExcluded, exclusionReason: newExcluded ? 'Manual' : null }
+            : v)
         );
         this.togglingExclusion.set(null);
       },
@@ -560,6 +571,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     if (!handle) return;
     this.api.getVideosForChannel(handle).subscribe({
       next: (videos) => this.videos.set(videos),
+      error: () => {},
     });
   }
 

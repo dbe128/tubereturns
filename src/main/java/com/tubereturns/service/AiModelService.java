@@ -19,7 +19,7 @@ import java.util.Map;
 @Service
 public class AiModelService {
 
-    private static final String MODEL = "stepfun/step-3.5-flash";
+    private static final String MODEL = "openrouter/owl-alpha";
 
     private static final String EXTRACTION_PROMPT_TEMPLATE = """
         Analyze the following YouTube video transcript and extract stock picks mentioned by the creator.
@@ -34,6 +34,7 @@ public class AiModelService {
         Return ONLY valid JSON in this exact format with no markdown, no code block, just raw JSON:
         {
           "videoId": "PLACEHOLDER",
+          "externalPositions": false,
           "extractions": [
             {
               "tickerSymbol": "TICKER",
@@ -48,6 +49,7 @@ public class AiModelService {
         - signal must be either "BUY" or "SELL"
         - tickerSymbol must be a valid stock ticker (1-5 uppercase letters)
         - If no picks are found, return an empty extractions array
+        - Set externalPositions to true if the transcript only presents positions or trades made by someone else (another person, an AI agent, a portfolio manager, etc.) rather than the video creator's own picks — the creator is merely reporting or reviewing them, not recommending them personally
 
         Transcript:
         """;
@@ -124,6 +126,7 @@ public class AiModelService {
         return """
             {
               "videoId": "mock_video",
+              "externalPositions": false,
               "extractions": []
             }
             """;

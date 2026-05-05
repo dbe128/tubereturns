@@ -121,3 +121,6 @@ VALUES (
     '2026-04-23 18:14:23.233111',
     '2026-04-23 18:14:45.451901'
 );
+
+--changeset tubereturns:002
+ALTER TABLE videos ADD COLUMN exclusion_reason VARCHAR(255);
