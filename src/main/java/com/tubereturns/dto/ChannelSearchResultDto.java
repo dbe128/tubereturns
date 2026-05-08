@@ -5,5 +5,9 @@ public record ChannelSearchResultDto(
         String channelName,
         String channelUrl,
         String thumbnailUrl,
-        String description
+        String description,
+        Long subscriberCount,
+        Long videoCount,
+        String channelCreatedAt,
+        String latestVideoAt
 ) {}

@@ -6,6 +6,7 @@ import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.TranscriptDownloadService;
 import com.tubereturns.service.YouTubeApiService;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,6 +38,7 @@ public class AdminController {
     private final VideoRepository videoRepository;
     private final PickRepository pickRepository;
     private final TranscriptDownloadService transcriptDownloadService;
+    private final ChannelNotificationService channelNotificationService;
 
     @GetMapping("/pipeline/status")
     @Operation(summary = "Get pipeline status", description = "Returns last/next run timestamps and running state for each pipeline step")
@@ -83,8 +86,13 @@ public class AdminController {
             @RequestParam String channelName,
             @RequestParam(required = false, defaultValue = "") String channelUrl,
             @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
-            @RequestParam(required = false, defaultValue = "") String description) {
-        discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description);
+            @RequestParam(required = false, defaultValue = "") String description,
+            @RequestParam(defaultValue = "true") boolean notifyOnComplete,
+            Authentication authentication) {
+        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description);
+        if (notifyOnComplete && authentication != null) {
+            channelNotificationService.scheduleNotification(channel, authentication.getName());
+        }
         scheduler.triggerDiscovery();
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }

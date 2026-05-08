@@ -50,7 +50,7 @@ public class YouTubeApiService {
                     .list(List.of("snippet"))
                     .setQ(query)
                     .setType(List.of("channel"))
-                    .setMaxResults(5L)
+                    .setMaxResults(10L)
                     .setKey(apiKey)
                     .execute()
                     .getItems();
@@ -65,7 +65,7 @@ public class YouTubeApiService {
 
             Map<String, com.google.api.services.youtube.model.Channel> detailMap = new HashMap<>();
             var detailResponse = youtube.channels()
-                    .list(List.of("snippet", "brandingSettings"))
+                    .list(List.of("snippet", "brandingSettings", "statistics", "contentDetails"))
                     .setId(channelIds)
                     .setKey(apiKey)
                     .execute();
@@ -75,7 +75,8 @@ public class YouTubeApiService {
                 }
             }
 
-            return searchItems.stream().map(item -> {
+            List<ChannelSearchResultDto> results = new ArrayList<>();
+            for (SearchResult item : searchItems) {
                 String channelId = item.getId().getChannelId();
                 var detail = detailMap.get(channelId);
 
@@ -87,13 +88,9 @@ public class YouTubeApiService {
                     else if (t.getDefault() != null) thumbnailUrl = t.getDefault().getUrl();
                 }
 
-                if (detail == null || detail.getSnippet() == null) {
-                    return null;
-                }
+                if (detail == null || detail.getSnippet() == null) continue;
                 String customUrl = detail.getSnippet().getCustomUrl();
-                if (customUrl == null || customUrl.isBlank()) {
-                    return null;
-                }
+                if (customUrl == null || customUrl.isBlank()) continue;
                 String handle = customUrl.toLowerCase().replaceAll("^@", "").replaceAll("/+$", "");
                 String channelUrl = "https://www.youtube.com/@" + handle;
                 String description = detail.getSnippet().getDescription();
@@ -103,12 +100,37 @@ public class YouTubeApiService {
                         ? detail.getBrandingSettings().getChannel().getKeywords()
                         : null;
 
-                if (filterByKeywords && !matchesFinanceKeywords(channelTags, description)) {
-                    return null;
+                if (filterByKeywords && !matchesFinanceKeywords(channelTags, description)) continue;
+
+                Long subscriberCount = null;
+                Long videoCount = null;
+                if (detail.getStatistics() != null) {
+                    if (!Boolean.TRUE.equals(detail.getStatistics().getHiddenSubscriberCount())
+                            && detail.getStatistics().getSubscriberCount() != null) {
+                        subscriberCount = detail.getStatistics().getSubscriberCount().longValue();
+                    }
+                    if (detail.getStatistics().getVideoCount() != null) {
+                        videoCount = detail.getStatistics().getVideoCount().longValue();
+                    }
                 }
 
-                return new ChannelSearchResultDto(handle, item.getSnippet().getTitle(), channelUrl, thumbnailUrl, description);
-            }).filter(r -> r != null).toList();
+                String channelCreatedAt = null;
+                if (detail.getSnippet().getPublishedAt() != null) {
+                    channelCreatedAt = Instant.ofEpochMilli(detail.getSnippet().getPublishedAt().getValue())
+                            .toString().substring(0, 10);
+                }
+
+                String uploadsPlaylistId = null;
+                if (detail.getContentDetails() != null && detail.getContentDetails().getRelatedPlaylists() != null) {
+                    uploadsPlaylistId = detail.getContentDetails().getRelatedPlaylists().getUploads();
+                }
+
+                results.add(new ChannelSearchResultDto(
+                        handle, item.getSnippet().getTitle(), channelUrl, thumbnailUrl, description,
+                        subscriberCount, videoCount, channelCreatedAt,
+                        fetchLatestVideoDate(youtube, uploadsPlaylistId)));
+            }
+            return results;
         } catch (Exception e) {
             log.error("Failed to search channels for '{}': {}", query, e.getMessage(), e);
             return List.of();
@@ -157,6 +179,29 @@ public class YouTubeApiService {
             log.error("Failed to discover videos for {}: {}", channelUrl, e.getMessage(), e);
             return List.of();
         }
+    }
+
+    private String fetchLatestVideoDate(YouTube youtube, String uploadsPlaylistId) {
+        if (uploadsPlaylistId == null || uploadsPlaylistId.isBlank()) {
+            return null;
+        }
+        try {
+            var response = youtube.playlistItems()
+                    .list(List.of("contentDetails"))
+                    .setPlaylistId(uploadsPlaylistId)
+                    .setMaxResults(1L)
+                    .setKey(apiKey)
+                    .execute();
+            if (response.getItems() != null && !response.getItems().isEmpty()) {
+                var videoPublishedAt = response.getItems().get(0).getContentDetails().getVideoPublishedAt();
+                if (videoPublishedAt != null) {
+                    return Instant.ofEpochMilli(videoPublishedAt.getValue()).toString().substring(0, 10);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch latest video date for playlist {}: {}", uploadsPlaylistId, e.getMessage());
+        }
+        return null;
     }
 
     private boolean matchesFinanceKeywords(String channelTags, String description) {

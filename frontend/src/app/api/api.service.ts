@@ -135,12 +135,13 @@ export class ApiService {
     return this.http.delete<unknown>(`/api/admin/channels/${handle}`).pipe(catchError((e) => this.handleError(e)));
   }
 
-  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string): Observable<unknown> {
+  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, notifyOnComplete: boolean): Observable<unknown> {
     const params = new HttpParams()
       .set('channelName', channelName)
       .set('channelUrl', channelUrl)
       .set('thumbnailUrl', thumbnailUrl)
-      .set('description', description);
+      .set('description', description)
+      .set('notifyOnComplete', notifyOnComplete);
     return this.http.post<unknown>(`/api/admin/channels/${handle}/add`, null, { params }).pipe(catchError((e) => this.handleError(e)));
   }
 

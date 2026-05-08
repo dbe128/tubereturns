@@ -59,10 +59,16 @@ interface ChannelRow extends Channel {
               placeholder="Search YouTube channels…"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
-            <label class="flex items-center gap-2 mt-2 text-xs text-gray-500 select-none cursor-pointer w-fit">
-              <input type="checkbox" [(ngModel)]="filterByKeywords" (change)="onSearchInput()" class="accent-primary-600" />
-              Filter by finance keywords
-            </label>
+            <div class="flex items-center gap-4 mt-2">
+              <label class="flex items-center gap-2 text-xs text-gray-500 select-none cursor-pointer w-fit">
+                <input type="checkbox" [(ngModel)]="filterByKeywords" (change)="onSearchInput()" class="accent-primary-600" />
+                Filter by finance keywords
+              </label>
+              <label class="flex items-center gap-2 text-xs text-gray-500 select-none cursor-pointer w-fit">
+                <input type="checkbox" [(ngModel)]="notifyOnComplete" class="accent-primary-600" />
+                Notify me when processed
+              </label>
+            </div>
             @if (searching()) {
               <div class="flex justify-center py-6">
                 <div class="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
@@ -87,6 +93,10 @@ interface ChannelRow extends Channel {
                       <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-gray-800 truncate">{{ result.channelName }}</p>
                         <p class="text-xs text-gray-400 truncate">{{ result.channelUrl }}</p>
+                        @let stats = formatSearchResultStats(result);
+                        @if (stats) {
+                          <p class="text-xs text-gray-500 truncate mt-0.5">{{ stats }}</p>
+                        }
                       </div>
                       @if (addingChannelId() === result.handle) {
                         <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent flex-shrink-0"></div>
@@ -316,6 +326,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly addError = signal<string | null>(null);
   searchQuery = '';
   filterByKeywords = true;
+  notifyOnComplete = true;
   private readonly searchSubject = new Subject<string>();
   private searchSub?: Subscription;
 
@@ -412,10 +423,37 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     this.searchSubject.next(q);
   }
 
+  formatSearchResultStats(result: ChannelSearchResult): string {
+    const parts: string[] = [];
+    if (result.subscriberCount != null) {
+      parts.push(this.formatSubscriberCount(result.subscriberCount) + ' subs');
+    }
+    if (result.videoCount != null) {
+      parts.push(result.videoCount.toLocaleString() + ' videos');
+    }
+    if (result.channelCreatedAt) {
+      parts.push('since ' + this.formatShortDate(result.channelCreatedAt));
+    }
+    if (result.latestVideoAt) {
+      parts.push('last ' + this.formatShortDate(result.latestVideoAt));
+    }
+    return parts.join(' · ');
+  }
+
+  private formatSubscriberCount(count: number): string {
+    if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+    if (count >= 1_000) return `${Math.round(count / 1_000)}K`;
+    return count.toLocaleString();
+  }
+
+  private formatShortDate(dateStr: string): string {
+    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+  }
+
   selectChannel(result: ChannelSearchResult): void {
     this.addingChannelId.set(result.handle);
     this.addError.set(null);
-    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '').subscribe({
+    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', this.notifyOnComplete).subscribe({
       next: () => {
         this.addingChannelId.set(null);
         this.cancelAddChannel();

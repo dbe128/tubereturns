@@ -84,6 +84,10 @@ export const ChannelSearchResultSchema = z.object({
   channelUrl: z.string(),
   thumbnailUrl: z.string().nullable(),
   description: z.string().nullable(),
+  subscriberCount: z.number().nullable(),
+  videoCount: z.number().nullable(),
+  channelCreatedAt: z.string().nullable(),
+  latestVideoAt: z.string().nullable(),
 });
 
 export const YtbsdStatsSchema = z.object({
