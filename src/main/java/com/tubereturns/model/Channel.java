@@ -55,6 +55,12 @@ public class Channel {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "subscriber_count")
+    private Long subscriberCount;
+
+    @Column(name = "discovery_complete", nullable = false)
+    private boolean discoveryComplete = false;
+
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Video> videos;
 

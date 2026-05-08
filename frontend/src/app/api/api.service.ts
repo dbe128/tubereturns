@@ -16,8 +16,9 @@ import {
   RegisterResponseSchema,
   AuthResponseSchema,
   MessageResponseSchema,
+  PendingNotificationSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse, PendingNotification } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -118,6 +119,17 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/pipeline/${step}/trigger`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
+  getPendingNotifications(): Observable<PendingNotification[]> {
+    return this.validated(
+      z.array(PendingNotificationSchema),
+      this.http.get<unknown>('/api/admin/notifications/pending').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  triggerNotificationCheck(): Observable<unknown> {
+    return this.http.post<unknown>('/api/admin/notifications/trigger', null).pipe(catchError((e) => this.handleError(e)));
+  }
+
   reextractVideo(videoId: string): Observable<unknown> {
     return this.http.post<unknown>(`/api/admin/videos/${videoId}/reextract`, null).pipe(catchError((e) => this.handleError(e)));
   }
@@ -135,13 +147,16 @@ export class ApiService {
     return this.http.delete<unknown>(`/api/admin/channels/${handle}`).pipe(catchError((e) => this.handleError(e)));
   }
 
-  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, notifyOnComplete: boolean): Observable<unknown> {
-    const params = new HttpParams()
+  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean): Observable<unknown> {
+    let params = new HttpParams()
       .set('channelName', channelName)
       .set('channelUrl', channelUrl)
       .set('thumbnailUrl', thumbnailUrl)
       .set('description', description)
       .set('notifyOnComplete', notifyOnComplete);
+    if (subscriberCount != null) {
+      params = params.set('subscriberCount', subscriberCount);
+    }
     return this.http.post<unknown>(`/api/admin/channels/${handle}/add`, null, { params }).pipe(catchError((e) => this.handleError(e)));
   }
 

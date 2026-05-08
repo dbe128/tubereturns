@@ -207,7 +207,7 @@ public class StockPickExtractionService {
         }
 
         log.info("Sending transcript to AI for extraction: {} ({})", videoTitle, videoUrl);
-        AiModelService.ExtractionResult aiResult = aiModelService.extractStockPicks(videoTitle, transcriptText);
+        AiModelService.ExtractionResult aiResult = aiModelService.extractStockPicks(videoId, videoTitle, transcriptText);
         log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResult.content());
 
         try {

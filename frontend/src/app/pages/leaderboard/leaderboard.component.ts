@@ -8,7 +8,7 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
-import type { Channel, ChannelStats, ChannelSearchResult, PipelineStepStatus } from '../../api/types';
+import type { Channel, ChannelStats, ChannelSearchResult, PipelineStepStatus, PendingNotification } from '../../api/types';
 
 interface ChannelRow extends Channel {
   stats: ChannelStats | null;
@@ -120,6 +120,7 @@ interface ChannelRow extends Channel {
               <tr class="border-b border-gray-200 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 <th class="px-6 py-4">#</th>
                 <th class="px-6 py-4">Channel</th>
+                <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
                 <th class="px-6 py-4 text-right">Processed</th>
                 <th class="px-6 py-4">
@@ -134,7 +135,7 @@ interface ChannelRow extends Channel {
             <tbody>
               @if (rows().length === 0) {
                 <tr>
-                  <td colspan="6" class="px-6 py-16 text-center text-gray-400 text-sm">
+                  <td colspan="7" class="px-6 py-16 text-center text-gray-400 text-sm">
                     No channels yet. Add a channel to get started.
                   </td>
                 </tr>
@@ -160,6 +161,9 @@ interface ChannelRow extends Channel {
                           {{ row.channelName }}
                         </span>
                       </a>
+                    </td>
+                    <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
+                      {{ row.subscriberCount != null ? formatSubscriberCount(row.subscriberCount) : '—' }}
                     </td>
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
                       {{ row.stats?.totalVideos ?? '—' }}
@@ -303,6 +307,41 @@ interface ChannelRow extends Channel {
             }
           </div>
         </div>
+
+        <div class="mt-8">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Notifications</h2>
+            <button
+              (click)="triggerNotifications()"
+              [disabled]="triggeringNotifications()"
+              class="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors"
+            >Check &amp; Send</button>
+          </div>
+          @if (pendingNotifications().length === 0) {
+            <p class="text-xs text-gray-400">No pending notifications.</p>
+          } @else {
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-50 text-gray-400 uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Channel</th>
+                    <th class="px-4 py-2 text-left font-medium">User</th>
+                    <th class="px-4 py-2 text-left font-medium">Requested at</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (n of pendingNotifications(); track n.channelHandle + n.userEmail) {
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-4 py-2 font-medium text-gray-800">{{ n.channelName }} <span class="text-gray-400">({{ n.channelHandle }})</span></td>
+                      <td class="px-4 py-2 text-gray-600">{{ n.userEmail }}</td>
+                      <td class="px-4 py-2 font-mono text-gray-500">{{ n.requestedAt | date:'HH:mm:ss, dd MMM' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
         }
       }
     </div>
@@ -318,6 +357,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly pipelineStatus = signal<PipelineStepStatus[]>([]);
   readonly disabledSteps = signal<Set<string>>(new Set());
+  readonly pendingNotifications = signal<PendingNotification[]>([]);
+  readonly triggeringNotifications = signal(false);
   readonly showAddForm = signal(false);
   @ViewChild('searchInput') private searchInputRef?: ElementRef<HTMLInputElement>;
   readonly searchResults = signal<ChannelSearchResult[]>([]);
@@ -337,7 +378,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     this.load();
     if (this.auth.isAdmin) {
       this.loadPipelineStatus();
-      this.statusPollSub = interval(15000).subscribe(() => this.loadPipelineStatus());
+      this.loadPendingNotifications();
+      this.statusPollSub = interval(15000).subscribe(() => { this.loadPipelineStatus(); this.loadPendingNotifications(); });
     }
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
@@ -397,6 +439,21 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadPendingNotifications(): void {
+    this.api.getPendingNotifications().subscribe({
+      next: (notifications) => this.pendingNotifications.set(notifications),
+      error: () => {},
+    });
+  }
+
+  triggerNotifications(): void {
+    this.triggeringNotifications.set(true);
+    this.api.triggerNotificationCheck().subscribe({
+      next: () => { this.loadPendingNotifications(); this.triggeringNotifications.set(false); },
+      error: () => this.triggeringNotifications.set(false),
+    });
+  }
+
   triggerStep(step: string): void {
     this.disabledSteps.update((s) => new Set([...s, step]));
     setTimeout(() => this.disabledSteps.update((s) => { const n = new Set(s); n.delete(step); return n; }), 5000);
@@ -440,7 +497,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     return parts.join(' · ');
   }
 
-  private formatSubscriberCount(count: number): string {
+  formatSubscriberCount(count: number): string {
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
     if (count >= 1_000) return `${Math.round(count / 1_000)}K`;
     return count.toLocaleString();
@@ -453,7 +510,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   selectChannel(result: ChannelSearchResult): void {
     this.addingChannelId.set(result.handle);
     this.addError.set(null);
-    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', this.notifyOnComplete).subscribe({
+    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, this.notifyOnComplete).subscribe({
       next: () => {
         this.addingChannelId.set(null);
         this.cancelAddChannel();

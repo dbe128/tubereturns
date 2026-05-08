@@ -31,7 +31,7 @@ public class AiModelService {
         2. Company names being discussed as investments
         3. Clear BUY or SELL recommendations
 
-        Return ONLY valid JSON in this exact format with no markdown, no code block, just raw JSON:
+        Output ONLY the raw JSON object below — no explanation, no markdown, no code fences, no text before or after:
         {
           "videoId": "PLACEHOLDER",
           "externalPositions": false,
@@ -65,20 +65,21 @@ public class AiModelService {
 
     public record ExtractionResult(String content, String model) {}
 
-    public ExtractionResult extractStockPicks(String videoTitle, String transcriptText) {
+    public ExtractionResult extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         return switch (aiProvider) {
-            case "openrouter" -> callOpenRouter(videoTitle, transcriptText);
+            case "openrouter" -> callOpenRouter(videoId, videoTitle, transcriptText);
             default           -> new ExtractionResult(createMockResponse(), "mock");
         };
     }
 
-    private ExtractionResult callOpenRouter(String videoTitle, String transcriptText) {
-        log.info("Calling OpenRouter API with model {}", MODEL);
+    private ExtractionResult callOpenRouter(String videoId, String videoTitle, String transcriptText) {
+        log.info("Calling OpenRouter API with model {} — {} (https://youtu.be/{})", MODEL, videoTitle, videoId);
 
         String prompt = EXTRACTION_PROMPT_TEMPLATE.formatted(videoTitle) + transcriptText;
         Map<String, Object> body = Map.of(
             "model", MODEL,
             "messages", List.of(
+                Map.of("role", "system", "content", "You are a financial data extraction engine. You output only raw JSON — no markdown, no code fences, no explanation, nothing else."),
                 Map.of("role", "user", "content", prompt)
             )
         );

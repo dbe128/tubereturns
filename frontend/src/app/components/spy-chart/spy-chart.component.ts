@@ -10,6 +10,7 @@ import {
   ElementRef,
   Output,
   EventEmitter,
+  Input,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { forkJoin, of } from 'rxjs';
@@ -165,6 +166,7 @@ interface SeriesData {
   `,
 })
 export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
+  @Input() channelId?: string;
   @Output() readonly refresh = new EventEmitter<void>();
 
   private readonly api = inject(ApiService);

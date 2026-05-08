@@ -3,8 +3,11 @@ package com.tubereturns.controller;
 import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
 import com.tubereturns.dto.YtbsdStatsDto;
+import com.tubereturns.model.User;
 import com.tubereturns.model.Video;
+import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.PickRepository;
+import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
@@ -39,6 +42,10 @@ public class AdminController {
     private final PickRepository pickRepository;
     private final TranscriptDownloadService transcriptDownloadService;
     private final ChannelNotificationService channelNotificationService;
+    private final ChannelProcessingNotificationRepository notificationRepository;
+    private final UserRepository userRepository;
+
+    public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
     @GetMapping("/pipeline/status")
     @Operation(summary = "Get pipeline status", description = "Returns last/next run timestamps and running state for each pipeline step")
@@ -87,11 +94,13 @@ public class AdminController {
             @RequestParam(required = false, defaultValue = "") String channelUrl,
             @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
             @RequestParam(required = false, defaultValue = "") String description,
+            @RequestParam(required = false) Long subscriberCount,
             @RequestParam(defaultValue = "true") boolean notifyOnComplete,
             Authentication authentication) {
-        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description);
+        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount);
         if (notifyOnComplete && authentication != null) {
-            channelNotificationService.scheduleNotification(channel, authentication.getName());
+            userRepository.findByEmail(authentication.getName())
+                    .ifPresent(user -> channelNotificationService.scheduleNotification(channel, user));
         }
         scheduler.triggerDiscovery();
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
@@ -148,6 +157,25 @@ public class AdminController {
                     return ResponseEntity.ok(Map.of("message", "Video " + videoId + " excluded=" + excluded));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/notifications/pending")
+    @Operation(summary = "Get pending processing notifications")
+    public List<PendingNotificationDto> getPendingNotifications() {
+        return notificationRepository.findPending().stream()
+                .map(n -> new PendingNotificationDto(
+                        n.getChannel().getChannelName(),
+                        n.getChannel().getHandle(),
+                        n.getUser().getEmail(),
+                        n.getRequestedAt().toString()))
+                .toList();
+    }
+
+    @PostMapping("/notifications/trigger")
+    @Operation(summary = "Manually trigger the notification check and send cycle")
+    public ResponseEntity<Map<String, String>> triggerNotifications() {
+        channelNotificationService.checkAndSendPendingNotifications();
+        return ResponseEntity.ok(Map.of("message", "Notification check completed"));
     }
 
     @GetMapping("/health")

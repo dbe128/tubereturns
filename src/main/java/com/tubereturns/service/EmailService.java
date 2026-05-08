@@ -71,10 +71,10 @@ public class EmailService {
         trySend(message, toEmail, link);
     }
 
-    public void sendChannelProcessedEmail(String toEmail, String channelName, String channelHandle) {
+    public boolean sendChannelProcessedEmail(String toEmail, String channelName, String channelHandle) {
         if (mailSender == null) {
             log.warn("Mail not configured — channel processed notification for {} (channel: {})", toEmail, channelName);
-            return;
+            return false;
         }
         try {
             MimeMessage message = mailSender.createMimeMessage();
@@ -85,8 +85,10 @@ public class EmailService {
             helper.setText(buildChannelProcessedHtml(channelName), true);
             mailSender.send(message);
             log.info("Channel processed email sent to {} for channel {}", toEmail, channelHandle);
+            return true;
         } catch (Exception e) {
-            log.warn("Failed to send channel processed email to {} for channel {}: {}", toEmail, channelHandle, e.getMessage());
+            log.error("Failed to send channel processed email to {} for channel {}: {}", toEmail, channelHandle, e.getMessage());
+            return false;
         }
     }
 

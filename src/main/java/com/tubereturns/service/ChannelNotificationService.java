@@ -2,6 +2,7 @@ package com.tubereturns.service;
 
 import com.tubereturns.model.Channel;
 import com.tubereturns.model.ChannelProcessingNotification;
+import com.tubereturns.model.User;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.VideoRepository;
@@ -19,7 +20,10 @@ import java.util.List;
 @Service
 public class ChannelNotificationService {
 
-    private static final List<Video.ProcessingStatus> INCOMPLETE_STATUSES =
+    private static final List<Video.TranscriptStatus> INCOMPLETE_TRANSCRIPT_STATUSES =
+            List.of(Video.TranscriptStatus.PENDING, Video.TranscriptStatus.DOWNLOADING);
+
+    private static final List<Video.ProcessingStatus> INCOMPLETE_PROCESSING_STATUSES =
             List.of(Video.ProcessingStatus.PENDING, Video.ProcessingStatus.PROCESSING);
 
     private final ChannelProcessingNotificationRepository notificationRepository;
@@ -27,12 +31,12 @@ public class ChannelNotificationService {
     private final EmailService emailService;
 
     @Transactional
-    public void scheduleNotification(Channel channel, String userEmail) {
-        if (notificationRepository.existsByChannelIdAndUserEmailAndSentAtIsNull(channel.getId(), userEmail)) {
+    public void scheduleNotification(Channel channel, User user) {
+        if (notificationRepository.existsByChannelIdAndUserIdAndSentAtIsNull(channel.getId(), user.getId())) {
             return;
         }
-        notificationRepository.save(new ChannelProcessingNotification(channel, userEmail));
-        log.info("Scheduled processing notification for channel {} to {}", channel.getHandle(), userEmail);
+        notificationRepository.save(new ChannelProcessingNotification(channel, user));
+        log.info("Scheduled processing notification for channel {} to {}", channel.getHandle(), user.getEmail());
     }
 
     @Scheduled(fixedDelay = 120_000)
@@ -42,19 +46,30 @@ public class ChannelNotificationService {
         if (pending.isEmpty()) {
             return;
         }
+        log.info("Checking {} pending notification(s)", pending.size());
         for (ChannelProcessingNotification notification : pending) {
             Channel channel = notification.getChannel();
-            if (channel.getLastProcessedAt() == null
-                    || channel.getLastProcessedAt().isBefore(notification.getRequestedAt())) {
+            if (!channel.isDiscoveryComplete()) {
+                log.info("Skipping notification for {} → discovery not complete", channel.getHandle());
                 continue;
             }
-            if (videoRepository.countByChannelIdAndProcessingStatusIn(channel.getId(), INCOMPLETE_STATUSES) > 0) {
+            long pendingTranscripts = videoRepository.countByChannelIdAndTranscriptStatusIn(channel.getId(), INCOMPLETE_TRANSCRIPT_STATUSES);
+            if (pendingTranscripts > 0) {
+                log.info("Skipping notification for {} → {} transcript(s) still pending", channel.getHandle(), pendingTranscripts);
                 continue;
             }
-            notification.setSentAt(Instant.now());
-            notificationRepository.save(notification);
-            emailService.sendChannelProcessedEmail(
-                    notification.getUserEmail(), channel.getChannelName(), channel.getHandle());
+            long pendingExtractions = videoRepository.countByChannelIdAndProcessingStatusIn(channel.getId(), INCOMPLETE_PROCESSING_STATUSES);
+            if (pendingExtractions > 0) {
+                log.info("Skipping notification for {} → {} extraction(s) still pending", channel.getHandle(), pendingExtractions);
+                continue;
+            }
+            log.info("Sending processing-complete notification for channel {} to {}", channel.getHandle(), notification.getUser().getEmail());
+            boolean sent = emailService.sendChannelProcessedEmail(
+                    notification.getUser().getEmail(), channel.getChannelName(), channel.getHandle());
+            if (sent) {
+                notification.setSentAt(Instant.now());
+                notificationRepository.save(notification);
+            }
         }
     }
 }

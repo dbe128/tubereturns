@@ -120,19 +120,30 @@ public class YouTubeDiscoveryService {
         String channelUrl = "https://www.youtube.com/@" + channel.getHandle();
         log.info("Processing channel: {} ({})", channel.getChannelName(), channelUrl);
 
-        if (channel.getThumbnailData() == null) {
-            YouTubeApiService.ChannelInfo info = youTubeApiService.resolveChannelInfo(channelUrl);
-            if (info != null && info.thumbnailUrl() != null) {
-                downloadThumbnail(info.thumbnailUrl(), channel);
-                channelRepository.save(channel);
-            }
+        YouTubeApiService.ChannelInfo info = youTubeApiService.resolveChannelInfo(channelUrl);
+        if (info == null) {
+            log.warn("Could not resolve channel info for: {}", channelUrl);
+            return 0;
+        }
+
+        boolean needsSave = false;
+        if (channel.getThumbnailData() == null && info.thumbnailUrl() != null) {
+            downloadThumbnail(info.thumbnailUrl(), channel);
+            needsSave = true;
+        }
+        if (info.subscriberCount() != null && !info.subscriberCount().equals(channel.getSubscriberCount())) {
+            channel.setSubscriberCount(info.subscriberCount());
+            needsSave = true;
+        }
+        if (needsSave) {
+            channelRepository.save(channel);
         }
 
         Instant since = channel.getLastProcessedAt() != null
                 ? channel.getLastProcessedAt()
                 : Instant.EPOCH;
         log.info("Fetching videos for channel '{}' since {}", channel.getChannelName(), since);
-        List<YouTubeVideoDto> recentVideos = youTubeApiService.getRecentVideos(channelUrl, since)
+        List<YouTubeVideoDto> recentVideos = youTubeApiService.getVideosFromPlaylist(info.uploadsPlaylistId(), since)
                 .stream().limit(maxVideos).toList();
 
         log.info("Found {} new video(s) for channel '{}'", recentVideos.size(), channel.getChannelName());
@@ -141,15 +152,25 @@ public class YouTubeDiscoveryService {
             processVideo(channel, video);
         }
 
+        boolean channelChanged = false;
+        if (recentVideos.size() < maxVideos && !channel.isDiscoveryComplete()) {
+            channel.setDiscoveryComplete(true);
+            channelChanged = true;
+            log.info("Channel '{}' discovery complete", channel.getChannelName());
+        }
+
         recentVideos.stream()
                 .map(YouTubeVideoDto::publishedAt)
                 .max(Comparator.naturalOrder())
                 .ifPresent(latest -> {
                     if (channel.getLastProcessedAt() == null || latest.isAfter(channel.getLastProcessedAt())) {
                         channel.setLastProcessedAt(latest);
-                        channelRepository.save(channel);
                     }
                 });
+
+        if (channelChanged || !recentVideos.isEmpty()) {
+            channelRepository.save(channel);
+        }
 
         return recentVideos.size();
     }
@@ -163,7 +184,7 @@ public class YouTubeDiscoveryService {
     }
 
     @Transactional
-    public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description) {
+    public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description, Long subscriberCount) {
         return channelRepository.findByHandleIncludingDeleted(handle)
             .map(existing -> {
                 existing.setChannelName(channelName);
@@ -174,11 +195,15 @@ public class YouTubeDiscoveryService {
                 if (existing.getThumbnailData() == null && thumbnailUrl != null && !thumbnailUrl.isBlank()) {
                     downloadThumbnail(thumbnailUrl, existing);
                 }
+                if (subscriberCount != null) {
+                    existing.setSubscriberCount(subscriberCount);
+                }
                 return channelRepository.save(existing);
             })
             .orElseGet(() -> {
                 Channel newChannel = new Channel(handle, channelName);
                 newChannel.setDescription(description);
+                newChannel.setSubscriberCount(subscriberCount);
                 if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
                     downloadThumbnail(thumbnailUrl, newChannel);
                 }

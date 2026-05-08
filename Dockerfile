@@ -1,4 +1,4 @@
-FROM eclipse-temurin:25-jdk AS build
+FROM eclipse-temurin:25-jdk-noble AS build
 WORKDIR /app
 COPY gradlew gradlew
 COPY gradle gradle
@@ -8,25 +8,19 @@ RUN ./gradlew dependencies --no-daemon -q 2>/dev/null || true
 COPY src src
 RUN ./gradlew bootJar --no-daemon -x test
 
-FROM eclipse-temurin:25-jdk
+FROM python:3.12-slim-bookworm
 WORKDIR /app
 
+ENV JAVA_HOME=/opt/java/openjdk
+ENV PATH="${JAVA_HOME}/bin:${PATH}"
+
+COPY --from=build /opt/java/openjdk /opt/java/openjdk
+
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        python3 python3-pip \
-        wget gnupg ca-certificates \
-        libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1 \
-        libasound2t64 libgbm1 libxshmfence1 \
-        fonts-liberation xdg-utils && \
-    wget -q -O - https://dl.google.com/linux/linux_signing_key.pub \
-        | gpg --dearmor -o /usr/share/keyrings/google-linux-signing-keyring.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-linux-signing-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" \
-        > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && \
-    apt-get install -y --no-install-recommends google-chrome-stable && \
+    apt-get install -y --no-install-recommends chromium chromium-driver && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip3 install --break-system-packages \
+RUN pip install --no-cache-dir \
     youtube-transcript-api \
     yt-dlp \
     requests \

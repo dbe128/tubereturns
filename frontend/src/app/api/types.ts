@@ -8,6 +8,7 @@ export const ChannelSchema = z.object({
   hasThumbnail: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  subscriberCount: z.number().nullable(),
 });
 
 export const ChannelStatsSchema = z.object({
@@ -138,6 +139,14 @@ export const AuthResponseSchema = z.object({
 });
 
 export type PipelineStepStatus = z.infer<typeof PipelineStepStatusSchema>;
+
+export const PendingNotificationSchema = z.object({
+  channelName: z.string(),
+  channelHandle: z.string(),
+  userEmail: z.string(),
+  requestedAt: z.string(),
+});
+export type PendingNotification = z.infer<typeof PendingNotificationSchema>;
 export type ChannelSearchResult = z.infer<typeof ChannelSearchResultSchema>;
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
