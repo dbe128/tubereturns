@@ -9,6 +9,7 @@ export const ChannelSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string(),
   subscriberCount: z.number().nullable(),
+  discoveryComplete: z.boolean(),
 });
 
 export const ChannelStatsSchema = z.object({

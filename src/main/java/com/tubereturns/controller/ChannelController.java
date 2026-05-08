@@ -6,6 +6,7 @@ import com.tubereturns.dto.VideoSummaryDto;
 import com.tubereturns.model.Channel;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Video;
+import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
@@ -30,8 +31,11 @@ import java.util.Optional;
 public class ChannelController {
 
     private final ChannelRepository channelRepository;
+    private final ChannelProcessingNotificationRepository notificationRepository;
     private final PickRepository pickRepository;
     private final VideoRepository videoRepository;
+    private final UserRepository userRepository;
+    private final ChannelNotificationService channelNotificationService;
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -80,6 +84,47 @@ public class ChannelController {
         return ResponseEntity.ok(videos.stream().map(this::toVideoSummaryDto).toList());
     }
 
+    @GetMapping("/my-notifications")
+    @Operation(summary = "Get handles of channels the current user has a pending processing notification for")
+    public ResponseEntity<List<String>> getMyNotifications(Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.ok(List.of());
+        }
+        return userRepository.findByEmail(authentication.getName())
+                .map(user -> ResponseEntity.ok(notificationRepository.findPendingHandlesByUserId(user.getId())))
+                .orElse(ResponseEntity.ok(List.of()));
+    }
+
+    @PostMapping("/{handle}/notify")
+    @Operation(summary = "Subscribe to processing-complete notification for a channel")
+    public ResponseEntity<Void> subscribeToNotification(@PathVariable String handle, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Optional<Channel> channelOpt = channelRepository.findByHandle(handle);
+        if (channelOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        userRepository.findByEmail(authentication.getName())
+                .ifPresent(user -> channelNotificationService.scheduleNotification(channelOpt.get(), user));
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{handle}/notify")
+    @Operation(summary = "Unsubscribe from processing-complete notification for a channel")
+    public ResponseEntity<Void> unsubscribeFromNotification(@PathVariable String handle, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).build();
+        }
+        Optional<Channel> channelOpt = channelRepository.findByHandle(handle);
+        if (channelOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        userRepository.findByEmail(authentication.getName())
+                .ifPresent(user -> channelNotificationService.cancelNotification(channelOpt.get(), user));
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/top-performers")
     @Operation(summary = "Get channels ranked by pick count")
     public ResponseEntity<List<ChannelStatsDto>> getTopPerformers(
@@ -101,7 +146,8 @@ public class ChannelController {
             channel.getThumbnailData() != null,
             channel.getCreatedAt(),
             channel.getUpdatedAt(),
-            channel.getSubscriberCount()
+            channel.getSubscriberCount(),
+            channel.isDiscoveryComplete()
         );
     }
 

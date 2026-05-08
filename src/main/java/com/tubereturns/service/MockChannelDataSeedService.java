@@ -38,6 +38,10 @@ public class MockChannelDataSeedService {
                     c.setDescription(channelData.description());
                     return channelRepository.save(c);
                 });
+            if (!channel.isDiscoveryComplete()) {
+                channel.setDiscoveryComplete(true);
+                channelRepository.save(channel);
+            }
 
             for (MockChannelProvider.MockVideoData videoData : channelData.videos()) {
                 if (videoRepository.existsByVideoId(videoData.videoId())) {

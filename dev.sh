@@ -37,7 +37,7 @@ cleanup() {
 trap cleanup INT TERM
 
 BACKEND_PORT=8080
-EXISTING_PID=$(lsof -ti tcp:"$BACKEND_PORT" 2>/dev/null)
+EXISTING_PID=$(lsof -ti tcp:"$BACKEND_PORT" 2>/dev/null || true)
 if [ -n "$EXISTING_PID" ]; then
     echo "Port $BACKEND_PORT in use (PID $EXISTING_PID) — killing..."
     kill "$EXISTING_PID" 2>/dev/null

@@ -13,5 +13,10 @@ public interface ChannelProcessingNotificationRepository extends JpaRepository<C
     @Query("SELECT n FROM ChannelProcessingNotification n JOIN FETCH n.channel JOIN FETCH n.user WHERE n.sentAt IS NULL")
     List<ChannelProcessingNotification> findPending();
 
+    @Query("SELECT n.channel.handle FROM ChannelProcessingNotification n WHERE n.user.id = :userId AND n.sentAt IS NULL")
+    List<String> findPendingHandlesByUserId(Long userId);
+
     boolean existsByChannelIdAndUserIdAndSentAtIsNull(Long channelId, Long userId);
+
+    void deleteByChannelIdAndUserIdAndSentAtIsNull(Long channelId, Long userId);
 }

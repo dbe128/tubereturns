@@ -10,5 +10,6 @@ public record ChannelResponseDto(
     boolean hasThumbnail,
     Instant createdAt,
     Instant updatedAt,
-    Long subscriberCount
+    Long subscriberCount,
+    boolean discoveryComplete
 ) {}

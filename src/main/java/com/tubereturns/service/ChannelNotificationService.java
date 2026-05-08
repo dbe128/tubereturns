@@ -31,6 +31,12 @@ public class ChannelNotificationService {
     private final EmailService emailService;
 
     @Transactional
+    public void cancelNotification(Channel channel, User user) {
+        notificationRepository.deleteByChannelIdAndUserIdAndSentAtIsNull(channel.getId(), user.getId());
+        log.info("Cancelled processing notification for channel {} for {}", channel.getHandle(), user.getEmail());
+    }
+
+    @Transactional
     public void scheduleNotification(Channel channel, User user) {
         if (notificationRepository.existsByChannelIdAndUserIdAndSentAtIsNull(channel.getId(), user.getId())) {
             return;

@@ -119,6 +119,21 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/pipeline/${step}/trigger`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
+  getMyChannelNotifications(): Observable<string[]> {
+    return this.validated(
+      z.array(z.string()),
+      this.http.get<unknown>('/api/channels/my-notifications').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  subscribeToChannelNotification(handle: string): Observable<unknown> {
+    return this.http.post<unknown>(`/api/channels/${handle}/notify`, null).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  unsubscribeFromChannelNotification(handle: string): Observable<unknown> {
+    return this.http.delete<unknown>(`/api/channels/${handle}/notify`).pipe(catchError((e) => this.handleError(e)));
+  }
+
   getPendingNotifications(): Observable<PendingNotification[]> {
     return this.validated(
       z.array(PendingNotificationSchema),
