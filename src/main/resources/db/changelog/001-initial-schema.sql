@@ -124,3 +124,21 @@ VALUES (
 
 --changeset tubereturns:002
 ALTER TABLE videos ADD COLUMN exclusion_reason VARCHAR(255);
+
+--changeset tubereturns:003 validCheckSum:ANY
+CREATE TABLE channel_processing_notifications (
+    id         BIGSERIAL PRIMARY KEY,
+    channel_id BIGINT NOT NULL REFERENCES channels(id),
+    user_email VARCHAR(255) NOT NULL,
+    requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    sent_at    TIMESTAMP WITH TIME ZONE
+);
+CREATE INDEX idx_cpn_channel_id ON channel_processing_notifications(channel_id);
+CREATE INDEX idx_cpn_sent_at ON channel_processing_notifications(sent_at);
+
+--changeset tubereturns:004
+ALTER TABLE channel_processing_notifications DROP COLUMN user_email;
+ALTER TABLE channel_processing_notifications ADD COLUMN user_id BIGINT NOT NULL REFERENCES users(id);
+
+--changeset tubereturns:005
+ALTER TABLE channels ADD COLUMN subscriber_count BIGINT;
