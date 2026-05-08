@@ -94,6 +94,9 @@ public class AdminController {
     public ResponseEntity<Map<String, String>> reextractVideo(@PathVariable String videoId) {
         return videoRepository.findByVideoId(videoId)
                 .map(video -> {
+                    if (video.getChannel().getHandle().startsWith("mock-")) {
+                        return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
+                    }
                     pickRepository.deleteByVideoId(video.getId());
                     video.setProcessingStatus(Video.ProcessingStatus.PENDING);
                     video.setExtractionModel(null);
@@ -109,6 +112,9 @@ public class AdminController {
     public ResponseEntity<Map<String, String>> redownloadTranscript(@PathVariable String videoId) {
         return videoRepository.findByVideoId(videoId)
                 .map(video -> {
+                    if (video.getChannel().getHandle().startsWith("mock-")) {
+                        return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
+                    }
                     pickRepository.deleteByVideoId(video.getId());
                     video.setTranscriptText(null);
                     video.setTranscriptStatus(Video.TranscriptStatus.PENDING);

@@ -113,6 +113,10 @@ public class YouTubeDiscoveryService {
 
     @Transactional
     public int processChannel(Channel channel, int maxVideos) {
+        if (channel.getHandle().startsWith("mock-")) {
+            log.debug("Skipping mock channel: {}", channel.getHandle());
+            return 0;
+        }
         String channelUrl = "https://www.youtube.com/@" + channel.getHandle();
         log.info("Processing channel: {} ({})", channel.getChannelName(), channelUrl);
 

@@ -325,7 +325,7 @@ interface IndexedVideo {
                     </td>
                     <td class="px-4 py-3">
                       <div class="flex items-center gap-2">
-                        @if (!item.v.excluded && item.v.transcriptStatus !== 'DOWNLOADING') {
+                        @if (!item.v.excluded && item.v.transcriptStatus !== 'DOWNLOADING' && !isMockChannel()) {
                           <button
                             (click)="handleRedownloadTranscript(item.v)"
                             [disabled]="redownloading() === item.v.videoId"
@@ -422,6 +422,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly reextracting = signal<string | null>(null);
   readonly togglingExclusion = signal<string | null>(null);
   readonly redownloading = signal<string | null>(null);
+  readonly isMockChannel = computed(() => this.channel()?.handle?.startsWith('mock-') ?? false);
 
   readonly sortKey = signal<SortKey>('publishedAt');
   readonly sortDir = signal<SortDir>('desc');

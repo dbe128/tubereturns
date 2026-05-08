@@ -19,17 +19,15 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.NavigableMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/portfolios")
 @RequiredArgsConstructor
 public class PortfolioController {
+
+    private record PositionGroup(List<LocalDate> buyDates, LocalDate sellDate) {}
 
     private final ChannelRepository channelRepository;
     private final PickRepository pickRepository;
@@ -69,15 +67,29 @@ public class PortfolioController {
 
         return channelRepository.findByHandle(channelId)
             .map(channel -> {
-                List<String> tickers = pickRepository.findDistinctTickersByChannelIdAndSignal(
-                    channel.getId(), Pick.Signal.BUY);
-                LocalDate startDate = pickRepository.findEarliestBuyPickPublishedAtAllTime(channel.getId())
-                    .map(instant -> adjustToTradingDay(instant.atZone(ZoneOffset.UTC).toLocalDate()))
-                    .orElse(LocalDate.now());
+                List<Pick> buyPicks = pickRepository.findBuyPicksByChannelId(channel.getId());
+                if (buyPicks.isEmpty()) {
+                    return ResponseEntity.ok(List.<PortfolioPricePointDto>of());
+                }
+                LocalDate startDate = adjustToTradingDay(
+                    buyPicks.get(0).getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate());
+                Map<String, List<LocalDate>> buyDatesByTicker = pickDatesToMap(buyPicks);
+                Map<String, List<LocalDate>> sellDatesByTicker = pickDatesToMap(
+                    pickRepository.findSellPicksByChannelId(channel.getId()));
                 LocalDate clipFrom = from != null ? LocalDate.parse(from) : null;
-                return ResponseEntity.ok(buildPortfolioPrices(tickers, startDate, clipFrom));
+                return ResponseEntity.ok(buildPortfolioPrices(buyDatesByTicker, sellDatesByTicker, startDate, clipFrom));
             })
             .orElse(ResponseEntity.notFound().build());
+    }
+
+    private Map<String, List<LocalDate>> pickDatesToMap(List<Pick> picks) {
+        return picks.stream().collect(Collectors.groupingBy(
+            p -> p.getStock().getTickerSymbol(),
+            Collectors.mapping(
+                p -> adjustToTradingDay(p.getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate()),
+                Collectors.toList()
+            )
+        ));
     }
 
     private List<PortfolioPricePointDto> buildSpyPrices(String fromParam) {
@@ -98,9 +110,14 @@ public class PortfolioController {
         }).orElse(List.of());
     }
 
-    private List<PortfolioPricePointDto> buildPortfolioPrices(List<String> tickers, LocalDate startDate, LocalDate clipFrom) {
+    private List<PortfolioPricePointDto> buildPortfolioPrices(
+            Map<String, List<LocalDate>> buyDatesByTicker,
+            Map<String, List<LocalDate>> sellDatesByTicker,
+            LocalDate startDate,
+            LocalDate clipFrom) {
+
         Map<String, NavigableMap<LocalDate, Double>> tickerPrices = new TreeMap<>();
-        for (String ticker : tickers) {
+        for (String ticker : buyDatesByTicker.keySet()) {
             stockRepository.findByTickerSymbol(ticker).ifPresent(stock -> {
                 List<StockPrice> prices = stockPriceRepository
                     .findByStockIdAndPriceDateGreaterThanEqualOrderByPriceDateAsc(stock.getId(), startDate);
@@ -116,15 +133,14 @@ public class PortfolioController {
             return List.of();
         }
 
-        LocalDate effectiveFrom = clipFrom != null && clipFrom.isAfter(startDate) ? clipFrom : startDate;
+        Map<String, List<PositionGroup>> groupsByTicker = new HashMap<>();
+        for (Map.Entry<String, List<LocalDate>> entry : buyDatesByTicker.entrySet()) {
+            groupsByTicker.put(entry.getKey(), buildPositionGroups(
+                entry.getValue(),
+                sellDatesByTicker.getOrDefault(entry.getKey(), List.of())));
+        }
 
-        Map<String, Double> basePrices = tickerPrices.entrySet().stream()
-            .collect(Collectors.toMap(
-                Map.Entry::getKey,
-                e -> {
-                    Map.Entry<LocalDate, Double> floor = e.getValue().floorEntry(effectiveFrom);
-                    return floor != null ? floor.getValue() : e.getValue().firstEntry().getValue();
-                }));
+        LocalDate effectiveFrom = clipFrom != null && clipFrom.isAfter(startDate) ? clipFrom : startDate;
 
         NavigableMap<LocalDate, Double> allDates = new TreeMap<>();
         tickerPrices.values().forEach(m -> m.keySet().forEach(d -> allDates.put(d, 0.0)));
@@ -132,21 +148,67 @@ public class PortfolioController {
         return allDates.tailMap(effectiveFrom).keySet().stream()
             .map(date -> {
                 List<Double> returns = tickerPrices.entrySet().stream()
-                    .map(e -> {
-                        Double base = basePrices.get(e.getKey());
-                        Map.Entry<LocalDate, Double> entry = e.getValue().floorEntry(date);
-                        if (base == null || base == 0 || entry == null) {
-                            return null;
-                        }
-                        return ((entry.getValue() - base) / base) * 100;
-                    })
+                    .map(e -> computeTickerReturn(
+                        date,
+                        groupsByTicker.getOrDefault(e.getKey(), List.of()),
+                        e.getValue()))
                     .filter(r -> r != null)
                     .toList();
-
                 double avg = returns.isEmpty() ? 0 : returns.stream().mapToDouble(Double::doubleValue).average().orElse(0);
                 return new PortfolioPricePointDto(date.toString(), avg, null);
             })
             .toList();
+    }
+
+    private List<PositionGroup> buildPositionGroups(List<LocalDate> buys, List<LocalDate> sells) {
+        List<PositionGroup> groups = new ArrayList<>();
+        int buyIdx = 0;
+        for (LocalDate sellDate : sells) {
+            List<LocalDate> groupBuys = new ArrayList<>();
+            while (buyIdx < buys.size() && buys.get(buyIdx).isBefore(sellDate)) {
+                groupBuys.add(buys.get(buyIdx++));
+            }
+            if (!groupBuys.isEmpty()) {
+                groups.add(new PositionGroup(List.copyOf(groupBuys), sellDate));
+            }
+        }
+        if (buyIdx < buys.size()) {
+            groups.add(new PositionGroup(List.copyOf(buys.subList(buyIdx, buys.size())), null));
+        }
+        return groups;
+    }
+
+    private Double computeTickerReturn(LocalDate date, List<PositionGroup> groups, NavigableMap<LocalDate, Double> prices) {
+        double compounded = 1.0;
+        boolean hasContribution = false;
+        for (PositionGroup group : groups) {
+            List<LocalDate> activeBuys = group.buyDates().stream()
+                .filter(b -> !b.isAfter(date))
+                .toList();
+            if (activeBuys.isEmpty()) {
+                break;
+            }
+            boolean isClosed = group.sellDate() != null && !date.isBefore(group.sellDate());
+            Map.Entry<LocalDate, Double> exitEntry = prices.floorEntry(isClosed ? group.sellDate() : date);
+            if (exitEntry == null) {
+                continue;
+            }
+            double exitPrice = exitEntry.getValue();
+            OptionalDouble groupReturn = activeBuys.stream()
+                .mapToDouble(buyDate -> {
+                    Map.Entry<LocalDate, Double> buyEntry = prices.floorEntry(buyDate);
+                    return (buyEntry != null && buyEntry.getValue() != 0)
+                        ? (exitPrice - buyEntry.getValue()) / buyEntry.getValue()
+                        : Double.NaN;
+                })
+                .filter(r -> !Double.isNaN(r))
+                .average();
+            if (groupReturn.isPresent()) {
+                hasContribution = true;
+                compounded *= (1.0 + groupReturn.getAsDouble());
+            }
+        }
+        return hasContribution ? (compounded - 1.0) * 100.0 : null;
     }
 
     private LocalDate adjustToTradingDay(LocalDate date) {

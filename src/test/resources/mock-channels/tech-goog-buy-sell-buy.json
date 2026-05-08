@@ -1,0 +1,32 @@
+{
+  "handle": "mock-tech-goog-buy-sell-buy",
+  "channelName": "Tech GOOG Buy Sell Buy",
+  "description": "Mock tech portfolio channel with Google sold then rebought",
+  "videos": [
+    {
+      "videoId": "mock-tech-goog-buy-sell-buy-v001",
+      "title": "Tech Portfolio Picks - September 1, 2022",
+      "publishedAt": "2022-09-01T16:00:00Z",
+      "picks": [
+        { "ticker": "AMD",  "companyName": "Advanced Micro Devices", "signal": "BUY" },
+        { "ticker": "GOOG", "companyName": "Alphabet Inc.",          "signal": "BUY" }
+      ]
+    },
+    {
+      "videoId": "mock-tech-goog-buy-sell-buy-v002",
+      "title": "Tech Portfolio Update - September 1, 2025",
+      "publishedAt": "2025-09-01T16:00:00Z",
+      "picks": [
+        { "ticker": "GOOG", "companyName": "Alphabet Inc.", "signal": "SELL" }
+      ]
+    },
+    {
+      "videoId": "mock-tech-goog-buy-sell-buy-v003",
+      "title": "Tech Portfolio Update - January 1, 2026",
+      "publishedAt": "2026-01-01T16:00:00Z",
+      "picks": [
+        { "ticker": "GOOG", "companyName": "Alphabet Inc.", "signal": "BUY" }
+      ]
+    }
+  ]
+}

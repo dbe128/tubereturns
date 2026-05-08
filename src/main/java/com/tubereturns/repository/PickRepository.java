@@ -44,4 +44,10 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
 
     @Query("SELECT MIN(p.video.publishedAt) FROM Pick p WHERE p.video.channel.id = :channelId AND p.signal = 'BUY'")
     Optional<Instant> findEarliestBuyPickPublishedAtAllTime(@Param("channelId") Long channelId);
+
+    @Query("SELECT p FROM Pick p JOIN FETCH p.video JOIN FETCH p.stock WHERE p.video.channel.id = :channelId AND p.signal = 'BUY' AND p.video.excluded = false ORDER BY p.video.publishedAt ASC")
+    List<Pick> findBuyPicksByChannelId(@Param("channelId") Long channelId);
+
+    @Query("SELECT p FROM Pick p JOIN FETCH p.video JOIN FETCH p.stock WHERE p.video.channel.id = :channelId AND p.signal = 'SELL' AND p.video.excluded = false ORDER BY p.video.publishedAt ASC")
+    List<Pick> findSellPicksByChannelId(@Param("channelId") Long channelId);
 }
