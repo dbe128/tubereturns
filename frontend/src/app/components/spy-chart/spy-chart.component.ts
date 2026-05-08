@@ -60,9 +60,14 @@ function formatXLabel(dateStr: string, tf: Timeframe): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
 }
 
-function thinData(data: PortfolioPricePoint[]): PortfolioPricePoint[] {
-  if (data.length <= 60) return data;
-  const n = Math.ceil(data.length / 60);
+function maxPointsForTimeframe(tf: Timeframe): number {
+  if (tf === '1W' || tf === '1M' || tf === 'YTD' || tf === '1Y') return Infinity;
+  return 200;
+}
+
+function thinData(data: PortfolioPricePoint[], max: number): PortfolioPricePoint[] {
+  if (!isFinite(max) || data.length <= max) return data;
+  const n = Math.ceil(data.length / max);
   return data.filter((_, i) => i % n === 0);
 }
 
@@ -324,8 +329,8 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private buildSpyChart(ctx: CanvasRenderingContext2D, pts: PortfolioPricePoint[]): void {
-    const thinned = thinData(pts);
     const tf = this.timeframe();
+    const thinned = thinData(pts, maxPointsForTimeframe(tf));
     const change = this.spyChange();
     const positive = change >= 0;
     const color = positive ? '#2d7a2d' : '#cc1a1a';
@@ -404,9 +409,8 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private buildComparisonChart(ctx: CanvasRenderingContext2D, visible: SeriesData[]): void {
     const allDates = [...new Set(visible.flatMap((s) => s.points.map((p) => p.date)))].sort();
-    const thinned = allDates.length > 60
-      ? allDates.filter((_, i) => i % Math.ceil(allDates.length / 60) === 0)
-      : allDates;
+    const max = maxPointsForTimeframe(this.timeframe());
+    const thinned = thinData(allDates.map((d) => ({ date: d } as PortfolioPricePoint)), max).map((p) => p.date);
 
     this.chart = new Chart(ctx, {
       type: 'line',
