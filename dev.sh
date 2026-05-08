@@ -36,6 +36,14 @@ cleanup() {
 }
 trap cleanup INT TERM
 
+BACKEND_PORT=8080
+EXISTING_PID=$(lsof -ti tcp:"$BACKEND_PORT" 2>/dev/null)
+if [ -n "$EXISTING_PID" ]; then
+    echo "Port $BACKEND_PORT in use (PID $EXISTING_PID) — killing..."
+    kill "$EXISTING_PID" 2>/dev/null
+    while lsof -ti tcp:"$BACKEND_PORT" > /dev/null 2>&1; do sleep 0.2; done
+fi
+
 echo "Starting backend (http://localhost:8080)..."
 "$ROOT/gradlew" -p "$ROOT" --console plain bootRun --args='--spring.profiles.active=dev' &
 BACKEND_PID=$!

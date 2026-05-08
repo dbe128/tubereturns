@@ -1,6 +1,8 @@
 # claude.md — TubeReturns (Consolidated MVP Spec)
 
-After completing every task, run: `afplay /System/Library/Sounds/Glass.aiff`
+After completing every task, run: `afplay "/Users/dbe128/IdeaProjects/TubeReturns/mission-accomplished-made-with-Voicemod.mp3"`
+
+Do NOT commit or push changes unless explicitly asked by the user.
 
 ## Versioning
 
