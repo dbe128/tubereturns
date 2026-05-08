@@ -18,6 +18,8 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
 
 tubereturns:
+  app:
+    base-url: http://localhost:4200
   transcript:
     ytbsd-path: scripts/ytbsd.py
     transcripts-dir: transcripts

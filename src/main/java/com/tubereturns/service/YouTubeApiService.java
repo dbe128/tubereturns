@@ -37,7 +37,7 @@ public class YouTubeApiService {
     @Value("${tubereturns.youtube.channel-filter-keywords:}")
     private List<String> channelFilterKeywords;
 
-    public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl) {}
+    public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl, Long subscriberCount) {}
 
     public List<ChannelSearchResultDto> searchChannels(String query, boolean filterByKeywords) {
         if (!enabled || apiKey == null || apiKey.isBlank()) {
@@ -50,7 +50,7 @@ public class YouTubeApiService {
                     .list(List.of("snippet"))
                     .setQ(query)
                     .setType(List.of("channel"))
-                    .setMaxResults(10L)
+                    .setMaxResults(50L)
                     .setKey(apiKey)
                     .execute()
                     .getItems();
@@ -152,31 +152,21 @@ public class YouTubeApiService {
         }
     }
 
-    public List<YouTubeVideoDto> getRecentVideos(String channelUrl, Instant since) {
-        if (!enabled || channelUrl == null || channelUrl.isBlank()) {
-            log.warn("YouTube API disabled or no channel URL — skipping video discovery");
+    public List<YouTubeVideoDto> getVideosFromPlaylist(String uploadsPlaylistId, Instant since) {
+        if (!enabled || uploadsPlaylistId == null || uploadsPlaylistId.isBlank()) {
             return List.of();
         }
         if (apiKey == null || apiKey.isBlank()) {
-            log.error("YOUTUBE_API_KEY is not set — cannot discover videos for {}", channelUrl);
             return List.of();
         }
-
         try {
             YouTube youtube = buildClient();
-            ChannelInfo channelInfo = resolveUploadsPlaylistId(youtube, channelUrl);
-            if (channelInfo == null) {
-                log.warn("Could not resolve uploads playlist for: {}", channelUrl);
-                return List.of();
-            }
-
-            List<String> videoIds = fetchVideoIds(youtube, channelInfo.uploadsPlaylistId(), since);
+            List<String> videoIds = fetchVideoIds(youtube, uploadsPlaylistId, since);
             return fetchVideoDetails(youtube, videoIds).stream()
                     .sorted(Comparator.comparing(YouTubeVideoDto::publishedAt))
                     .toList();
-
         } catch (Exception e) {
-            log.error("Failed to discover videos for {}: {}", channelUrl, e.getMessage(), e);
+            log.error("Failed to fetch videos from playlist {}: {}", uploadsPlaylistId, e.getMessage(), e);
             return List.of();
         }
     }
@@ -223,7 +213,7 @@ public class YouTubeApiService {
 
     private ChannelInfo resolveUploadsPlaylistId(YouTube youtube, String channelUrl) throws IOException {
         YouTube.Channels.List request = youtube.channels()
-                .list(List.of("contentDetails", "snippet"))
+                .list(List.of("contentDetails", "snippet", "statistics"))
                 .setKey(apiKey);
 
         if (channelUrl.contains("/@")) {
@@ -261,7 +251,13 @@ public class YouTubeApiService {
                 thumbnailUrl = thumbnails.getDefault().getUrl();
             }
         }
-        return new ChannelInfo(uploadsPlaylistId, thumbnailUrl);
+        Long subscriberCount = null;
+        if (item.getStatistics() != null
+                && !Boolean.TRUE.equals(item.getStatistics().getHiddenSubscriberCount())
+                && item.getStatistics().getSubscriberCount() != null) {
+            subscriberCount = item.getStatistics().getSubscriberCount().longValue();
+        }
+        return new ChannelInfo(uploadsPlaylistId, thumbnailUrl, subscriberCount);
     }
 
     private List<String> fetchVideoIds(YouTube youtube, String uploadsPlaylistId, Instant since) throws IOException {

@@ -9,5 +9,6 @@ public record ChannelResponseDto(
     String description,
     boolean hasThumbnail,
     Instant createdAt,
-    Instant updatedAt
+    Instant updatedAt,
+    Long subscriberCount
 ) {}

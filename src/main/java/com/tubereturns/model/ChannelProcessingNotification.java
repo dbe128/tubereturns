@@ -26,8 +26,9 @@ public class ChannelProcessingNotification {
     private Channel channel;
 
     @NotNull
-    @Column(name = "user_email", nullable = false)
-    private String userEmail;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @NotNull
     @Column(name = "requested_at", nullable = false, updatable = false)
@@ -36,9 +37,9 @@ public class ChannelProcessingNotification {
     @Column(name = "sent_at")
     private Instant sentAt;
 
-    public ChannelProcessingNotification(Channel channel, String userEmail) {
+    public ChannelProcessingNotification(Channel channel, User user) {
         this.channel = channel;
-        this.userEmail = userEmail;
+        this.user = user;
         this.requestedAt = Instant.now();
     }
 }

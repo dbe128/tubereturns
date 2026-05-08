@@ -61,7 +61,7 @@ tubereturns:
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
   app:
-    base-url: ${APP_BASE_URL:http://localhost:4200}
+    base-url: ${APP_BASE_URL:http://localhost}
     from-email: ${MAIL_FROM:noreply@tubereturns.com}
 
   pipeline:
@@ -70,7 +70,7 @@ tubereturns:
       max-items: 100
     transcript:
       cron: "0 15 * * * *"
-      batch-size: 2
+      batch-size: 100
     extraction:
       cron: "0 30 * * * *"
 

@@ -8,13 +8,16 @@ import com.tubereturns.model.Pick;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
+import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.service.ChannelNotificationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -97,7 +100,8 @@ public class ChannelController {
             channel.getDescription(),
             channel.getThumbnailData() != null,
             channel.getCreatedAt(),
-            channel.getUpdatedAt()
+            channel.getUpdatedAt(),
+            channel.getSubscriberCount()
         );
     }
 

@@ -10,6 +10,7 @@ import json
 import os
 import random
 import re
+import shutil
 import sys
 import threading
 import time
@@ -94,6 +95,11 @@ def download_fresh_proxies(proxy_file: str = PROXY_FILE) -> int:
     Download fresh proxy list from free-proxy-list.net and save to file.
     Returns the number of proxies downloaded.
     """
+    chrome = shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium-browser') or shutil.which('chromium')
+    if not chrome:
+        print("⚠ Chrome not found — skipping proxy download\n")
+        return 0
+
     print("\nDownloading fresh proxy list...")
 
     driver = None
@@ -104,7 +110,15 @@ def download_fresh_proxies(proxy_file: str = PROXY_FILE) -> int:
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--log-level=3")  # Suppress Chrome logs
-        driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
+
+        chrome_binary = (shutil.which('google-chrome') or shutil.which('google-chrome-stable')
+                         or shutil.which('chromium-browser') or shutil.which('chromium'))
+        if chrome_binary:
+            options.binary_location = chrome_binary
+
+        chromedriver_bin = shutil.which('chromedriver')
+        service = ChromeService(chromedriver_bin) if chromedriver_bin else ChromeService(ChromeDriverManager().install())
+        driver = webdriver.Chrome(service=service, options=options)
 
         url = "https://free-proxy-list.net/en/"
         driver.get(url)
