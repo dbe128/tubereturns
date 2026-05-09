@@ -1900,26 +1900,30 @@ def run_new_job(mode: str, cli_args=None) -> bool:
 
     # Batch mode: one or more video URLs
     if mode == "batch":
-        videos = []
-        for raw_url in raw_urls:
+        def fetch_video_info(raw_url):
             vid_id = extract_video_id(raw_url)
             full_url = f"https://www.youtube.com/watch?v={vid_id}"
+            print(f"Fetching video info for {vid_id}...", flush=True)
             try:
-                print(f"Fetching video info for {vid_id}...", flush=True)
                 ydl_opts = {'quiet': True, 'no_warnings': True}
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(full_url, download=False)
                 sname = sanitize_filename(info.get('channel') or info.get('uploader') or vid_id)
                 sid = info.get('channel_id') or info.get('uploader_id') or ''
-                videos.append({
+                return {
                     'id': info.get('id', vid_id),
                     'title': info.get('title', vid_id),
                     'source_name': sname,
                     'source_id': sid,
-                })
+                }
             except Exception as e:
-                print(f"Warning: could not fetch info for {vid_id}: {e}")
-                videos.append({'id': vid_id, 'title': vid_id, 'source_name': vid_id, 'source_id': ''})
+                print(f"Warning: could not fetch info for {vid_id}: {e}", flush=True)
+                return {'id': vid_id, 'title': vid_id, 'source_name': vid_id, 'source_id': ''}
+
+        workers = min(len(raw_urls), 100)
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            videos = list(ex.map(fetch_video_info, raw_urls))
+
         if len(videos) == 1:
             source_name = videos[0].get('source_name', '')
             source_id = videos[0].get('source_id', '')
