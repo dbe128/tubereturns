@@ -7,5 +7,9 @@ public record YtbsdStatsDto(
         Long lastDurationMs,
         Integer lastBatchSize,
         boolean running,
-        Integer currentBatchSize
+        Integer currentBatchSize,
+        String currentPhase,
+        int currentCompleted,
+        int currentTotal,
+        Integer currentPct
 ) {}

@@ -54,3 +54,5 @@ bin/
 /transcripts/
 /scripts/proxies.txt
 /mission-accomplished-made-with-Voicemod.mp3
+/scripts/.progress.json
+/ytbsd.log

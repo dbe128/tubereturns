@@ -51,7 +51,7 @@ public class AdminController {
     @Operation(summary = "Get pipeline status", description = "Returns last/next run timestamps and running state for each pipeline step")
     public List<PipelineStepStatusDto> getPipelineStatus() {
         TranscriptDownloadService.YtbsdStats stats = transcriptDownloadService.getYtbsdStats();
-        YtbsdStatsDto ytbsdStatsDto = new YtbsdStatsDto(stats.totalRuns(), stats.successfulRuns(), stats.failedRuns(), stats.lastDurationMs(), stats.lastBatchSize(), stats.running(), stats.currentBatchSize());
+        YtbsdStatsDto ytbsdStatsDto = new YtbsdStatsDto(stats.totalRuns(), stats.successfulRuns(), stats.failedRuns(), stats.lastDurationMs(), stats.lastBatchSize(), stats.running(), stats.currentBatchSize(), stats.currentPhase(), stats.currentCompleted(), stats.currentTotal(), stats.currentPct());
         return List.of(
                 toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),

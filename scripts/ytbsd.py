@@ -6,6 +6,7 @@ Features: Multi-threading, proxy rotation, progress saving, resume capability.
 """
 
 import argparse
+import contextlib
 import json
 import os
 import random
@@ -95,7 +96,13 @@ def download_fresh_proxies(proxy_file: str = PROXY_FILE) -> int:
     Download fresh proxy list from free-proxy-list.net and save to file.
     Returns the number of proxies downloaded.
     """
-    chrome = shutil.which('google-chrome') or shutil.which('google-chrome-stable') or shutil.which('chromium-browser') or shutil.which('chromium')
+    MAC_CHROME_PATHS = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ]
+    chrome = (shutil.which('google-chrome') or shutil.which('google-chrome-stable')
+              or shutil.which('chromium-browser') or shutil.which('chromium')
+              or next((p for p in MAC_CHROME_PATHS if os.path.isfile(p)), None))
     if not chrome:
         print("⚠ Chrome not found — skipping proxy download\n")
         return 0
@@ -112,7 +119,8 @@ def download_fresh_proxies(proxy_file: str = PROXY_FILE) -> int:
         options.add_argument("--log-level=3")  # Suppress Chrome logs
 
         chrome_binary = (shutil.which('google-chrome') or shutil.which('google-chrome-stable')
-                         or shutil.which('chromium-browser') or shutil.which('chromium'))
+                         or shutil.which('chromium-browser') or shutil.which('chromium')
+                         or next((p for p in MAC_CHROME_PATHS if os.path.isfile(p)), None))
         if chrome_binary:
             options.binary_location = chrome_binary
 
@@ -1061,13 +1069,26 @@ class ThreadStatusManager:
         return Group(summary_panel, table)
 
     def get_live_context(self):
-        """Return a Live context manager for use in the main thread."""
-        # Pass self as renderable - Live will call __rich__() on each refresh
+        if not sys.stdout.isatty():
+            return contextlib.nullcontext()
         self.live = Live(self, console=self.console, refresh_per_second=4)
         return self.live
 
+    def log_plain_progress(self):
+        with self.lock:
+            completed = self.completed
+            total = self.total_videos
+            success = self.success
+            failed = self.failed
+            no_transcript = self.no_transcript
+        pct = round(completed / total * 100) if total else 0
+        state = (completed, total, success, failed, no_transcript)
+        if state == getattr(self, '_last_logged_state', None):
+            return
+        self._last_logged_state = state
+        print(f"Progress: {completed}/{total} ({pct}%) — success={success} no_transcript={no_transcript} failed={failed}", flush=True)
+
     def stop_display(self):
-        """Stop the live display."""
         self.live = None
 
 
@@ -1442,6 +1463,8 @@ def download_transcripts_parallel(videos: list[dict], source_name: str, source_t
                 already_failed + failed,
                 already_no_transcript + no_trans
             )
+            if not sys.stdout.isatty():
+                status_manager.log_plain_progress()
 
             # Signal all workers to stop if all videos are done
             if work_queue.is_all_work_done():
@@ -1457,8 +1480,12 @@ def download_transcripts_parallel(videos: list[dict], source_name: str, source_t
     try:
         with status_manager.get_live_context():
             futures = [executor.submit(worker_thread) for _ in range(num_threads)]
+            last_log_time = time.time()
             while not work_queue.is_all_work_done() and not all(f.done() for f in futures):
                 time.sleep(0.1)
+                if not sys.stdout.isatty() and time.time() - last_log_time >= 10:
+                    status_manager.log_plain_progress()
+                    last_log_time = time.time()
             for f in futures:
                 if f.done():
                     try:
@@ -1878,6 +1905,7 @@ def run_new_job(mode: str, cli_args=None) -> bool:
             vid_id = extract_video_id(raw_url)
             full_url = f"https://www.youtube.com/watch?v={vid_id}"
             try:
+                print(f"Fetching video info for {vid_id}...", flush=True)
                 ydl_opts = {'quiet': True, 'no_warnings': True}
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     info = ydl.extract_info(full_url, download=False)
@@ -2090,7 +2118,8 @@ def main():
             completed = len(progress.get('completed_ids', progress.get('videos_data', [])))
             total = len(progress.get('videos', []))
             print(f"** Unfinished job found: {progress['source_name']} **")
-            print(f"   Progress: {completed}/{total} videos\n")
+            pct = round(completed / total * 100) if total else 0
+            print(f"   Progress: {completed}/{total} videos ({pct}%)\n")
 
         choice = get_user_choice(has_unfinished)
 

@@ -10,7 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -67,6 +69,13 @@ public class TranscriptDownloadService {
     private volatile Integer ytbsdLastBatchSize = null;
     private volatile boolean ytbsdRunning = false;
     private volatile Integer ytbsdCurrentBatchSize = null;
+    private volatile String ytbsdCurrentPhase = null;
+    private volatile int ytbsdCurrentCompleted = 0;
+    private volatile int ytbsdCurrentTotal = 0;
+    private volatile Integer ytbsdCurrentPct = null;
+
+    private static final java.util.regex.Pattern PROGRESS_PATTERN =
+            java.util.regex.Pattern.compile("Progress: (\\d+)/(\\d+) \\((\\d+)%\\)");
 
     public int getQueueSize() {
         synchronized (batchLock) {
@@ -74,10 +83,10 @@ public class TranscriptDownloadService {
         }
     }
 
-    public record YtbsdStats(int totalRuns, int successfulRuns, int failedRuns, Long lastDurationMs, Integer lastBatchSize, boolean running, Integer currentBatchSize) {}
+    public record YtbsdStats(int totalRuns, int successfulRuns, int failedRuns, Long lastDurationMs, Integer lastBatchSize, boolean running, Integer currentBatchSize, String currentPhase, int currentCompleted, int currentTotal, Integer currentPct) {}
 
     public YtbsdStats getYtbsdStats() {
-        return new YtbsdStats(ytbsdTotalRuns.get(), ytbsdSuccessfulRuns.get(), ytbsdFailedRuns.get(), ytbsdLastDurationMs, ytbsdLastBatchSize, ytbsdRunning, ytbsdCurrentBatchSize);
+        return new YtbsdStats(ytbsdTotalRuns.get(), ytbsdSuccessfulRuns.get(), ytbsdFailedRuns.get(), ytbsdLastDurationMs, ytbsdLastBatchSize, ytbsdRunning, ytbsdCurrentBatchSize, ytbsdCurrentPhase, ytbsdCurrentCompleted, ytbsdCurrentTotal, ytbsdCurrentPct);
     }
 
     @PreDestroy
@@ -171,6 +180,10 @@ public class TranscriptDownloadService {
                 }))
             );
 
+            ytbsdCurrentPhase = "fetching_info";
+            ytbsdCurrentCompleted = 0;
+            ytbsdCurrentTotal = videoIds.size();
+            ytbsdCurrentPct = null;
             try {
                 invokeYtbsd(videoIds);
             } catch (Exception e) {
@@ -218,6 +231,10 @@ public class TranscriptDownloadService {
         } finally {
             ytbsdRunning = false;
             ytbsdCurrentBatchSize = null;
+            ytbsdCurrentPhase = null;
+            ytbsdCurrentCompleted = 0;
+            ytbsdCurrentTotal = 0;
+            ytbsdCurrentPct = null;
             synchronized (batchLock) {
                 videoIds.forEach(queuedVideoIds::remove);
             }
@@ -244,12 +261,22 @@ public class TranscriptDownloadService {
         videoIds.stream().map(id -> "https://youtu.be/" + id).forEach(cmd::add);
 
         ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.environment().put("PYTHONUNBUFFERED", "1");
         pb.redirectErrorStream(true);
 
         log.info("Running ytbsd.py: {}", cmd);
         Instant start = Instant.now();
         Process process = pb.start();
-        String output = new String(process.getInputStream().readAllBytes());
+
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                log.info("[ytbsd] {}", line);
+                parseProgressLine(line);
+                output.append(line).append('\n');
+            }
+        }
 
         boolean finished = process.waitFor(timeoutSeconds, TimeUnit.SECONDS);
         long durationMs = Duration.between(start, Instant.now()).toMillis();
@@ -267,11 +294,11 @@ public class TranscriptDownloadService {
         if (exitCode != 0) {
             ytbsdFailedRuns.incrementAndGet();
             log.warn("ytbsd.py exited with code {} for {}:\n{}", exitCode, videoIds, output);
-            throw new RuntimeException("ytbsd.py failed for videos " + videoIds + ": " + output.trim());
+            throw new RuntimeException("ytbsd.py failed for videos " + videoIds + ": " + output.toString().trim());
         }
 
         ytbsdSuccessfulRuns.incrementAndGet();
-        log.info("ytbsd.py output for {}:\n{}", videoIds, output);
+        log.info("ytbsd.py completed for {} in {}ms", videoIds, durationMs);
     }
 
     private String readTranscriptFromOutput(Path transcriptsDir, String videoId, String videoTitle) throws IOException {
@@ -322,6 +349,23 @@ public class TranscriptDownloadService {
         }
         String text = markdown.substring(start, end).strip();
         return text.isBlank() ? null : text;
+    }
+
+    private void parseProgressLine(String line) {
+        if (line.startsWith("Fetching video info for ")) {
+            ytbsdCurrentCompleted++;
+        } else if (line.startsWith("Downloading transcripts for ")) {
+            ytbsdCurrentPhase = "downloading";
+            ytbsdCurrentCompleted = 0;
+            ytbsdCurrentPct = 0;
+        } else if (line.startsWith("Progress: ")) {
+            var matcher = PROGRESS_PATTERN.matcher(line);
+            if (matcher.find()) {
+                ytbsdCurrentCompleted = Integer.parseInt(matcher.group(1));
+                ytbsdCurrentTotal = Integer.parseInt(matcher.group(2));
+                ytbsdCurrentPct = Integer.parseInt(matcher.group(3));
+            }
+        }
     }
 
     private void deleteOutputFile(Path file) {

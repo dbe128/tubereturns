@@ -70,7 +70,7 @@ tubereturns:
       max-items: 100
     transcript:
       cron: "0 15 * * * *"
-      batch-size: 100
+      batch-size: 20
     extraction:
       cron: "0 30 * * * *"
 

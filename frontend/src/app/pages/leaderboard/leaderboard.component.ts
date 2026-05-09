@@ -185,14 +185,26 @@ interface ChannelRow extends Channel {
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-primary-600 font-medium">
                       @if (row.stats && row.stats.buyPicks.length > 0) {
-                        {{ row.stats.buyPicks.join(', ') }}
+                        @for (ticker of row.stats.buyPicks; track ticker; let last = $last) {
+                          <span class="relative group/tk inline-block">{{ ticker }}
+                            @if (tickerMap()[ticker]) {
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                            }
+                          </span>@if (!last) {, }
+                        }
                       } @else {
                         <span class="text-gray-200 font-normal">—</span>
                       }
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-danger-500 font-medium">
                       @if (row.stats && row.stats.sellPicks.length > 0) {
-                        {{ row.stats.sellPicks.join(', ') }}
+                        @for (ticker of row.stats.sellPicks; track ticker; let last = $last) {
+                          <span class="relative group/tk inline-block">{{ ticker }}
+                            @if (tickerMap()[ticker]) {
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                            }
+                          </span>@if (!last) {, }
+                        }
                       } @else {
                         <span class="text-gray-200 font-normal">—</span>
                       }
@@ -271,6 +283,20 @@ interface ChannelRow extends Channel {
                     <span class="text-xs text-gray-300">Idle</span>
                   }
                 </div>
+                @if (step.ytbsdStats; as s) {
+                  @if (s.running && s.currentPhase) {
+                    <div class="mb-4">
+                      @if (s.currentPhase === 'fetching_info') {
+                        <p class="text-xs text-gray-500">Fetching video info: {{ s.currentCompleted }} / {{ s.currentTotal }}</p>
+                      } @else if (s.currentPhase === 'downloading') {
+                        <p class="text-xs text-gray-500 mb-1.5">Downloading: {{ s.currentCompleted }} / {{ s.currentTotal }}@if (s.currentPct !== null) { ({{ s.currentPct }}%)}</p>
+                        <div class="w-full bg-gray-100 rounded-full h-1.5">
+                          <div class="bg-primary-500 h-1.5 rounded-full transition-all duration-500" [style.width.%]="s.currentPct ?? 0"></div>
+                        </div>
+                      }
+                    </div>
+                  }
+                }
                 <dl class="space-y-2 text-xs mb-5">
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Last started</dt>
@@ -387,7 +413,8 @@ interface ChannelRow extends Channel {
             </div>
           }
         </div>
-        }
+
+}
       }
     </div>
   `,
@@ -404,6 +431,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly disabledSteps = signal<Set<string>>(new Set());
   readonly pendingNotifications = signal<PendingNotification[]>([]);
   readonly triggeringNotifications = signal(false);
+  readonly tickerMap = signal<Record<string, string>>({});
   readonly myNotifiedHandles = signal<Set<string>>(new Set());
   readonly togglingNotificationFor = signal<string | null>(null);
   readonly showAddForm = signal(false);
@@ -423,6 +451,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
+    this.api.getTickers().subscribe({ next: (m) => this.tickerMap.set(m), error: () => {} });
     if (this.auth.isAuthenticated) {
       this.loadMyNotifications();
     }
@@ -518,7 +547,15 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   loadPipelineStatus(): void {
     this.api.getPipelineStatus().subscribe({
-      next: (status) => this.pipelineStatus.set(status),
+      next: (status) => {
+        this.pipelineStatus.set(status);
+        if (!this.fastPollSub || this.fastPollSub.closed) {
+          const transcript = status.find((s) => s.step === 'transcript');
+          if (transcript?.ytbsdStats?.running) {
+            this.pollUntilDone('transcript');
+          }
+        }
+      },
       error: () => {},
     });
   }

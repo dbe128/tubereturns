@@ -100,6 +100,10 @@ export const YtbsdStatsSchema = z.object({
   lastBatchSize: z.number().nullable(),
   running: z.boolean(),
   currentBatchSize: z.number().nullable(),
+  currentPhase: z.string().nullable(),
+  currentCompleted: z.number(),
+  currentTotal: z.number(),
+  currentPct: z.number().nullable(),
 });
 
 export const PipelineStepStatusSchema = z.object({

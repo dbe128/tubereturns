@@ -303,14 +303,26 @@ interface IndexedVideo {
                     }
                     <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-primary-600]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
                       @if (item.v.buyPicks.length > 0) {
-                        {{ item.v.buyPicks.join(', ') }}
+                        @for (ticker of item.v.buyPicks; track ticker; let last = $last) {
+                          <span class="relative group/tk inline-block">{{ ticker }}
+                            @if (tickerMap()[ticker]) {
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                            }
+                          </span>@if (!last) {, }
+                        }
                       } @else {
                         <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
                       }
                     </td>
                     <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-danger-500]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
                       @if (item.v.sellPicks.length > 0) {
-                        {{ item.v.sellPicks.join(', ') }}
+                        @for (ticker of item.v.sellPicks; track ticker; let last = $last) {
+                          <span class="relative group/tk inline-block">{{ ticker }}
+                            @if (tickerMap()[ticker]) {
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                            }
+                          </span>@if (!last) {, }
+                        }
                       } @else {
                         <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
                       }
@@ -414,6 +426,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly recovery = inject(BackendRecoveryService);
 
+  readonly tickerMap = signal<Record<string, string>>({});
   readonly channel = signal<Channel | null>(null);
   readonly stats = signal<ChannelStats | null>(null);
   readonly videos = signal<VideoSummary[]>([]);
@@ -478,6 +491,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.api.getTickers().subscribe({ next: (m) => this.tickerMap.set(m), error: () => {} });
     const channelId = this.route.snapshot.paramMap.get('channelId');
     if (channelId) {
       this.loadData(channelId);

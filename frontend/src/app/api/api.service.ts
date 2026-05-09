@@ -119,6 +119,13 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/pipeline/${step}/trigger`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
+  getTickers(): Observable<Record<string, string>> {
+    return this.validated(
+      z.record(z.string(), z.string()),
+      this.http.get<unknown>('/api/tickers').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
   getMyChannelNotifications(): Observable<string[]> {
     return this.validated(
       z.array(z.string()),
