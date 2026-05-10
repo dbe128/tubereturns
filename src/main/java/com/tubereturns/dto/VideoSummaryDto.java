@@ -7,6 +7,7 @@ public record VideoSummaryDto(
     String videoId,
     String title,
     Instant publishedAt,
+    Long viewCount,
     String transcriptStatus,
     String processingStatus,
     String extractionModel,

@@ -287,7 +287,7 @@ interface ChannelRow extends Channel {
                   @if (s.running && s.currentPhase) {
                     <div class="mb-4">
                       @if (s.currentPhase === 'fetching_info') {
-                        <p class="text-xs text-gray-500">Fetching video info: {{ s.currentCompleted }} / {{ s.currentTotal }}</p>
+                        <p class="text-xs text-gray-500">Fetching video infos...</p>
                       } @else if (s.currentPhase === 'downloading') {
                         <p class="text-xs text-gray-500 mb-1.5">Downloading: {{ s.currentCompleted }} / {{ s.currentTotal }}@if (s.currentPct !== null) { ({{ s.currentPct }}%)}</p>
                         <div class="w-full bg-gray-100 rounded-full h-1.5">

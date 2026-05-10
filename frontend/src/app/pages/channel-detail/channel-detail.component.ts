@@ -16,7 +16,7 @@ import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import type { Channel, ChannelStats, VideoSummary } from '../../api/types';
 
-type SortKey = 'index' | 'publishedAt' | 'transcriptStatus' | 'processingStatus';
+type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'processingStatus';
 type SortDir = 'asc' | 'desc';
 
 const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
@@ -222,6 +222,10 @@ interface IndexedVideo {
                   class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('publishedAt')"
                 >Upload Date<span class="ml-1" [class.text-primary-500]="sortKey() === 'publishedAt'" [class.text-gray-300]="sortKey() !== 'publishedAt'">{{ sortKey() === 'publishedAt' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                <th
+                  class="px-4 py-3 w-24 text-right whitespace-nowrap cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  (click)="toggleSort('viewCount')"
+                >Views<span class="ml-1" [class.text-primary-500]="sortKey() === 'viewCount'" [class.text-gray-300]="sortKey() !== 'viewCount'">{{ sortKey() === 'viewCount' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 @if (auth.isAdmin) {
                 <th
                   class="px-4 py-3 w-32 cursor-pointer select-none hover:text-primary-600 transition-colors"
@@ -244,7 +248,7 @@ interface IndexedVideo {
             <tbody>
               @if (sorted().length === 0) {
                 <tr>
-                  <td [attr.colspan]="auth.isAdmin ? 11 : 6" class="px-4 py-12 text-center text-gray-400">
+                  <td [attr.colspan]="auth.isAdmin ? 12 : 7" class="px-4 py-12 text-center text-gray-400">
                     No videos match the current filters.
                   </td>
                 </tr>
@@ -276,6 +280,9 @@ interface IndexedVideo {
                     </td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {{ item.v.publishedAt | date: 'shortDate' }}
+                    </td>
+                    <td class="px-4 py-3 text-gray-500 text-right font-mono text-xs whitespace-nowrap">
+                      {{ item.v.viewCount !== null ? (item.v.viewCount | number) : '—' }}
                     </td>
                     @if (auth.isAdmin) {
                     <td class="px-4 py-3">
@@ -480,6 +487,8 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
         cmp = a.originalIndex - b.originalIndex;
       } else if (key === 'publishedAt') {
         cmp = new Date(a.v.publishedAt).getTime() - new Date(b.v.publishedAt).getTime();
+      } else if (key === 'viewCount') {
+        cmp = (a.v.viewCount ?? -1) - (b.v.viewCount ?? -1);
       } else if (key === 'transcriptStatus') {
         cmp = TRANSCRIPT_ORDER[a.v.transcriptStatus] - TRANSCRIPT_ORDER[b.v.transcriptStatus];
       } else if (key === 'processingStatus') {

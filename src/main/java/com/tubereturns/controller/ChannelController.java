@@ -164,6 +164,7 @@ public class ChannelController {
             video.getVideoId(),
             video.getTitle(),
             video.getPublishedAt(),
+            video.getViewCount(),
             video.getTranscriptStatus().name(),
             video.getProcessingStatus().name(),
             video.getExtractionModel(),

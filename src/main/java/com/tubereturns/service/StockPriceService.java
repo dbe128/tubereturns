@@ -39,19 +39,25 @@ public class StockPriceService {
 
         date = adjustForWeekend(date);
 
-        String cacheKey = ticker + "_" + date;
-
-        if (cache.containsKey(cacheKey)) {
-            Double price = cache.get(cacheKey);
-            log.info("Returning cached price {} for {} on {}. ", price, ticker, date);
-            return price;
+        LocalDate tryDate = date;
+        for (int i = 0; i <= 5; i++) {
+            String cacheKey = ticker + "_" + tryDate;
+            if (cache.containsKey(cacheKey)) {
+                log.info("Returning cached price {} for {} on {}", cache.get(cacheKey), ticker, tryDate);
+                return cache.get(cacheKey);
+            }
+            Double price = fetchClosePrice(ticker, tryDate);
+            if (price != null) {
+                if (i > 0) {
+                    log.info("No trading data on {}, used next trading day {} for {}", date, tryDate, ticker);
+                }
+                cache.put(cacheKey, price);
+                return price;
+            }
+            log.warn("No trading data for {} on {}, trying next trading day", ticker, tryDate);
+            tryDate = nextTradingDay(tryDate);
         }
-
-        double price = fetchClosePrice(ticker, date);
-
-        cache.put(cacheKey, price);
-
-        return price;
+        throw new RuntimeException("No trading data found for " + ticker + " within 5 trading days of " + date);
     }
 
     public static Map<LocalDate, Double> fetchHistoricalClosePrices(String ticker, LocalDate from, LocalDate to) throws Exception {
@@ -98,7 +104,15 @@ public class StockPriceService {
         return prices;
     }
 
-    private static double fetchClosePrice(String ticker, LocalDate date) throws Exception {
+    private static LocalDate nextTradingDay(LocalDate date) {
+        LocalDate next = date.plusDays(1);
+        while (next.getDayOfWeek() == DayOfWeek.SATURDAY || next.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            next = next.plusDays(1);
+        }
+        return next;
+    }
+
+    private static Double fetchClosePrice(String ticker, LocalDate date) throws Exception {
 
         long start = date.atStartOfDay(ZoneOffset.UTC).toEpochSecond();
         long end = date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toEpochSecond();
@@ -150,13 +164,14 @@ public class StockPriceService {
                         .path("close")
                         .get(0);
 
-                if (!closeNode.isMissingNode()) {
+                if (closeNode != null && !closeNode.isNull() && !closeNode.isMissingNode()) {
                     log.info("Fetched price {} for {} on {}. ", closeNode.asDouble(), ticker, date);
                     return closeNode.asDouble();
                 }
+                return null;
 
             } catch (Exception e) {
-                log.error("Stock price query failed for {} on {}. Number of retries left: {}", ticker, date, retries);
+                log.error("Stock price query failed for {} on {}. Number of retries left: {}", ticker, date, retries, e);
                 if (retries == 0) {
                     throw e;
                 }
@@ -165,7 +180,7 @@ public class StockPriceService {
             }
         }
 
-        throw new RuntimeException("Failed to fetch price");
+        return null;
     }
 
     private static LocalDate adjustForWeekend(LocalDate date) {

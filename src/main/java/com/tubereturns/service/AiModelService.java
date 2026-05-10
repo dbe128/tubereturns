@@ -34,7 +34,7 @@ public class AiModelService {
         Look for:
         1. Stock ticker symbols (e.g., AAPL, TSLA, MSFT)
         2. Company names being discussed as investments
-        3. Explicit BUY or SELL recommendations
+        3. Explicit BUY or SELL recommendations made by the video creator
         4. Implicit signals based on the creator's own analysis or opinion — see signal rules below
 
         Output ONLY the raw JSON object below — no explanation, no markdown, no code fences, no text before or after:
@@ -53,7 +53,7 @@ public class AiModelService {
         Rules:
         - You MUST include EVERY investment recommendation mentioned in the transcript — do not skip or summarise any
         - signal must be either "BUY" or "SELL"
-        - tickerSymbol must be a valid stock ticker (1-5 uppercase letters)
+        - tickerSymbol must be a valid stock ticker
         - If no picks are found, return an empty extractions array
         - Set externalPositions to true if the transcript only presents positions or trades made by someone else (another person, an AI agent, a portfolio manager, etc.) rather than the video creator's own picks — the creator is merely reporting or reviewing them, not recommending them personally
         - Implicit BUY signals: the creator expresses that a stock is undervalued, attractively priced, a good investment, a compelling opportunity, has strong upside, or otherwise indicates bullish conviction based on their own analysis — treat this as BUY

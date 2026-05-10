@@ -1903,7 +1903,6 @@ def run_new_job(mode: str, cli_args=None) -> bool:
         def fetch_video_info(raw_url):
             vid_id = extract_video_id(raw_url)
             full_url = f"https://www.youtube.com/watch?v={vid_id}"
-            print(f"Fetching video info for {vid_id}...", flush=True)
             try:
                 ydl_opts = {'quiet': True, 'no_warnings': True}
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
