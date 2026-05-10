@@ -328,6 +328,20 @@ interface ChannelRow extends Channel {
                     <dd class="text-red-600 font-mono text-right break-all">{{ step.fatalError }}</dd>
                   </div>
                   }
+                  @if (step.aiModelStatus; as ai) {
+                  <div class="flex justify-between gap-2">
+                    <dt class="text-gray-400 shrink-0">AI model</dt>
+                    <dd class="text-gray-700 font-mono text-right break-all text-xs">
+                      <span class="text-gray-400">#{{ ai.currentIndex }}</span> {{ ai.currentModel }}
+                    </dd>
+                  </div>
+                  @if (ai.model0ResetAt) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400 shrink-0">Model reset at</dt>
+                    <dd class="text-gray-700 font-mono">{{ ai.model0ResetAt | date:'HH:mm:ss, dd MMM' }}</dd>
+                  </div>
+                  }
+                  }
                   @if (step.ytbsdStats) {
                   <div class="flex justify-between">
                     <dt class="text-gray-400">YTBSD runs</dt>

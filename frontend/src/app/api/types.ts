@@ -92,6 +92,14 @@ export const ChannelSearchResultSchema = z.object({
   latestVideoAt: z.string().nullable(),
 });
 
+export const AiModelStatusSchema = z.object({
+  currentIndex: z.number(),
+  currentModel: z.string(),
+  model0ResetAt: z.string().nullable(),
+});
+
+export type AiModelStatus = z.infer<typeof AiModelStatusSchema>;
+
 export const YtbsdStatsSchema = z.object({
   totalRuns: z.number(),
   successfulRuns: z.number(),
@@ -118,6 +126,7 @@ export const PipelineStepStatusSchema = z.object({
   queueSize: z.number().nullable(),
   ytbsdStats: YtbsdStatsSchema.nullable(),
   fatalError: z.string().nullable(),
+  aiModelStatus: AiModelStatusSchema.nullable(),
 });
 
 export type Channel = z.infer<typeof ChannelSchema>;

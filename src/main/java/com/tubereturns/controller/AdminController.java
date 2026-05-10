@@ -1,5 +1,6 @@
 package com.tubereturns.controller;
 
+import com.tubereturns.dto.AiModelStatusDto;
 import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
 import com.tubereturns.dto.YtbsdStatsDto;
@@ -9,6 +10,7 @@ import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.TranscriptDownloadService;
@@ -38,6 +40,7 @@ public class AdminController {
     private final YouTubeDiscoveryService discoveryService;
     private final YouTubeApiService youTubeApiService;
     private final StockPickExtractionService stockPickExtractionService;
+    private final AiModelService aiModelService;
     private final VideoRepository videoRepository;
     private final PickRepository pickRepository;
     private final TranscriptDownloadService transcriptDownloadService;
@@ -55,7 +58,7 @@ public class AdminController {
         return List.of(
                 toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
-                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null, stockPickExtractionService.isWorkerRunning())
+                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null, stockPickExtractionService.isWorkerRunning(), toAiModelStatusDto(aiModelService.getStatus()))
         );
     }
 
@@ -185,10 +188,18 @@ public class AdminController {
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {
-        return toDto(step, label, queueSize, ytbsdStats, registry.isRunning(step));
+        return toDto(step, label, queueSize, ytbsdStats, registry.isRunning(step), null);
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running) {
-        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats, registry.getFatalError(step));
+        return toDto(step, label, queueSize, ytbsdStats, running, null);
+    }
+
+    private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running, AiModelStatusDto aiModelStatus) {
+        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats, registry.getFatalError(step), aiModelStatus);
+    }
+
+    private AiModelStatusDto toAiModelStatusDto(AiModelService.AiModelStatus s) {
+        return new AiModelStatusDto(s.currentIndex(), s.currentModel(), s.model0ResetAt() != null ? s.model0ResetAt().toString() : null);
     }
 }
