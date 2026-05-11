@@ -145,7 +145,7 @@ public class PortfolioController {
         NavigableMap<LocalDate, Double> allDates = new TreeMap<>();
         tickerPrices.values().forEach(m -> m.keySet().forEach(d -> allDates.put(d, 0.0)));
 
-        return allDates.tailMap(effectiveFrom).keySet().stream()
+        List<PortfolioPricePointDto> points = allDates.tailMap(effectiveFrom).keySet().stream()
             .map(date -> {
                 List<Double> returns = tickerPrices.entrySet().stream()
                     .map(e -> computeTickerReturn(
@@ -157,6 +157,18 @@ public class PortfolioController {
                 double avg = returns.isEmpty() ? 0 : returns.stream().mapToDouble(Double::doubleValue).average().orElse(0);
                 return new PortfolioPricePointDto(date.toString(), avg, null);
             })
+            .toList();
+
+        if (points.isEmpty() || effectiveFrom.equals(startDate)) {
+            return points;
+        }
+        double base = points.get(0).changePercent();
+        double baseFactor = 1.0 + base / 100.0;
+        return points.stream()
+            .map(p -> new PortfolioPricePointDto(
+                p.date(),
+                (1.0 + p.changePercent() / 100.0) / baseFactor * 100.0 - 100.0,
+                p.close()))
             .toList();
     }
 

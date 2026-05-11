@@ -286,19 +286,12 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
 
         this.allSeries = [
           { id: 'SPY', label: 'SPY', points: spyPts, color: '#6b7280' },
-          ...portfolios.map((p, i) => {
-            const pts = results[i + 1];
-            const base = pts[0]?.changePercent ?? 0;
-            return {
-              id: p.channelId,
-              label: p.name,
-              points: pts.map((pt) => ({
-                ...pt,
-                changePercent: pt.changePercent != null ? pt.changePercent - base : pt.changePercent,
-              })),
-              color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
-            };
-          }),
+          ...portfolios.map((p, i) => ({
+            id: p.channelId,
+            label: p.name,
+            points: results[i + 1],
+            color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
+          })),
         ];
 
         if (this.visibleIds.size === 0) {
