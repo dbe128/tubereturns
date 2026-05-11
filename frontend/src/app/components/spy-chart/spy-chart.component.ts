@@ -286,12 +286,19 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
 
         this.allSeries = [
           { id: 'SPY', label: 'SPY', points: spyPts, color: '#6b7280' },
-          ...portfolios.map((p, i) => ({
-            id: p.channelId,
-            label: p.name,
-            points: results[i + 1],
-            color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
-          })),
+          ...portfolios.map((p, i) => {
+            const pts = results[i + 1];
+            const base = pts[0]?.changePercent ?? 0;
+            return {
+              id: p.channelId,
+              label: p.name,
+              points: pts.map((pt) => ({
+                ...pt,
+                changePercent: pt.changePercent != null ? pt.changePercent - base : pt.changePercent,
+              })),
+              color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
+            };
+          }),
         ];
 
         if (this.visibleIds.size === 0) {
@@ -393,7 +400,7 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
               },
             },
             grid: { display: false },
-            border: { display: false },
+            border: { display: true, color: '#000' },
           },
           y: {
             ticks: {
@@ -401,8 +408,8 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
               color: '#9ca3af',
               callback: (v) => `$${Number(v).toFixed(0)}`,
             },
-            grid: { color: '#f0f0f0' },
-            border: { display: false },
+            grid: { color: '#cbd5e1' },
+            border: { display: true, color: '#000' },
           },
         },
       },
@@ -413,6 +420,15 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
     const allDates = [...new Set(visible.flatMap((s) => s.points.map((p) => p.date)))].sort();
     const max = maxPointsForTimeframe(this.timeframe());
     const thinned = thinData(allDates.map((d) => ({ date: d } as PortfolioPricePoint)), max).map((p) => p.date);
+
+    const allVals = visible.flatMap((s) =>
+      s.points.map((p) => p.changePercent).filter((v): v is number => v != null && isFinite(v))
+    );
+    const dataMin = allVals.length ? Math.min(...allVals) : -10;
+    const dataMax = allVals.length ? Math.max(...allVals) : 10;
+    const pad = Math.max((dataMax - dataMin) * 0.1, 2);
+    const yMin = dataMin - pad;
+    const yMax = dataMax + pad;
 
     this.chart = new Chart(ctx, {
       type: 'line',
@@ -430,6 +446,7 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
             fill: false,
             tension: 0,
             spanGaps: true,
+            yAxisID: 'y',
           };
         }),
       },
@@ -471,16 +488,30 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
               },
             },
             grid: { display: false },
-            border: { display: false },
+            border: { display: true, color: '#000' },
           },
           y: {
+            min: yMin,
+            max: yMax,
             ticks: {
               font: { size: 11 },
               color: '#9ca3af',
-              callback: (v) => `${Number(v) >= 0 ? '+' : ''}${Number(v).toFixed(0)}%`,
+              callback: (v) => `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(0)}%`,
             },
-            grid: { color: '#f0f0f0' },
-            border: { display: false },
+            grid: { color: '#cbd5e1' },
+            border: { display: true, color: '#000' },
+          },
+          yRight: {
+            position: 'right',
+            min: yMin,
+            max: yMax,
+            ticks: {
+              font: { size: 11 },
+              color: '#9ca3af',
+              callback: (v) => `${Number(v) > 0 ? '+' : ''}${Number(v).toFixed(0)}%`,
+            },
+            grid: { drawOnChartArea: false },
+            border: { display: true, color: '#000' },
           },
         },
       },
