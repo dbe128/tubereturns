@@ -16,7 +16,7 @@
     "@angular/forms": "^21.2.11",
     "@angular/platform-browser": "^21.2.11",
     "@angular/platform-browser-dynamic": "^21.2.11",
-    "@angular/router": "^21.2.11",
+    "@angular/router": "^21.2.12",
     "chart.js": "^4.4.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
