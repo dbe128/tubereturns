@@ -10,13 +10,13 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@angular/common": "^21.2.11",
-    "@angular/compiler": "^21.2.11",
-    "@angular/core": "^21.2.11",
-    "@angular/forms": "^21.2.11",
-    "@angular/platform-browser": "^21.2.11",
-    "@angular/platform-browser-dynamic": "^21.2.11",
-    "@angular/router": "^21.2.11",
+    "@angular/common": "^21.2.12",
+    "@angular/compiler": "^21.2.12",
+    "@angular/core": "^21.2.12",
+    "@angular/forms": "^21.2.12",
+    "@angular/platform-browser": "^21.2.12",
+    "@angular/platform-browser-dynamic": "^21.2.12",
+    "@angular/router": "^21.2.12",
     "chart.js": "^4.4.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
@@ -24,9 +24,9 @@
     "zone.js": "^0.16.2"
   },
   "devDependencies": {
-    "@angular/build": "^21.2.9",
+    "@angular/build": "^21.2.10",
     "@angular/cli": "^21.2.10",
-    "@angular/compiler-cli": "^21.2.10",
+    "@angular/compiler-cli": "^21.2.12",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.0",
