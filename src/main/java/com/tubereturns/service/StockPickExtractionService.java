@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -356,14 +357,18 @@ public class StockPickExtractionService {
 
     private void fetchAndSaveStockPrice(Stock stock, LocalDate priceDate) {
         try {
-            if (stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), priceDate)) {
-                return;
+            Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
+                    stock.getTickerSymbol(), priceDate.minusDays(7), LocalDate.now());
+            int inserted = 0;
+            for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
+                if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
+                    stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
+                    inserted++;
+                }
             }
-            double closePrice = StockPriceService.getClosePrice(stock.getTickerSymbol(), priceDate);
-            stockPriceRepository.save(new StockPrice(stock, priceDate, closePrice));
-            log.info("Saved price ${} for {} on {}", closePrice, stock.getTickerSymbol(), priceDate);
+            log.info("Saved {} price point(s) for {} from {} to today", inserted, stock.getTickerSymbol(), priceDate.minusDays(7));
         } catch (Exception e) {
-            log.warn("Could not fetch price for {} on {}: {}", stock.getTickerSymbol(), priceDate, e.getMessage());
+            log.warn("Could not fetch prices for {} from {}: {}", stock.getTickerSymbol(), priceDate, e.getMessage());
         }
     }
 }

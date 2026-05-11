@@ -120,7 +120,7 @@ public class PortfolioController {
         for (String ticker : buyDatesByTicker.keySet()) {
             stockRepository.findByTickerSymbol(ticker).ifPresent(stock -> {
                 List<StockPrice> prices = stockPriceRepository
-                    .findByStockIdAndPriceDateGreaterThanEqualOrderByPriceDateAsc(stock.getId(), startDate);
+                    .findByStockIdAndPriceDateGreaterThanEqualOrderByPriceDateAsc(stock.getId(), startDate.minusDays(7));
                 NavigableMap<LocalDate, Double> priceMap = new TreeMap<>();
                 prices.forEach(p -> priceMap.put(p.getPriceDate(), p.getClosePrice()));
                 if (!priceMap.isEmpty()) {

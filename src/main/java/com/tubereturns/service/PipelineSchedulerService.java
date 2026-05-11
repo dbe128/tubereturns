@@ -62,6 +62,10 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.discovery.cron}")
     public void runDiscovery() {
+        if (registry.isRunning("discovery")) {
+            log.warn("Pipeline step 'discovery' is already running, skipping");
+            return;
+        }
         discoveryService.scheduleDiscovery(discoveryMaxItems);
     }
 
@@ -72,6 +76,10 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.extraction.cron}")
     public void runExtraction() {
+        if (registry.isRunning("extraction")) {
+            log.warn("Pipeline step 'extraction' is already running, skipping");
+            return;
+        }
         extractionService.enqueueAllPending();
     }
 

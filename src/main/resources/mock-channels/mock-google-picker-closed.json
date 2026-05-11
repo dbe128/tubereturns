@@ -1,0 +1,31 @@
+{
+  "handle": "mock-google-picker-closed",
+  "channelName": "Mock Google Picker (Closed)",
+  "description": "Mock channel with a Google BUY on Jan 1 2026, closed with a SELL end of March 2026.",
+  "videos": [
+    {
+      "videoId": "mock-googl-buy-jan2026-v2",
+      "title": "Why I'm Buying Google in 2026",
+      "publishedAt": "2026-01-01T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "GOOGL",
+          "companyName": "Alphabet Inc.",
+          "signal": "BUY"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-googl-sell-mar2026",
+      "title": "Taking Profits on Google",
+      "publishedAt": "2026-03-31T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "GOOGL",
+          "companyName": "Alphabet Inc.",
+          "signal": "SELL"
+        }
+      ]
+    }
+  ]
+}
