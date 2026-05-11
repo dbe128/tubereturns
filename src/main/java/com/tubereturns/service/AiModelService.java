@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.nio.file.Files;
@@ -63,27 +64,44 @@ public class AiModelService {
         Transcript:
         """;
 
-    @Value("${tubereturns.ai.provider:mock}")
+    @Value("${tubereturns.ai.provider}")
     private String aiProvider;
 
-    @Value("${tubereturns.ai.api-key:}")
+    @Value("${tubereturns.ai.api-key}")
     private String apiKey;
 
-    @Value("${tubereturns.ai.models-file:llm-models.txt}")
+    @Value("${tubereturns.ai.models-file}")
     private String modelsFilePath;
 
-    @Value("${tubereturns.ai.model-reset-minutes:60}")
+    @Value("${tubereturns.ai.model-reset-minutes}")
     private int modelResetMinutes;
+
+    @Value("${tubereturns.ai.connect-timeout-seconds}")
+    private int connectTimeoutSeconds;
+
+    @Value("${tubereturns.ai.read-timeout-seconds}")
+    private int readTimeoutSeconds;
+
+    @Value("${tubereturns.ai.timeout-retries}")
+    private int timeoutRetries;
 
     private List<String> models;
     private final AtomicInteger currentModelIndex = new AtomicInteger(0);
     private volatile Instant lastModel0AttemptAt = null;
 
-    private final RestClient restClient = RestClient.create();
+    private RestClient restClient;
     private final ObjectMapper objectMapper;
 
     @PostConstruct
     public void loadModels() {
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(
+                java.net.http.HttpClient.newBuilder()
+                        .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+                        .build());
+        factory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
+        restClient = RestClient.builder().requestFactory(factory).build();
+        log.info("OpenRouter HTTP client configured: connectTimeout={}s readTimeout={}s timeoutRetries={}",
+                connectTimeoutSeconds, readTimeoutSeconds, timeoutRetries);
         Path path = Path.of(modelsFilePath);
         if (Files.exists(path)) {
             try {
@@ -153,9 +171,17 @@ public class AiModelService {
                 } else {
                     log.error("Rate limited on model {} — all {} models exhausted", model, size);
                 }
+            } catch (TimedOutException e) {
+                int nextIdx = (idx + 1) % size;
+                currentModelIndex.set(nextIdx);
+                if (attempt < size - 1) {
+                    log.warn("Timed out on model {} after {} retries — switching to {}", model, timeoutRetries, models.get(nextIdx));
+                } else {
+                    log.error("Timed out on model {} — all {} models exhausted", model, size);
+                }
             }
         }
-        throw new RuntimeException("All " + size + " AI models exhausted due to rate limiting for video " + videoId);
+        throw new RuntimeException("All " + size + " AI models exhausted for video " + videoId);
     }
 
     private ExtractionResult callWithModel(String model, String videoId, String videoTitle, String transcriptText) {
@@ -170,37 +196,48 @@ public class AiModelService {
             )
         );
 
-        String response = null;
-        try {
-            response = restClient.post()
-                .uri("https://openrouter.ai/api/v1/chat/completions")
-                .header("Authorization", "Bearer " + apiKey)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body)
-                .retrieve()
-                .body(String.class);
+        int attemptsLeft = timeoutRetries;
+        while (true) {
+            String response = null;
+            try {
+                response = restClient.post()
+                    .uri("https://openrouter.ai/api/v1/chat/completions")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
 
-            JsonNode root = objectMapper.readTree(response);
-            String actualModel = root.path("model").asText(model);
-            log.info("OpenRouter used model: {}", actualModel);
-            String text = root.path("choices").get(0).path("message").path("content").asText();
-            return new ExtractionResult(stripJsonFences(text), actualModel);
+                JsonNode root = objectMapper.readTree(response);
+                String actualModel = root.path("model").asText(model);
+                log.info("OpenRouter used model: {}", actualModel);
+                String text = root.path("choices").get(0).path("message").path("content").asText();
+                return new ExtractionResult(stripJsonFences(text), actualModel);
 
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
-                throw new RateLimitedException(model);
+            } catch (HttpClientErrorException e) {
+                if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                    throw new RateLimitedException(model);
+                }
+                if (e.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
+                    log.error("OpenRouter returned 402 Payment Required — insufficient credits");
+                    throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
+                }
+                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response, e);
+                throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
+            } catch (ResourceAccessException e) {
+                attemptsLeft--;
+                if (attemptsLeft > 0) {
+                    log.warn("OpenRouter timed out with model {} — {} attempt(s) left, retrying", model, attemptsLeft);
+                } else {
+                    log.error("OpenRouter timed out with model {} — no retries left", model);
+                    throw new TimedOutException(model);
+                }
+            } catch (RateLimitedException | PaymentRequiredException | TimedOutException e) {
+                throw e;
+            } catch (Exception e) {
+                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response, e);
+                throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
             }
-            if (e.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
-                log.error("OpenRouter returned 402 Payment Required — insufficient credits");
-                throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
-            }
-            log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response, e);
-            throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
-        } catch (RateLimitedException | PaymentRequiredException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response, e);
-            throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
         }
     }
 
@@ -228,6 +265,12 @@ public class AiModelService {
     private static final class RateLimitedException extends RuntimeException {
         RateLimitedException(String model) {
             super("Rate limited on model: " + model);
+        }
+    }
+
+    private static final class TimedOutException extends RuntimeException {
+        TimedOutException(String model) {
+            super("Timed out on model: " + model);
         }
     }
 }

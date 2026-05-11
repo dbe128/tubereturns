@@ -28,13 +28,13 @@ import java.util.Map;
 @Service
 public class YouTubeApiService {
 
-    @Value("${tubereturns.youtube.api-key:}")
+    @Value("${tubereturns.youtube.api-key}")
     private String apiKey;
 
-    @Value("${tubereturns.youtube.enabled:false}")
+    @Value("${tubereturns.youtube.enabled}")
     private boolean enabled;
 
-    @Value("${tubereturns.youtube.channel-filter-keywords:}")
+    @Value("${tubereturns.youtube.channel-filter-keywords}")
     private List<String> channelFilterKeywords;
 
     public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl, Long subscriberCount) {}
@@ -207,7 +207,10 @@ public class YouTubeApiService {
         return new YouTube.Builder(
                 GoogleNetHttpTransport.newTrustedTransport(),
                 GsonFactory.getDefaultInstance(),
-                request -> {}
+                request -> {
+                    request.setConnectTimeout(10_000);
+                    request.setReadTimeout(60_000);
+                }
         ).setApplicationName("tubereturns").build();
     }
 

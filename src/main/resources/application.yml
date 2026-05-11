@@ -16,6 +16,9 @@ spring:
           auth: true
           starttls:
             enable: true
+          connectiontimeout: 10000
+          timeout: 30000
+          writetimeout: 30000
 
   datasource:
     url: jdbc:postgresql://localhost:5432/tubereturns
@@ -52,9 +55,14 @@ tubereturns:
     timeout-seconds: 120
 
   ai:
-    enabled: true
+    enabled: false
     provider: openrouter
     api-key: ${OPENROUTER_API_KEY:}
+    models-file: llm-models.txt
+    model-reset-minutes: 60
+    connect-timeout-seconds: 10
+    read-timeout-seconds: 180
+    timeout-retries: 3
 
   security:
     jwt-secret: ${JWT_SECRET}

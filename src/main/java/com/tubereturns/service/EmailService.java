@@ -17,10 +17,10 @@ public class EmailService {
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
-    @Value("${tubereturns.app.base-url:http://localhost:4200}")
+    @Value("${tubereturns.app.base-url}")
     private String baseUrl;
 
-    @Value("${tubereturns.app.from-email:noreply@tubereturns.com}")
+    @Value("${tubereturns.app.from-email}")
     private String fromEmail;
 
     public void sendVerificationEmail(String toEmail, String firstName, String token) {

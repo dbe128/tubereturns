@@ -16,6 +16,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -32,7 +33,9 @@ public class YouTubeDiscoveryService {
     private final YouTubeApiService youTubeApiService;
     private final PipelineStatusRegistry registry;
     private final TranscriptDownloadService transcriptDownloadService;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
 
     private final ExecutorService discoveryExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "discovery-worker");
@@ -221,6 +224,7 @@ public class YouTubeDiscoveryService {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .header("User-Agent", "Mozilla/5.0")
+                    .timeout(Duration.ofSeconds(30))
                     .GET()
                     .build();
             HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());

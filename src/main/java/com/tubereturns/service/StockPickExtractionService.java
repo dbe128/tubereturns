@@ -35,7 +35,7 @@ import java.util.regex.Pattern;
 @Service
 public class StockPickExtractionService {
 
-    @Value("${tubereturns.ai.enabled:false}")
+    @Value("${tubereturns.ai.enabled}")
     private boolean aiEnabled;
 
     private final VideoRepository videoRepository;

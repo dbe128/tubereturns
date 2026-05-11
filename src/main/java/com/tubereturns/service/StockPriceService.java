@@ -16,7 +16,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class StockPriceService {
 
-    private static final HttpClient client = HttpClient.newHttpClient();
+    private static final HttpClient client = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private static final Map<String, Double> cache = new ConcurrentHashMap<>();
@@ -72,6 +74,7 @@ public class StockPriceService {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
                 .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                .timeout(Duration.ofSeconds(30))
                 .GET()
                 .build();
 
@@ -131,6 +134,7 @@ public class StockPriceService {
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(url))
                         .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
+                        .timeout(Duration.ofSeconds(30))
                         .GET()
                         .build();
 

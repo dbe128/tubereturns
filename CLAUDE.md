@@ -121,3 +121,4 @@ Create `src/main/resources/db/changelog/NNN-description.sql` and add an `<includ
 - **No unused code** — remove dead methods, unused imports, stubs immediately
 - Always wrap `if`/`for`/`while` bodies in `{}`
 - Frontend: use `@for`/`@if` Angular control-flow blocks, not structural directives
+- **No `@Value` defaults in Java** — `@Value("${some.key}")` only; all defaults belong in `application.yml` (or `application-dev.yml` for dev-only overrides)

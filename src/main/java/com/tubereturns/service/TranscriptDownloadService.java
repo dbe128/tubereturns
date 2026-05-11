@@ -37,16 +37,16 @@ public class TranscriptDownloadService {
     private final VideoRepository videoRepository;
     private final StockPickExtractionService extractionService;
 
-    @Value("${tubereturns.transcript.ytbsd-path:/app/scripts/ytbsd.py}")
+    @Value("${tubereturns.transcript.ytbsd-path}")
     private String ytbsdPath;
 
-    @Value("${tubereturns.transcript.transcripts-dir:/app/transcripts}")
+    @Value("${tubereturns.transcript.transcripts-dir}")
     private String transcriptsDirPath;
 
-    @Value("${tubereturns.transcript.timeout-seconds:120}")
+    @Value("${tubereturns.transcript.timeout-seconds}")
     private int timeoutSeconds;
 
-    @Value("${tubereturns.pipeline.transcript.batch-size:1}")
+    @Value("${tubereturns.pipeline.transcript.batch-size}")
     private int batchSize;
 
     private final ExecutorService ytbsdExecutor = Executors.newSingleThreadExecutor(r -> {
