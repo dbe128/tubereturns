@@ -420,8 +420,12 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
     const dataMin = allVals.length ? Math.min(...allVals) : -10;
     const dataMax = allVals.length ? Math.max(...allVals) : 10;
     const pad = Math.max((dataMax - dataMin) * 0.1, 2);
-    const yMin = dataMin - pad;
-    const yMax = dataMax + pad;
+    const rawMin = dataMin - pad;
+    const rawMax = dataMax + pad;
+    const range = rawMax - rawMin;
+    const step = range < 20 ? 5 : range < 50 ? 10 : range < 150 ? 20 : range < 400 ? 50 : 100;
+    const yMin = Math.floor(rawMin / step) * step;
+    const yMax = Math.ceil(rawMax / step) * step;
 
     this.chart = new Chart(ctx, {
       type: 'line',
