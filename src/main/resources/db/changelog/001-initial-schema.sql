@@ -127,11 +127,11 @@ ALTER TABLE videos ADD COLUMN exclusion_reason VARCHAR(255);
 
 --changeset tubereturns:003 validCheckSum:ANY
 CREATE TABLE channel_processing_notifications (
-    id         BIGSERIAL PRIMARY KEY,
-    channel_id BIGINT NOT NULL REFERENCES channels(id),
-    user_email VARCHAR(255) NOT NULL,
+    id           BIGSERIAL PRIMARY KEY,
+    channel_id   BIGINT NOT NULL REFERENCES channels(id),
+    user_email   VARCHAR(255) NOT NULL,
     requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    sent_at    TIMESTAMP WITH TIME ZONE
+    sent_at      TIMESTAMP WITH TIME ZONE
 );
 CREATE INDEX idx_cpn_channel_id ON channel_processing_notifications(channel_id);
 CREATE INDEX idx_cpn_sent_at ON channel_processing_notifications(sent_at);
@@ -142,3 +142,22 @@ ALTER TABLE channel_processing_notifications ADD COLUMN user_id BIGINT NOT NULL 
 
 --changeset tubereturns:005
 ALTER TABLE channels ADD COLUMN subscriber_count BIGINT;
+
+--changeset tubereturns:002-channel-discovery-complete
+ALTER TABLE channels ADD COLUMN discovery_complete BOOLEAN NOT NULL DEFAULT FALSE;
+
+--changeset tubereturns:003-seed-dev-user
+INSERT INTO users (first_name, email, password_hash, provider, email_verified, role_id, created_at, updated_at)
+VALUES (
+    'Balázs2',
+    'dbalazs128@gmail.com',
+    '$2a$10$NRq54lV/dZ2jDp4I9/r82eLR5Ry4jYLCjXZrzd7GPslBQBZz080gi',
+    'local',
+    TRUE,
+    (SELECT id FROM roles WHERE name = 'FREE'),
+    '2026-05-12 09:13:30.579577',
+    '2026-05-12 09:13:45.368842'
+);
+
+--changeset tubereturns:004-stock-unknown
+ALTER TABLE stocks ADD COLUMN is_unknown BOOLEAN NOT NULL DEFAULT false;
