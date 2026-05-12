@@ -28,16 +28,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
 public class StockPickExtractionService {
-
-    @Value("${tubereturns.ai.enabled}")
-    private boolean aiEnabled;
 
     private final VideoRepository videoRepository;
     private final PickRepository pickRepository;
@@ -183,11 +179,6 @@ public class StockPickExtractionService {
 
     private ExtractionWithModel extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         String videoUrl = "https://youtu.be/" + videoId;
-        if (!aiEnabled) {
-            log.info("Using mock extraction for {} ({})", videoTitle, videoUrl);
-            return new ExtractionWithModel(createMockExtraction(videoId, transcriptText), "mock");
-        }
-
         log.info("Sending transcript to AI for extraction: {} ({})", videoTitle, videoUrl);
         AiModelService.ExtractionResult aiResult = aiModelService.extractStockPicks(videoId, videoTitle, transcriptText);
         log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResult.content());
@@ -198,101 +189,6 @@ public class StockPickExtractionService {
             log.error("Failed to parse AI response for {} ({}): {}\nResponse: {}", videoTitle, videoUrl, e.getMessage(), aiResult.content());
             throw new RuntimeException("Failed to parse AI response for video " + videoId, e);
         }
-    }
-
-    private StockPickExtractionDto createMockExtraction(String videoId, String transcriptText) {
-        List<StockPickExtractionDto.PickExtractionDto> extractions = new ArrayList<>();
-
-        extractions.addAll(extractTickersWithRegex(transcriptText));
-
-        if (extractions.isEmpty()) {
-            extractions.add(new StockPickExtractionDto.PickExtractionDto("SPY", "SPDR S&P 500 ETF", "BUY"));
-        }
-
-        return new StockPickExtractionDto(videoId, extractions, false);
-    }
-
-    private List<StockPickExtractionDto.PickExtractionDto> extractTickersWithRegex(String text) {
-        List<StockPickExtractionDto.PickExtractionDto> picks = new ArrayList<>();
-
-        Pattern buyPattern = Pattern.compile("\\b(?:buy|buying|purchased?|long)\\s+(?:stock\\s+)?([A-Z]{1,5})\\b", Pattern.CASE_INSENSITIVE);
-        Pattern sellPattern = Pattern.compile("\\b(?:sell|selling|sold|short)\\s+(?:stock\\s+)?([A-Z]{1,5})\\b", Pattern.CASE_INSENSITIVE);
-        Pattern tickerPattern = Pattern.compile("\\b(AAPL|TSLA|MSFT|GOOGL?|AMZN|META|NVDA|CRM|NFLX|UBER)\\b");
-
-        Matcher buyMatcher = buyPattern.matcher(text);
-        while (buyMatcher.find()) {
-            String ticker = buyMatcher.group(1);
-            if (isValidTicker(ticker)) {
-                picks.add(new StockPickExtractionDto.PickExtractionDto(ticker, getCompanyName(ticker), "BUY"));
-            }
-        }
-
-        Matcher sellMatcher = sellPattern.matcher(text);
-        while (sellMatcher.find()) {
-            String ticker = sellMatcher.group(1);
-            if (isValidTicker(ticker)) {
-                picks.add(new StockPickExtractionDto.PickExtractionDto(ticker, getCompanyName(ticker), "SELL"));
-            }
-        }
-
-        Matcher tickerMatcher = tickerPattern.matcher(text);
-        while (tickerMatcher.find()) {
-            String ticker = tickerMatcher.group(1);
-            String signal = determineSignalFromContext(text, ticker);
-            if (signal != null && !containsTicker(picks, ticker)) {
-                picks.add(new StockPickExtractionDto.PickExtractionDto(ticker, getCompanyName(ticker), signal));
-            }
-        }
-
-        return picks;
-    }
-
-    private boolean isValidTicker(String ticker) {
-        return !ticker.isEmpty() && ticker.length() <= 5 && ticker.matches("[A-Z]+");
-    }
-
-    private boolean containsTicker(List<StockPickExtractionDto.PickExtractionDto> picks, String ticker) {
-        return picks.stream().anyMatch(pick -> pick.tickerSymbol().equals(ticker));
-    }
-
-    private String determineSignalFromContext(String text, String ticker) {
-        String lowerText = text.toLowerCase();
-        int tickerIndex = lowerText.indexOf(ticker.toLowerCase());
-
-        if (tickerIndex == -1) {
-            return "BUY";
-        }
-
-        String contextBefore = lowerText.substring(Math.max(0, tickerIndex - 100), tickerIndex);
-        String contextAfter = lowerText.substring(tickerIndex, Math.min(lowerText.length(), tickerIndex + 100));
-        String fullContext = contextBefore + " " + contextAfter;
-
-        if (fullContext.contains("sell") || fullContext.contains("short") || fullContext.contains("avoid")) {
-            return "SELL";
-        }
-
-        if (fullContext.contains("buy") || fullContext.contains("bullish") || fullContext.contains("long")) {
-            return "BUY";
-        }
-
-        return "BUY";
-    }
-
-    private String getCompanyName(String ticker) {
-        return switch (ticker.toUpperCase()) {
-            case "AAPL" -> "Apple Inc.";
-            case "TSLA" -> "Tesla Inc.";
-            case "MSFT" -> "Microsoft Corporation";
-            case "GOOGL", "GOOG" -> "Alphabet Inc.";
-            case "AMZN" -> "Amazon.com Inc.";
-            case "META" -> "Meta Platforms Inc.";
-            case "NVDA" -> "NVIDIA Corporation";
-            case "CRM" -> "Salesforce Inc.";
-            case "NFLX" -> "Netflix Inc.";
-            case "UBER" -> "Uber Technologies Inc.";
-            case "SPY" -> "SPDR S&P 500 ETF";
-            default -> null;
-        };
     }
 
     private List<Pick> savePicks(Video video, StockPickExtractionDto extraction) {

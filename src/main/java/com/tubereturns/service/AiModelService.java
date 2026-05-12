@@ -64,9 +64,6 @@ public class AiModelService {
         Transcript:
         """;
 
-    @Value("${tubereturns.ai.provider}")
-    private String aiProvider;
-
     @Value("${tubereturns.ai.api-key}")
     private String apiKey;
 
@@ -134,10 +131,7 @@ public class AiModelService {
     }
 
     public ExtractionResult extractStockPicks(String videoId, String videoTitle, String transcriptText) {
-        return switch (aiProvider) {
-            case "openrouter" -> callOpenRouter(videoId, videoTitle, transcriptText);
-            default           -> new ExtractionResult(createMockResponse(), "mock");
-        };
+        return callOpenRouter(videoId, videoTitle, transcriptText);
     }
 
     private ExtractionResult callOpenRouter(String videoId, String videoTitle, String transcriptText) {
@@ -262,16 +256,6 @@ public class AiModelService {
             t = t.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("```\\s*$", "").strip();
         }
         return t;
-    }
-
-    private String createMockResponse() {
-        return """
-            {
-              "videoId": "mock_video",
-              "externalPositions": false,
-              "extractions": []
-            }
-            """;
     }
 
     private static final class RateLimitedException extends RuntimeException {

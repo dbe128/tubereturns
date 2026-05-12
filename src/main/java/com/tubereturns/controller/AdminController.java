@@ -6,6 +6,7 @@ import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.User;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
+import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
@@ -36,6 +37,7 @@ public class AdminController {
     private final PipelineSchedulerService scheduler;
     private final PipelineStatusRegistry registry;
     private final YouTubeDiscoveryService discoveryService;
+    private final ChannelRepository channelRepository;
     private final StockPickExtractionService stockPickExtractionService;
     private final AiModelService aiModelService;
     private final VideoRepository videoRepository;
@@ -78,6 +80,36 @@ public class AdminController {
     public ResponseEntity<Map<String, String>> deleteChannel(@PathVariable String handle) {
         discoveryService.softDeleteChannel(handle);
         return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
+    }
+
+    @PostMapping("/channels/{handle}/reprocess")
+    @Operation(summary = "Reprocess all picks for a channel", description = "Deletes all picks for videos with downloaded transcripts, resets to PENDING, and triggers extraction")
+    public ResponseEntity<Map<String, String>> reprocessChannel(@PathVariable String handle) {
+        return channelRepository.findByHandle(handle)
+                .map(channel -> {
+                    if (handle.startsWith("mock-")) {
+                        return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
+                    }
+                    List<Video> videos = videoRepository.findByChannelIdOrderByPublishedAtDesc(channel.getId());
+                    int count = 0;
+                    for (Video video : videos) {
+                        if (video.getTranscriptStatus() != Video.TranscriptStatus.DOWNLOADED) {
+                            continue;
+                        }
+                        pickRepository.deleteByVideoId(video.getId());
+                        video.setProcessingStatus(Video.ProcessingStatus.PENDING);
+                        video.setExtractionModel(null);
+                        if (!"Manual".equals(video.getExclusionReason())) {
+                            video.setExcluded(false);
+                            video.setExclusionReason(null);
+                        }
+                        videoRepository.save(video);
+                        count++;
+                    }
+                    scheduler.triggerExtraction();
+                    return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Reprocessing " + count + " video(s) for channel: " + handle));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/videos/{videoId}/reextract")

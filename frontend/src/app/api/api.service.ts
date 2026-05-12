@@ -169,6 +169,10 @@ export class ApiService {
     return this.http.delete<unknown>(`/api/admin/channels/${handle}`).pipe(catchError((e) => this.handleError(e)));
   }
 
+  reprocessChannel(handle: string): Observable<unknown> {
+    return this.http.post<unknown>(`/api/admin/channels/${handle}/reprocess`, null).pipe(catchError((e) => this.handleError(e)));
+  }
+
   addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean): Observable<unknown> {
     let params = new HttpParams()
       .set('channelName', channelName)

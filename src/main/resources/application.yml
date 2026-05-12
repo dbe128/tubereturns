@@ -55,8 +55,6 @@ tubereturns:
     timeout-seconds: 120
 
   ai:
-    enabled: false
-    provider: openrouter
     api-key: ${OPENROUTER_API_KEY:}
     models-file: llm-models.txt
     model-reset-minutes: 60
