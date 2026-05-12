@@ -24,4 +24,10 @@ tubereturns:
     ytbsd-path: scripts/ytbsd.py
     transcripts-dir: transcripts
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 
