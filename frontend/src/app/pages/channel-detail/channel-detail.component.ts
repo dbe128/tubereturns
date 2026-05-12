@@ -237,8 +237,8 @@ interface IndexedVideo {
                 >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'processingStatus'" [class.text-gray-300]="sortKey() !== 'processingStatus'">{{ sortKey() === 'processingStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
                 }
-                <th class="px-4 py-3 w-20 text-primary-600 whitespace-nowrap">▲ Buy</th>
-                <th class="px-4 py-3 w-20 text-danger-500 whitespace-nowrap">▼ Sell</th>
+                <th class="px-4 py-3 w-28 text-primary-600 whitespace-nowrap">▲ Buy</th>
+                <th class="px-4 py-3 w-28 text-danger-500 whitespace-nowrap">▼ Sell</th>
                 @if (auth.isAdmin) {
                 <th class="px-4 py-3 w-32 whitespace-nowrap">Excl. Reason</th>
                 <th class="px-4 py-3 w-24">Actions</th>
@@ -313,11 +313,13 @@ interface IndexedVideo {
                     <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-primary-600]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
                       @if (item.v.buyPicks.length > 0) {
                         @for (ticker of item.v.buyPicks; track ticker; let last = $last) {
-                          <span class="relative group/tk inline-block">{{ ticker }}
-                            @if (tickerMap()[ticker]) {
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                            }
-                          </span>@if (!last) {, }
+                          <span class="inline-block whitespace-nowrap">
+                            <span class="relative group/tk inline-block">{{ ticker }}
+                              @if (tickerMap()[ticker]) {
+                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                              }
+                            </span>@if (unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                          </span>
                         }
                       } @else {
                         <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
@@ -326,11 +328,13 @@ interface IndexedVideo {
                     <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-danger-500]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
                       @if (item.v.sellPicks.length > 0) {
                         @for (ticker of item.v.sellPicks; track ticker; let last = $last) {
-                          <span class="relative group/tk inline-block">{{ ticker }}
-                            @if (tickerMap()[ticker]) {
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                            }
-                          </span>@if (!last) {, }
+                          <span class="inline-block whitespace-nowrap">
+                            <span class="relative group/tk inline-block">{{ ticker }}
+                              @if (tickerMap()[ticker]) {
+                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                              }
+                            </span>@if (unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                          </span>
                         }
                       } @else {
                         <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
@@ -436,6 +440,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly recovery = inject(BackendRecoveryService);
 
   readonly tickerMap = signal<Record<string, string>>({});
+  readonly unknownTickers = signal<ReadonlySet<string>>(new Set());
   readonly channel = signal<Channel | null>(null);
   readonly stats = signal<ChannelStats | null>(null);
   readonly videos = signal<VideoSummary[]>([]);
@@ -502,7 +507,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.api.getTickers().subscribe({ next: (m) => this.tickerMap.set(m), error: () => {} });
+    this.api.getTickers().subscribe({ next: (d) => { this.tickerMap.set(d.companies); this.unknownTickers.set(new Set(d.unknownTickers)); }, error: () => {} });
     const channelId = this.route.snapshot.paramMap.get('channelId');
     if (channelId) {
       this.loadData(channelId);

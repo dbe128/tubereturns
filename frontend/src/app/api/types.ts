@@ -93,6 +93,12 @@ export const ChannelSearchResultSchema = z.object({
   latestVideoAt: z.string().nullable(),
 });
 
+export const TickerDataSchema = z.object({
+  companies: z.record(z.string(), z.string()),
+  unknownTickers: z.array(z.string()),
+});
+export type TickerData = z.infer<typeof TickerDataSchema>;
+
 export const AiModelStatusSchema = z.object({
   currentIndex: z.number(),
   currentModel: z.string(),

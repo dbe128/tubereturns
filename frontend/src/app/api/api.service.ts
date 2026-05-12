@@ -17,8 +17,9 @@ import {
   AuthResponseSchema,
   MessageResponseSchema,
   PendingNotificationSchema,
+  TickerDataSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse, PendingNotification } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -119,9 +120,9 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/pipeline/${step}/trigger`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
-  getTickers(): Observable<Record<string, string>> {
+  getTickers(): Observable<TickerData> {
     return this.validated(
-      z.record(z.string(), z.string()),
+      TickerDataSchema,
       this.http.get<unknown>('/api/tickers').pipe(catchError((e) => this.handleError(e))),
     );
   }

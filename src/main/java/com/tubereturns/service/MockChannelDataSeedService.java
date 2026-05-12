@@ -56,6 +56,10 @@ public class MockChannelDataSeedService {
                 for (MockChannelProvider.MockPickData pickData : videoData.picks()) {
                     Stock stock = stockRepository.findByTickerSymbol(pickData.ticker())
                         .orElseGet(() -> stockRepository.save(new Stock(pickData.ticker(), pickData.companyName())));
+                    if (pickData.unknown() && !stock.isUnknown()) {
+                        stock.setUnknown(true);
+                        stockRepository.save(stock);
+                    }
                     pickRepository.save(new Pick(video, stock, Pick.Signal.valueOf(pickData.signal())));
                 }
 

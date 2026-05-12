@@ -65,6 +65,7 @@ public class MockChannelProvider {
     public record MockPickData(
         String ticker,
         String companyName,
-        String signal
+        String signal,
+        boolean unknown
     ) {}
 }

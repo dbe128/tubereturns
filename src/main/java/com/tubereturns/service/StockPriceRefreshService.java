@@ -35,6 +35,18 @@ public class StockPriceRefreshService {
             try {
                 Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
                         stock.getTickerSymbol(), from, to);
+                if (prices.isEmpty()) {
+                    if (!stock.isUnknown()) {
+                        stock.setUnknown(true);
+                        stockRepository.save(stock);
+                        log.warn("Price refresh: marking {} as unknown — no data from Yahoo Finance", stock.getTickerSymbol());
+                    }
+                    continue;
+                }
+                if (stock.isUnknown()) {
+                    stock.setUnknown(false);
+                    stockRepository.save(stock);
+                }
                 int inserted = 0;
                 for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
                     if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
@@ -47,7 +59,11 @@ public class StockPriceRefreshService {
                 }
                 totalInserted += inserted;
             } catch (Exception e) {
-                log.warn("Price refresh failed for {}: {}", stock.getTickerSymbol(), e.getMessage());
+                if (!stock.isUnknown()) {
+                    stock.setUnknown(true);
+                    stockRepository.save(stock);
+                    log.warn("Price refresh: marking {} as unknown — fetch failed: {}", stock.getTickerSymbol(), e.getMessage());
+                }
             }
         }
 

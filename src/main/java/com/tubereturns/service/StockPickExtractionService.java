@@ -236,6 +236,18 @@ public class StockPickExtractionService {
         try {
             Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
                     stock.getTickerSymbol(), priceDate.minusDays(7), LocalDate.now());
+            if (prices.isEmpty()) {
+                if (!stock.isUnknown()) {
+                    stock.setUnknown(true);
+                    stockRepository.save(stock);
+                    log.warn("Marking {} as unknown — Yahoo Finance returned no price data", stock.getTickerSymbol());
+                }
+                return;
+            }
+            if (stock.isUnknown()) {
+                stock.setUnknown(false);
+                stockRepository.save(stock);
+            }
             int inserted = 0;
             for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
                 if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
@@ -245,7 +257,11 @@ public class StockPickExtractionService {
             }
             log.info("Saved {} price point(s) for {} from {} to today", inserted, stock.getTickerSymbol(), priceDate.minusDays(7));
         } catch (Exception e) {
-            log.warn("Could not fetch prices for {} from {}: {}", stock.getTickerSymbol(), priceDate, e.getMessage());
+            if (!stock.isUnknown()) {
+                stock.setUnknown(true);
+                stockRepository.save(stock);
+                log.warn("Marking {} as unknown — price fetch failed: {}", stock.getTickerSymbol(), e.getMessage());
+            }
         }
     }
 }

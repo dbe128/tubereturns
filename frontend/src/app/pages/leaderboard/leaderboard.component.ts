@@ -186,11 +186,13 @@ interface ChannelRow extends Channel {
                     <td class="px-6 py-4 text-sm font-mono text-primary-600 font-medium">
                       @if (row.stats && row.stats.buyPicks.length > 0) {
                         @for (ticker of row.stats.buyPicks; track ticker; let last = $last) {
-                          <span class="relative group/tk inline-block">{{ ticker }}
-                            @if (tickerMap()[ticker]) {
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                            }
-                          </span>@if (!last) {, }
+                          <span class="inline-block whitespace-nowrap">
+                            <span class="relative group/tk inline-block">{{ ticker }}
+                              @if (tickerMap()[ticker]) {
+                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                              }
+                            </span>@if (unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                          </span>
                         }
                       } @else {
                         <span class="text-gray-200 font-normal">—</span>
@@ -199,11 +201,13 @@ interface ChannelRow extends Channel {
                     <td class="px-6 py-4 text-sm font-mono text-danger-500 font-medium">
                       @if (row.stats && row.stats.sellPicks.length > 0) {
                         @for (ticker of row.stats.sellPicks; track ticker; let last = $last) {
-                          <span class="relative group/tk inline-block">{{ ticker }}
-                            @if (tickerMap()[ticker]) {
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                            }
-                          </span>@if (!last) {, }
+                          <span class="inline-block whitespace-nowrap">
+                            <span class="relative group/tk inline-block">{{ ticker }}
+                              @if (tickerMap()[ticker]) {
+                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                              }
+                            </span>@if (unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                          </span>
                         }
                       } @else {
                         <span class="text-gray-200 font-normal">—</span>
@@ -461,6 +465,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly pendingNotifications = signal<PendingNotification[]>([]);
   readonly triggeringNotifications = signal(false);
   readonly tickerMap = signal<Record<string, string>>({});
+  readonly unknownTickers = signal<ReadonlySet<string>>(new Set());
   readonly myNotifiedHandles = signal<Set<string>>(new Set());
   readonly togglingNotificationFor = signal<string | null>(null);
   readonly showAddForm = signal(false);
@@ -480,7 +485,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
-    this.api.getTickers().subscribe({ next: (m) => this.tickerMap.set(m), error: () => {} });
+    this.api.getTickers().subscribe({ next: (d) => { this.tickerMap.set(d.companies); this.unknownTickers.set(new Set(d.unknownTickers)); }, error: () => {} });
     if (this.auth.isAuthenticated) {
       this.loadMyNotifications();
     }

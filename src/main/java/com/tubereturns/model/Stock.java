@@ -30,6 +30,9 @@ public class Stock {
     @Column(name = "company_name")
     private String companyName;
 
+    @Column(name = "is_unknown", nullable = false)
+    private boolean unknown = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
