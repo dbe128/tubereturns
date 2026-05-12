@@ -31,6 +31,7 @@ RUN pip install --no-cache-dir \
     rich
 
 COPY scripts/ytbsd.py /app/scripts/ytbsd.py
+COPY llm-models.txt /app/llm-models.txt
 COPY --from=build /app/build/libs/*.jar app.jar
 
 EXPOSE 8080
