@@ -398,6 +398,12 @@ interface ChannelRow extends Channel {
                       </dd>
                     }
                   </div>
+                  @if (!step.ytbsdStats && stepDuration(step); as dur) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">Last run duration</dt>
+                    <dd class="text-gray-700 font-mono">{{ dur }}</dd>
+                  </div>
+                  }
                 </dl>
                 <button
                   (click)="triggerStep(step.step)"
@@ -707,6 +713,20 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
         alert(`Failed to remove "${channelName}". Please try again.`);
       },
     });
+  }
+
+  stepDuration(step: PipelineStepStatus): string | null {
+    if (!step.lastStartedAt || !step.lastFinishedAt) {
+      return null;
+    }
+    const ms = new Date(step.lastFinishedAt).getTime() - new Date(step.lastStartedAt).getTime();
+    if (ms < 0) {
+      return null;
+    }
+    const totalSeconds = Math.round(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
   }
 
   private pollUntilDone(step: string): void {
