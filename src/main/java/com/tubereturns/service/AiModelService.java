@@ -152,11 +152,11 @@ public class AiModelService {
             }
         }
 
-        int startIndex = currentModelIndex.get();
-        int size = models.size();
+        int maxAttempts = models.size();
+        int attemptsWithoutRemoval = 0;
 
-        for (int attempt = 0; attempt < size; attempt++) {
-            int idx = (startIndex + attempt) % size;
+        while (!models.isEmpty() && attemptsWithoutRemoval < maxAttempts) {
+            int idx = currentModelIndex.get() % models.size();
             String model = models.get(idx);
             if (idx == 0) {
                 lastModel0AttemptAt = Instant.now();
@@ -164,24 +164,36 @@ public class AiModelService {
             try {
                 return callWithModel(model, videoId, videoTitle, transcriptText);
             } catch (RateLimitedException e) {
-                int nextIdx = (idx + 1) % size;
+                int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
-                if (attempt < size - 1) {
+                attemptsWithoutRemoval++;
+                if (attemptsWithoutRemoval < maxAttempts) {
                     log.warn("Rate limited on model {} — switching to {}", model, models.get(nextIdx));
                 } else {
-                    log.error("Rate limited on model {} — all {} models exhausted", model, size);
+                    log.error("Rate limited on model {} — all {} models exhausted", model, models.size());
                 }
             } catch (TimedOutException e) {
-                int nextIdx = (idx + 1) % size;
+                int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
-                if (attempt < size - 1) {
+                attemptsWithoutRemoval++;
+                if (attemptsWithoutRemoval < maxAttempts) {
                     log.warn("Timed out on model {} after {} retries — switching to {}", model, timeoutRetries, models.get(nextIdx));
                 } else {
-                    log.error("Timed out on model {} — all {} models exhausted", model, size);
+                    log.error("Timed out on model {} — all {} models exhausted", model, models.size());
                 }
+            } catch (PaymentRequiredException e) {
+                models.remove(idx);
+                if (models.isEmpty()) {
+                    log.error("Payment required on model {} — no more models available", model);
+                    throw new RuntimeException("All AI models have exhausted their credits for video " + videoId);
+                }
+                currentModelIndex.set(idx % models.size());
+                maxAttempts = models.size();
+                attemptsWithoutRemoval = 0;
+                log.warn("Payment required on model {} — removed from model list, {} remaining: {}", model, models.size(), models);
             }
         }
-        throw new RuntimeException("All " + size + " AI models exhausted for video " + videoId);
+        throw new RuntimeException("All AI models exhausted for video " + videoId);
     }
 
     private ExtractionResult callWithModel(String model, String videoId, String videoTitle, String transcriptText) {
