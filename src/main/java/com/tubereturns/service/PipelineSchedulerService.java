@@ -28,6 +28,9 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.extraction.cron}")
     private String extractionCron;
 
+    @Value("${tubereturns.pipeline.price-refresh.cron}")
+    private String priceRefreshCron;
+
     @Value("${tubereturns.pipeline.discovery.max-items}")
     private int discoveryMaxItems;
 
@@ -37,6 +40,7 @@ public class PipelineSchedulerService {
     private final YouTubeDiscoveryService discoveryService;
     private final TranscriptDownloadService transcriptService;
     private final StockPickExtractionService extractionService;
+    private final StockPriceRefreshService priceRefreshService;
     private final PipelineStatusRegistry registry;
     private final VideoRepository videoRepository;
 
@@ -45,6 +49,7 @@ public class PipelineSchedulerService {
         registry.registerStep("discovery", discoveryCron, discoveryMaxItems);
         registry.registerStep("transcript", transcriptCron, transcriptMaxItems);
         registry.registerStep("extraction", extractionCron, 1);
+        registry.registerStep("price-refresh", priceRefreshCron, null);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -96,6 +101,16 @@ public class PipelineSchedulerService {
     @Async
     public void triggerExtraction() {
         extractionService.enqueueAllPending();
+    }
+
+    @Scheduled(cron = "${tubereturns.pipeline.price-refresh.cron}")
+    public void runPriceRefresh() {
+        runStep("price-refresh", priceRefreshService::refreshAllPrices);
+    }
+
+    @Async
+    public void triggerPriceRefresh() {
+        runStep("price-refresh", priceRefreshService::refreshAllPrices);
     }
 
     private void runStep(String step, IntSupplier task) {

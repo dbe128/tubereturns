@@ -4,9 +4,11 @@ COPY gradlew gradlew
 COPY gradle gradle
 RUN chmod +x gradlew
 COPY build.gradle.kts settings.gradle.kts ./
-RUN ./gradlew dependencies --no-daemon -q 2>/dev/null || true
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew dependencies --no-daemon -q 2>/dev/null || true
 COPY src src
-RUN ./gradlew bootJar --no-daemon -x test
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew bootJar --no-daemon -x test
 
 FROM python:3.12-slim-bookworm
 WORKDIR /app

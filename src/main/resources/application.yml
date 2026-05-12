@@ -75,12 +75,14 @@ tubereturns:
   pipeline:
     discovery:
       cron: "0 0 * * * *"
-      max-items: 1
+      max-items: 500
     transcript:
       cron: "0 15 * * * *"
-      batch-size: 20
+      batch-size: 300
     extraction:
       cron: "0 30 * * * *"
+    price-refresh:
+      cron: "0 0 14,18,22 * * *"
 
 logging:
   pattern:
