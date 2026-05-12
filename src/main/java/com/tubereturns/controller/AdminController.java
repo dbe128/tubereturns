@@ -91,26 +91,6 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
     }
 
-    @PostMapping("/channels/{handle}/add")
-    @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring, or undelete a previously removed one")
-    public ResponseEntity<Map<String, String>> addChannel(
-            @PathVariable String handle,
-            @RequestParam String channelName,
-            @RequestParam(required = false, defaultValue = "") String channelUrl,
-            @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
-            @RequestParam(required = false, defaultValue = "") String description,
-            @RequestParam(required = false) Long subscriberCount,
-            @RequestParam(defaultValue = "true") boolean notifyOnComplete,
-            Authentication authentication) {
-        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount);
-        if (notifyOnComplete && authentication != null) {
-            userRepository.findByEmail(authentication.getName())
-                    .ifPresent(user -> channelNotificationService.scheduleNotification(channel, user));
-        }
-        scheduler.triggerDiscovery();
-        return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
-    }
-
     @PostMapping("/videos/{videoId}/reextract")
     @Operation(summary = "Re-extract picks from a video", description = "Deletes existing picks, resets status to PENDING, and enqueues for extraction")
     public ResponseEntity<Map<String, String>> reextractVideo(@PathVariable String videoId) {

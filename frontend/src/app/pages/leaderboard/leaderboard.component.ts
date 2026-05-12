@@ -37,7 +37,7 @@ interface ChannelRow extends Channel {
       }
 
       @if (!loading() && !error()) {
-        @if (auth.isAdmin && !showAddForm()) {
+        @if (auth.isAuthenticated && !showAddForm()) {
           <div class="mb-4 flex justify-end">
             <button
               (click)="openAddForm()"
@@ -46,7 +46,7 @@ interface ChannelRow extends Channel {
           </div>
         }
 
-        @if (auth.isAdmin && showAddForm()) {
+        @if (auth.isAuthenticated && showAddForm()) {
           <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 w-full mb-4">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-sm font-semibold text-gray-700">Add stock picking channel</h3>
@@ -240,6 +240,7 @@ interface ChannelRow extends Channel {
                             </button>
                           }
                         }
+                        @if (auth.isAdmin) {
                         <button
                           (click)="deleteChannel(row.handle, row.channelName)"
                           class="relative group/tip text-gray-300 hover:text-danger-500 transition-colors"
@@ -251,6 +252,7 @@ interface ChannelRow extends Channel {
                             Delete channel
                           </span>
                         </button>
+                        }
                       </div>
                     </td>
                   </tr>

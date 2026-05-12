@@ -179,7 +179,7 @@ export class ApiService {
     if (subscriberCount != null) {
       params = params.set('subscriberCount', subscriberCount);
     }
-    return this.http.post<unknown>(`/api/admin/channels/${handle}/add`, null, { params }).pipe(catchError((e) => this.handleError(e)));
+    return this.http.post<unknown>(`/api/channels/${handle}/add`, null, { params }).pipe(catchError((e) => this.handleError(e)));
   }
 
   searchChannels(q: string, filterByKeywords: boolean): Observable<ChannelSearchResult[]> {

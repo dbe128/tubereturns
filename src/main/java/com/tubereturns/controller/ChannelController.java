@@ -12,6 +12,8 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.ChannelNotificationService;
+import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,6 +22,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +40,8 @@ public class ChannelController {
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
     private final ChannelNotificationService channelNotificationService;
+    private final YouTubeDiscoveryService discoveryService;
+    private final PipelineSchedulerService scheduler;
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -123,6 +129,26 @@ public class ChannelController {
         userRepository.findByEmail(authentication.getName())
                 .ifPresent(user -> channelNotificationService.cancelNotification(channelOpt.get(), user));
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{handle}/add")
+    @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring, or undelete a previously removed one")
+    public ResponseEntity<Map<String, String>> addChannel(
+            @PathVariable String handle,
+            @RequestParam String channelName,
+            @RequestParam(required = false, defaultValue = "") String channelUrl,
+            @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
+            @RequestParam(required = false, defaultValue = "") String description,
+            @RequestParam(required = false) Long subscriberCount,
+            @RequestParam(defaultValue = "true") boolean notifyOnComplete,
+            Authentication authentication) {
+        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount);
+        if (notifyOnComplete && authentication != null) {
+            userRepository.findByEmail(authentication.getName())
+                    .ifPresent(user -> channelNotificationService.scheduleNotification(channel, user));
+        }
+        scheduler.triggerDiscovery();
+        return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }
 
     @GetMapping("/top-performers")
