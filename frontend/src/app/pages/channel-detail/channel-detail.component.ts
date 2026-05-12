@@ -217,13 +217,13 @@ interface IndexedVideo {
                   (click)="toggleSort('index')"
                 >#<span class="ml-1" [class.text-primary-500]="sortKey() === 'index'" [class.text-gray-300]="sortKey() !== 'index'">{{ sortKey() === 'index' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-44"></th>
-                <th class="px-4 py-3 w-52">Video</th>
+                <th class="px-4 py-3">Video</th>
                 <th
                   class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('publishedAt')"
                 >Upload Date<span class="ml-1" [class.text-primary-500]="sortKey() === 'publishedAt'" [class.text-gray-300]="sortKey() !== 'publishedAt'">{{ sortKey() === 'publishedAt' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th
-                  class="px-4 py-3 w-24 text-right whitespace-nowrap cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  class="px-4 py-3 w-16 text-right whitespace-nowrap cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('viewCount')"
                 >Views<span class="ml-1" [class.text-primary-500]="sortKey() === 'viewCount'" [class.text-gray-300]="sortKey() !== 'viewCount'">{{ sortKey() === 'viewCount' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 @if (auth.isAdmin) {
@@ -237,8 +237,8 @@ interface IndexedVideo {
                 >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'processingStatus'" [class.text-gray-300]="sortKey() !== 'processingStatus'">{{ sortKey() === 'processingStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
                 }
-                <th class="px-4 py-3 text-primary-600 whitespace-nowrap">▲ Buy</th>
-                <th class="px-4 py-3 text-danger-500 whitespace-nowrap">▼ Sell</th>
+                <th class="px-4 py-3 w-20 text-primary-600 whitespace-nowrap">▲ Buy</th>
+                <th class="px-4 py-3 w-20 text-danger-500 whitespace-nowrap">▼ Sell</th>
                 @if (auth.isAdmin) {
                 <th class="px-4 py-3 w-32 whitespace-nowrap">Excl. Reason</th>
                 <th class="px-4 py-3 w-24">Actions</th>
@@ -270,13 +270,15 @@ interface IndexedVideo {
                       </a>
                     </td>
                     <td class="px-4 py-3 max-w-0">
-                      <a
-                        [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
-                        target="_blank"
-                        rel="noreferrer"
-                        [title]="item.v.title"
-                        class="text-gray-900 hover:text-primary-600 block truncate"
-                      >{{ item.v.title }}</a>
+                      <div class="relative group/title">
+                        <a
+                          [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
+                          target="_blank"
+                          rel="noreferrer"
+                          class="text-gray-900 hover:text-primary-600 block truncate"
+                        >{{ item.v.title }}</a>
+                        <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
+                      </div>
                     </td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {{ item.v.publishedAt | date: 'shortDate' }}
