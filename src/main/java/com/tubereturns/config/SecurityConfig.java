@@ -40,6 +40,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/health").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/channels/search").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/channels/*/add").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/channels/my-notifications").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/channels/*/notify").authenticated()

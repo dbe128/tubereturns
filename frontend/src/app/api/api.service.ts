@@ -185,7 +185,7 @@ export class ApiService {
   searchChannels(q: string, filterByKeywords: boolean): Observable<ChannelSearchResult[]> {
     return this.validated(
       z.array(ChannelSearchResultSchema),
-      this.http.get<unknown>('/api/admin/channels/search', { params: new HttpParams().set('q', q).set('filterByKeywords', filterByKeywords) }).pipe(catchError((e) => this.handleError(e))),
+      this.http.get<unknown>('/api/channels/search', { params: new HttpParams().set('q', q).set('filterByKeywords', filterByKeywords) }).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

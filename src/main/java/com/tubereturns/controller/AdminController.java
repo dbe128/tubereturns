@@ -1,7 +1,6 @@
 package com.tubereturns.controller;
 
 import com.tubereturns.dto.AiModelStatusDto;
-import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
 import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.User;
@@ -14,7 +13,6 @@ import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.TranscriptDownloadService;
-import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.PipelineStatusRegistry;
 import com.tubereturns.service.StockPickExtractionService;
 import com.tubereturns.service.YouTubeDiscoveryService;
@@ -38,7 +36,6 @@ public class AdminController {
     private final PipelineSchedulerService scheduler;
     private final PipelineStatusRegistry registry;
     private final YouTubeDiscoveryService discoveryService;
-    private final YouTubeApiService youTubeApiService;
     private final StockPickExtractionService stockPickExtractionService;
     private final AiModelService aiModelService;
     private final VideoRepository videoRepository;
@@ -74,14 +71,6 @@ public class AdminController {
             default -> { return ResponseEntity.badRequest().body(Map.of("message", "Unknown step: " + step)); }
         }
         return ResponseEntity.accepted().body(Map.of("message", "Step '" + step + "' triggered"));
-    }
-
-    @GetMapping("/channels/search")
-    @Operation(summary = "Search YouTube channels", description = "Returns up to 5 YouTube channels matching the query")
-    public List<ChannelSearchResultDto> searchChannels(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "true") boolean filterByKeywords) {
-        return youTubeApiService.searchChannels(q, filterByKeywords);
     }
 
     @DeleteMapping("/channels/{handle}")

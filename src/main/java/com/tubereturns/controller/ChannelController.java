@@ -11,8 +11,10 @@ import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -41,6 +43,7 @@ public class ChannelController {
     private final UserRepository userRepository;
     private final ChannelNotificationService channelNotificationService;
     private final YouTubeDiscoveryService discoveryService;
+    private final YouTubeApiService youTubeApiService;
     private final PipelineSchedulerService scheduler;
 
     @GetMapping
@@ -129,6 +132,14 @@ public class ChannelController {
         userRepository.findByEmail(authentication.getName())
                 .ifPresent(user -> channelNotificationService.cancelNotification(channelOpt.get(), user));
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search YouTube channels", description = "Returns up to 5 YouTube channels matching the query")
+    public List<ChannelSearchResultDto> searchChannels(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "true") boolean filterByKeywords) {
+        return youTubeApiService.searchChannels(q, filterByKeywords);
     }
 
     @PostMapping("/{handle}/add")
