@@ -375,7 +375,7 @@ interface ChannelRow extends Channel {
                   </div>
                   @if (step.ytbsdStats.lastDurationMs !== null) {
                   <div class="flex justify-between">
-                    <dt class="text-gray-400">Last run duration</dt>
+                    <dt class="text-gray-400">Last ytbsd run</dt>
                     <dd class="text-gray-700 font-mono">{{ (step.ytbsdStats.lastDurationMs / 1000) | number:'1.1-1' }}s</dd>
                   </div>
                   }
@@ -398,12 +398,10 @@ interface ChannelRow extends Channel {
                       </dd>
                     }
                   </div>
-                  @if (!step.ytbsdStats && stepDuration(step); as dur) {
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Last run duration</dt>
-                    <dd class="text-gray-700 font-mono">{{ dur }}</dd>
+                    <dd class="text-gray-700 font-mono">{{ stepDuration(step) ?? '—' }}</dd>
                   </div>
-                  }
 
                 </dl>
                 <button
