@@ -192,12 +192,12 @@ public class StockPickExtractionService {
                 }
 
                 if (attempt < maxRetries) {
-                    log.warn("Extraction attempt {} for {} has {} unknown ticker(s) — retrying with next model",
-                            attempt + 1, videoUrl, unknownCount);
+                    log.warn("Extraction attempt {} for {} has {} unknown ticker(s) [{}] — retrying with next model",
+                            attempt + 1, videoUrl, unknownCount, formatUnknownTickers(extracted.dto(), priceCache));
                     aiModelService.advanceModel();
                 } else {
-                    log.warn("All {} extraction attempts exhausted for {} — using best result with {} unknown ticker(s)",
-                            maxRetries + 1, videoUrl, best.unknownCount());
+                    log.warn("All {} extraction attempts exhausted for {} — using best result with {} unknown ticker(s) [{}]",
+                            maxRetries + 1, videoUrl, best.unknownCount(), formatUnknownTickers(best.dto(), best.priceCache()));
                 }
             }
             } finally {
@@ -326,6 +326,14 @@ public class StockPickExtractionService {
         return unknownCount;
     }
 
+    private String formatUnknownTickers(StockPickExtractionDto dto, Map<String, Map<LocalDate, Double>> priceCache) {
+        return dto.extractions().stream()
+                .filter(p -> priceCache.getOrDefault(p.tickerSymbol().toUpperCase(), Map.of()).isEmpty())
+                .map(p -> p.tickerSymbol() + " (" + p.companyName() + ")")
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
     private void applyPriceCache(Stock stock, Map<LocalDate, Double> prices) {
         if (prices.isEmpty()) {
             if (!stock.isUnknown()) {
@@ -357,10 +365,10 @@ public class StockPickExtractionService {
                     stock.getTickerSymbol(), priceDate.minusDays(7), LocalDate.now());
             if (prices.isEmpty() && stock.getTickerSymbol().contains(".")) {
                 String alt = stock.getTickerSymbol().replace(".", "-");
-                log.info("No prices for {} — retrying with {}", stock.getTickerSymbol(), alt);
+                log.info("No prices for {} ({}) — retrying with {}", stock.getTickerSymbol(), stock.getCompanyName(), alt);
                 prices = StockPriceService.fetchHistoricalClosePrices(alt, priceDate.minusDays(7), LocalDate.now());
                 if (!prices.isEmpty()) {
-                    log.info("Renaming ticker {} → {}", stock.getTickerSymbol(), alt);
+                    log.info("Renaming ticker {} → {} ({})", stock.getTickerSymbol(), alt, stock.getCompanyName());
                     stock.setTickerSymbol(alt);
                     stockRepository.save(stock);
                 }
