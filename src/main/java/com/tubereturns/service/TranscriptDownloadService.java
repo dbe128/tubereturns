@@ -36,6 +36,7 @@ public class TranscriptDownloadService {
     private final PlatformTransactionManager txManager;
     private final VideoRepository videoRepository;
     private final StockPickExtractionService extractionService;
+    private final PipelineStatusRegistry registry;
 
     @Value("${tubereturns.transcript.ytbsd-path}")
     private String ytbsdPath;
@@ -61,6 +62,8 @@ public class TranscriptDownloadService {
     private boolean draining = false;
 
     private Instant lastProxyRefreshAt = null;
+
+    private final AtomicInteger sessionDownloaded = new AtomicInteger();
 
     private final AtomicInteger ytbsdTotalRuns = new AtomicInteger();
     private final AtomicInteger ytbsdSuccessfulRuns = new AtomicInteger();
@@ -102,6 +105,12 @@ public class TranscriptDownloadService {
         List<Video> pendingVideos = videoRepository.findAllByTranscriptStatusIn(
                 List.of(Video.TranscriptStatus.PENDING, Video.TranscriptStatus.FAILED));
         if (pendingVideos.isEmpty()) {
+            synchronized (batchLock) {
+                if (!draining) {
+                    registry.markStarted("transcript");
+                    registry.markFinished("transcript", 0);
+                }
+            }
             return 0;
         }
         log.info("Found {} video(s) pending or failed transcript download", pendingVideos.size());
@@ -140,6 +149,8 @@ public class TranscriptDownloadService {
             log.info("Batch queue: {} item(s) pending after enqueue, draining={}", pendingBatches.size(), draining);
             if (!draining) {
                 draining = true;
+                sessionDownloaded.set(0);
+                registry.markStarted("transcript");
                 ytbsdExecutor.submit(this::drainNextBatch);
             }
         }
@@ -162,6 +173,7 @@ public class TranscriptDownloadService {
                 ytbsdExecutor.submit(this::drainNextBatch);
             } else {
                 draining = false;
+                registry.markFinished("transcript", sessionDownloaded.get());
             }
         }
     }
@@ -228,6 +240,8 @@ public class TranscriptDownloadService {
                 }
             }
             downloadedIds.forEach(extractionService::enqueueForProcessing);
+            sessionDownloaded.addAndGet(downloadedIds.size());
+            registry.markProgress("transcript", sessionDownloaded.get());
         } finally {
             ytbsdRunning = false;
             ytbsdCurrentBatchSize = null;

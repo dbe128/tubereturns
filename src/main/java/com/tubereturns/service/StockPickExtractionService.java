@@ -21,10 +21,12 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,11 +158,57 @@ public class StockPickExtractionService {
         videoRepository.save(video);
 
         try {
-            var result = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
-            savePicks(video, result.dto());
+            LocalDate priceDate = video.getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
+            CandidateResult best = null;
+            int maxRetries = 3;
+            int originalModelIndex = aiModelService.getCurrentModelIndex();
+
+            try {
+            for (int attempt = 0; attempt <= maxRetries; attempt++) {
+                ExtractionWithModel extracted;
+                try {
+                    extracted = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
+                } catch (Exception e) {
+                    if (best != null) {
+                        log.warn("Extraction retry {} for {} failed: {} — using best result so far ({} unknown)",
+                                attempt, videoUrl, e.getMessage(), best.unknownCount());
+                        break;
+                    }
+                    throw e;
+                }
+
+                Map<String, Map<LocalDate, Double>> priceCache = new HashMap<>();
+                int unknownCount = probeExtraction(extracted.dto(), priceDate, priceCache);
+
+                if (best == null || unknownCount < best.unknownCount()) {
+                    best = new CandidateResult(extracted.dto(), extracted.model(), unknownCount, priceCache);
+                }
+
+                if (unknownCount == 0) {
+                    if (attempt > 0) {
+                        log.info("Extraction retry {} for {} resolved all unknown tickers", attempt, videoUrl);
+                    }
+                    break;
+                }
+
+                if (attempt < maxRetries) {
+                    log.warn("Extraction attempt {} for {} has {} unknown ticker(s) — retrying with next model",
+                            attempt + 1, videoUrl, unknownCount);
+                    aiModelService.advanceModel();
+                } else {
+                    log.warn("All {} extraction attempts exhausted for {} — using best result with {} unknown ticker(s)",
+                            maxRetries + 1, videoUrl, best.unknownCount());
+                }
+            }
+            } finally {
+                aiModelService.setModelIndex(originalModelIndex);
+                log.info("Reset AI model back to index {} after extraction retries for {}", originalModelIndex, videoUrl);
+            }
+
+            savePicks(video, best.dto(), priceDate, best.priceCache());
             video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
-            video.setExtractionModel(result.model());
-            if (result.dto().externalPositions()) {
+            video.setExtractionModel(best.model());
+            if (best.dto().externalPositions()) {
                 log.info("Video {} contains only external positions — auto-excluding", videoUrl);
                 video.setExcluded(true);
                 video.setExclusionReason("External Positions");
@@ -178,6 +226,8 @@ public class StockPickExtractionService {
 
     private record ExtractionWithModel(StockPickExtractionDto dto, String model) {}
 
+    private record CandidateResult(StockPickExtractionDto dto, String model, int unknownCount, Map<String, Map<LocalDate, Double>> priceCache) {}
+
     private ExtractionWithModel extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         String videoUrl = "https://youtu.be/" + videoId;
         log.info("Sending transcript to AI for extraction: {} ({})", videoTitle, videoUrl);
@@ -192,16 +242,16 @@ public class StockPickExtractionService {
         }
     }
 
-    private List<Pick> savePicks(Video video, StockPickExtractionDto extraction) {
+    private List<Pick> savePicks(Video video, StockPickExtractionDto extraction, LocalDate priceDate, Map<String, Map<LocalDate, Double>> priceCache) {
         List<Pick> savedPicks = new ArrayList<>();
-        LocalDate priceDate = video.getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
 
         for (StockPickExtractionDto.PickExtractionDto pickDto : extraction.extractions()) {
             try {
                 Pick.Signal signal = Pick.Signal.valueOf(pickDto.signal().toUpperCase());
 
-                boolean isNewStock = stockRepository.findByTickerSymbol(pickDto.tickerSymbol().toUpperCase()).isEmpty();
-                Stock stock = stockRepository.findByTickerSymbol(pickDto.tickerSymbol().toUpperCase())
+                String upperTicker = pickDto.tickerSymbol().toUpperCase();
+                boolean isNewStock = stockRepository.findByTickerSymbol(upperTicker).isEmpty();
+                Stock stock = stockRepository.findByTickerSymbol(upperTicker)
                         .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName(), pickDto.currency())));
                 if (pickDto.currency() != null && stock.getCurrency() == null) {
                     stock.setCurrency(pickDto.currency().toUpperCase());
@@ -213,7 +263,11 @@ public class StockPickExtractionService {
 
                 savedPicks.add(pickRepository.save(new Pick(video, stock, signal)));
 
-                fetchAndSaveStockPrice(stock, priceDate);
+                if (priceCache.containsKey(upperTicker)) {
+                    applyPriceCache(stock, priceCache.get(upperTicker));
+                } else {
+                    fetchAndSaveStockPrice(stock, priceDate);
+                }
 
             } catch (IllegalArgumentException e) {
                 log.warn("Invalid signal value '{}' for ticker {} in video {}",
@@ -238,6 +292,62 @@ public class StockPickExtractionService {
             channel.setLastProcessedAt(video.getPublishedAt());
             channelRepository.save(channel);
             log.info("Advanced last_processed_at for channel '{}' to {}", channel.getChannelName(), video.getPublishedAt());
+        }
+    }
+
+    private int probeExtraction(StockPickExtractionDto dto, LocalDate priceDate, Map<String, Map<LocalDate, Double>> priceCache) {
+        int unknownCount = 0;
+        Set<String> probed = new HashSet<>();
+        for (StockPickExtractionDto.PickExtractionDto pickDto : dto.extractions()) {
+            String ticker = pickDto.tickerSymbol().toUpperCase();
+            if (!probed.add(ticker)) {
+                continue;
+            }
+            Optional<Stock> existing = stockRepository.findByTickerSymbol(ticker);
+            if (existing.isPresent()) {
+                if (existing.get().isUnknown()) {
+                    unknownCount++;
+                    priceCache.put(ticker, Map.of());
+                }
+            } else {
+                try {
+                    Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
+                            ticker, priceDate.minusDays(7), LocalDate.now());
+                    priceCache.put(ticker, prices);
+                    if (prices.isEmpty()) {
+                        unknownCount++;
+                    }
+                } catch (Exception e) {
+                    priceCache.put(ticker, Map.of());
+                    unknownCount++;
+                }
+            }
+        }
+        return unknownCount;
+    }
+
+    private void applyPriceCache(Stock stock, Map<LocalDate, Double> prices) {
+        if (prices.isEmpty()) {
+            if (!stock.isUnknown()) {
+                stock.setUnknown(true);
+                stockRepository.save(stock);
+                log.warn("Marking {} as unknown — Yahoo Finance returned no price data", stock.getTickerSymbol());
+            }
+            return;
+        }
+        if (stock.isUnknown()) {
+            stock.setUnknown(false);
+            stockRepository.save(stock);
+        }
+        int inserted = 0;
+        for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
+            if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
+                stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
+                inserted++;
+            }
+        }
+        if (inserted > 0) {
+            log.info("Saved {} price point(s) for {}", inserted, stock.getTickerSymbol());
         }
     }
 

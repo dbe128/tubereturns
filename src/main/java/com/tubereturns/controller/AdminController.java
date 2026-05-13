@@ -199,7 +199,7 @@ public class AdminController {
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running, AiModelStatusDto aiModelStatus) {
-        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats, registry.getFatalError(step), aiModelStatus);
+        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats, registry.getFatalError(step), aiModelStatus, registry.getLastRunDurationMs(step));
     }
 
     private AiModelStatusDto toAiModelStatusDto(AiModelService.AiModelStatus s) {

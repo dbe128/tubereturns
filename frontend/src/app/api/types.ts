@@ -134,6 +134,7 @@ export const PipelineStepStatusSchema = z.object({
   ytbsdStats: YtbsdStatsSchema.nullable(),
   fatalError: z.string().nullable(),
   aiModelStatus: AiModelStatusSchema.nullable(),
+  lastRunDurationMs: z.number().nullable(),
 });
 
 export type Channel = z.infer<typeof ChannelSchema>;

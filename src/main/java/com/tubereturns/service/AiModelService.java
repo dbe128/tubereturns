@@ -55,6 +55,9 @@ public class AiModelService {
         Rules:
         - You MUST include EVERY investment recommendation mentioned in the transcript — do not skip or summarise any
         - signal must be either "BUY" or "SELL"
+        - tickerSymbol must be the current, up-to-date ticker — use the latest symbol after any rebranding or ticker change (e.g. META not FB, GOOGL not GOOG if that was the old symbol)
+        - tickerSymbol and currency must both reflect the stock's primary listing exchange — the main exchange where the company is headquartered and primarily traded, not a secondary or cross-listing
+        - Exception: for stocks from outside the US and Europe, prefer the ADR ticker on NYSE/NASDAQ (no suffix, currency USD) if one exists — e.g. TSM instead of 2330.TW, BABA instead of 9988.HK, SONY instead of 6758.T
         - tickerSymbol must be in Yahoo Finance format:
           - US stocks (NYSE, NASDAQ, etc.): no suffix — e.g. AAPL, TSLA, FL
           - German stocks (XETRA): append .DE — e.g. VOW3.DE, SAP.DE
@@ -63,10 +66,10 @@ public class AiModelService {
           - French stocks (Euronext Paris): append .PA — e.g. AIR.PA, MC.PA
           - Dutch stocks (Euronext Amsterdam): append .AS — e.g. ASML.AS, PHIA.AS
           - Canadian stocks (TSX): append .TO — e.g. RY.TO, TD.TO
-          - Japanese stocks (TSE): append .T — e.g. 7203.T, 6758.T
+          - Japanese stocks (TSE): append .T — e.g. 7203.T, 6758.T (only if no ADR exists)
           - Swiss stocks (SIX): append .SW — e.g. NESN.SW, NOVN.SW
-          - Hong Kong stocks (HKEX): append .HK — e.g. 0700.HK, 9988.HK
-        - currency must be a 3-letter ISO currency code matching the stock's primary exchange — e.g. USD, EUR, GBP, AUD, CAD, JPY, CHF, HKD
+          - Hong Kong stocks (HKEX): append .HK — e.g. 0700.HK, 9988.HK (only if no ADR exists)
+        - currency must be the 3-letter ISO currency code of the chosen exchange — USD for ADRs and US-listed stocks, otherwise the local currency
         - If no picks are found, return an empty extractions array
         - Set externalPositions to true if the transcript only presents positions or trades made by someone else (another person, an AI agent, a portfolio manager, etc.) rather than the video creator's own picks — the creator is merely reporting or reviewing them, not recommending them personally
         - Implicit BUY signals: the creator expresses that a stock is undervalued, attractively priced, a good investment, a compelling opportunity, has strong upside, or otherwise indicates bullish conviction based on their own analysis — treat this as BUY
@@ -144,6 +147,22 @@ public class AiModelService {
 
     public ExtractionResult extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         return callOpenRouter(videoId, videoTitle, transcriptText);
+    }
+
+    public int getCurrentModelIndex() {
+        return currentModelIndex.get() % models.size();
+    }
+
+    public void setModelIndex(int index) {
+        currentModelIndex.set(index);
+    }
+
+    public void advanceModel() {
+        int size = models.size();
+        if (size > 1) {
+            int next = currentModelIndex.updateAndGet(i -> (i + 1) % size);
+            log.info("Advanced AI model to index {} ({})", next, models.get(next));
+        }
     }
 
     private ExtractionResult callOpenRouter(String videoId, String videoTitle, String transcriptText) {

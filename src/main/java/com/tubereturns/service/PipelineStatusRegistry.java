@@ -3,6 +3,7 @@ package com.tubereturns.service;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.util.Map;
@@ -18,6 +19,7 @@ public class PipelineStatusRegistry {
     private final Map<String, Integer> lastRunCounts = new ConcurrentHashMap<>();
     private final Map<String, Integer> limits = new ConcurrentHashMap<>();
     private final Map<String, String> fatalErrors = new ConcurrentHashMap<>();
+    private final Map<String, Long> lastRunDurationMs = new ConcurrentHashMap<>();
 
     public void registerStep(String step, String cron, Integer limit) {
         cronExpressions.put(step, cron);
@@ -33,7 +35,12 @@ public class PipelineStatusRegistry {
     }
 
     public void markFinished(String step, int count) {
-        lastFinishedAt.put(step, Instant.now());
+        Instant now = Instant.now();
+        Instant started = lastStartedAt.get(step);
+        if (started != null) {
+            lastRunDurationMs.put(step, Duration.between(started, now).toMillis());
+        }
+        lastFinishedAt.put(step, now);
         lastRunCounts.put(step, count);
         running.put(step, false);
     }
@@ -87,5 +94,9 @@ public class PipelineStatusRegistry {
 
     public Integer getLimit(String step) {
         return limits.get(step);
+    }
+
+    public Long getLastRunDurationMs(String step) {
+        return lastRunDurationMs.get(step);
     }
 }

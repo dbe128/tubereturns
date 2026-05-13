@@ -12,5 +12,6 @@ public record PipelineStepStatusDto(
         Integer queueSize,
         YtbsdStatsDto ytbsdStats,
         String fatalError,
-        AiModelStatusDto aiModelStatus
+        AiModelStatusDto aiModelStatus,
+        Long lastRunDurationMs
 ) {}

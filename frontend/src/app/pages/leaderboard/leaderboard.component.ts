@@ -404,6 +404,7 @@ interface ChannelRow extends Channel {
                     <dd class="text-gray-700 font-mono">{{ dur }}</dd>
                   </div>
                   }
+
                 </dl>
                 <button
                   (click)="triggerStep(step.step)"
@@ -723,14 +724,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   }
 
   stepDuration(step: PipelineStepStatus): string | null {
-    if (!step.lastStartedAt || !step.lastFinishedAt) {
+    if (step.lastRunDurationMs === null || step.lastRunDurationMs === undefined) {
       return null;
     }
-    const ms = new Date(step.lastFinishedAt).getTime() - new Date(step.lastStartedAt).getTime();
-    if (ms < 0) {
-      return null;
-    }
-    const totalSeconds = Math.round(ms / 1000);
+    const totalSeconds = Math.round(step.lastRunDurationMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;

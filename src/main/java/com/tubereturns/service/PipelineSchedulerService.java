@@ -77,7 +77,11 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.transcript.cron}")
     public void runTranscript() {
-        runStep("transcript", () -> transcriptService.downloadPendingTranscripts(transcriptMaxItems));
+        if (registry.isRunning("transcript")) {
+            log.warn("Pipeline step 'transcript' is already running, skipping");
+            return;
+        }
+        transcriptService.downloadPendingTranscripts(transcriptMaxItems);
     }
 
     @Scheduled(cron = "${tubereturns.pipeline.extraction.cron}")
@@ -96,7 +100,11 @@ public class PipelineSchedulerService {
 
     @Async
     public void triggerTranscript() {
-        runStep("transcript", () -> transcriptService.downloadPendingTranscripts(transcriptMaxItems));
+        if (registry.isRunning("transcript")) {
+            log.warn("Pipeline step 'transcript' is already running, skipping");
+            return;
+        }
+        transcriptService.downloadPendingTranscripts(transcriptMaxItems);
     }
 
     @Async
