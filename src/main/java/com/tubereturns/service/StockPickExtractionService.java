@@ -328,7 +328,7 @@ public class StockPickExtractionService {
 
     private String formatUnknownTickers(StockPickExtractionDto dto, Map<String, Map<LocalDate, Double>> priceCache) {
         return dto.extractions().stream()
-                .filter(p -> priceCache.getOrDefault(p.tickerSymbol().toUpperCase(), Map.of()).isEmpty())
+                .filter(p -> { var c = priceCache.get(p.tickerSymbol().toUpperCase()); return c != null && c.isEmpty(); })
                 .map(p -> p.tickerSymbol() + " (" + p.companyName() + ")")
                 .distinct()
                 .collect(java.util.stream.Collectors.joining(", "));
