@@ -184,14 +184,14 @@ interface ChannelRow extends Channel {
                       {{ row.stats?.processedVideos ?? '—' }}
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-primary-600 font-medium">
-                      @if (row.stats && row.stats.buyPicks.length > 0) {
-                        @for (ticker of row.stats.buyPicks; track ticker; let last = $last) {
+                      @if (row.stats && visiblePicks(row.stats.buyPicks).length > 0) {
+                        @for (ticker of visiblePicks(row.stats.buyPicks); track ticker; let last = $last) {
                           <span class="inline-block whitespace-nowrap">
                             <span class="relative group/tk inline-block">{{ ticker }}
                               @if (tickerMap()[ticker]) {
                                 <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
                               }
-                            </span>@if (unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                            </span>@if (auth.isAdmin && unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
                           </span>
                         }
                       } @else {
@@ -199,14 +199,14 @@ interface ChannelRow extends Channel {
                       }
                     </td>
                     <td class="px-6 py-4 text-sm font-mono text-danger-500 font-medium">
-                      @if (row.stats && row.stats.sellPicks.length > 0) {
-                        @for (ticker of row.stats.sellPicks; track ticker; let last = $last) {
+                      @if (row.stats && visiblePicks(row.stats.sellPicks).length > 0) {
+                        @for (ticker of visiblePicks(row.stats.sellPicks); track ticker; let last = $last) {
                           <span class="inline-block whitespace-nowrap">
                             <span class="relative group/tk inline-block">{{ ticker }}
                               @if (tickerMap()[ticker]) {
                                 <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
                               }
-                            </span>@if (unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                            </span>@if (auth.isAdmin && unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
                           </span>
                         }
                       } @else {
@@ -713,6 +713,13 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
         alert(`Failed to remove "${channelName}". Please try again.`);
       },
     });
+  }
+
+  visiblePicks(tickers: string[]): string[] {
+    if (this.auth.isAdmin) {
+      return tickers;
+    }
+    return tickers.filter(t => !this.unknownTickers().has(t));
   }
 
   stepDuration(step: PipelineStepStatus): string | null {
