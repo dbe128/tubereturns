@@ -263,7 +263,7 @@ public class StockPickExtractionService {
 
                 savedPicks.add(pickRepository.save(new Pick(video, stock, signal)));
 
-                if (priceCache.containsKey(upperTicker)) {
+                if (priceCache.containsKey(upperTicker) && !priceCache.get(upperTicker).isEmpty()) {
                     applyPriceCache(stock, priceCache.get(upperTicker));
                 } else {
                     fetchAndSaveStockPrice(stock, priceDate);
@@ -355,6 +355,16 @@ public class StockPickExtractionService {
         try {
             Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
                     stock.getTickerSymbol(), priceDate.minusDays(7), LocalDate.now());
+            if (prices.isEmpty() && stock.getTickerSymbol().contains(".")) {
+                String alt = stock.getTickerSymbol().replace(".", "-");
+                log.info("No prices for {} — retrying with {}", stock.getTickerSymbol(), alt);
+                prices = StockPriceService.fetchHistoricalClosePrices(alt, priceDate.minusDays(7), LocalDate.now());
+                if (!prices.isEmpty()) {
+                    log.info("Renaming ticker {} → {}", stock.getTickerSymbol(), alt);
+                    stock.setTickerSymbol(alt);
+                    stockRepository.save(stock);
+                }
+            }
             if (prices.isEmpty()) {
                 if (!stock.isUnknown()) {
                     stock.setUnknown(true);
