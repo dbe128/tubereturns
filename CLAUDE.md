@@ -132,3 +132,4 @@ Stock prices are stored in their local currency (the `currency` column on `Stock
 - Always wrap `if`/`for`/`while` bodies in `{}`
 - Frontend: use `@for`/`@if` Angular control-flow blocks, not structural directives
 - **No `@Value` defaults in Java** — `@Value("${some.key}")` only; all defaults belong in `application.yml` (or `application-dev.yml` for dev-only overrides)
+- **No `alert()` or `confirm()`** — user feedback goes through `showToast()` (green/red fixed overlay, auto-dismisses after 6 s) and `openConfirm()` (modal with backdrop, `destructive: true` makes the confirm button red); both helpers are established in `LeaderboardComponent` and should be replicated in any new component that needs them

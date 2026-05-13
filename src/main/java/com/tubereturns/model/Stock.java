@@ -37,6 +37,9 @@ public class Stock {
     @Column(name = "is_unknown", nullable = false)
     private boolean unknown = false;
 
+    @Column(name = "reviewed", nullable = false)
+    private boolean reviewed = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

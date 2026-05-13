@@ -2,17 +2,23 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.AiModelStatusDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
+import com.tubereturns.dto.UnknownStockDto;
 import com.tubereturns.dto.YtbsdStatsDto;
+import com.tubereturns.model.Stock;
+import com.tubereturns.model.StockPrice;
 import com.tubereturns.model.User;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
+import com.tubereturns.repository.StockPriceRepository;
+import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.StockPriceService;
 import com.tubereturns.service.TranscriptDownloadService;
 import com.tubereturns.service.PipelineStatusRegistry;
 import com.tubereturns.service.StockPickExtractionService;
@@ -21,13 +27,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/admin")
@@ -46,8 +56,12 @@ public class AdminController {
     private final ChannelNotificationService channelNotificationService;
     private final ChannelProcessingNotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final StockRepository stockRepository;
+    private final StockPriceRepository stockPriceRepository;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
+
+    public record TryTickerRequest(String ticker, String currency) {}
 
     @GetMapping("/pipeline/status")
     @Operation(summary = "Get pipeline status", description = "Returns last/next run timestamps and running state for each pipeline step")
@@ -188,6 +202,113 @@ public class AdminController {
     @Operation(summary = "Health check", description = "Check if the application is running")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of("message", "TubeReturns is running"));
+    }
+
+    @GetMapping("/stocks/unknown")
+    @Operation(summary = "Get unreviewed unknown stocks with pick counts")
+    public List<UnknownStockDto> getUnknownStocks() {
+        return stockRepository.findUnknownUnreviewed().stream()
+                .map(s -> new UnknownStockDto(
+                        s.getId(),
+                        s.getTickerSymbol(),
+                        s.getCompanyName(),
+                        s.getCurrency(),
+                        s.getCreatedAt().toString(),
+                        pickRepository.countByStockId(s.getId())))
+                .filter(dto -> dto.pickCount() > 0)
+                .sorted((a, b) -> Long.compare(b.pickCount(), a.pickCount()))
+                .toList();
+    }
+
+    @PostMapping("/stocks/{id}/try-ticker")
+    @Operation(summary = "Try resolving an unknown stock via Yahoo Finance")
+    @Transactional
+    public ResponseEntity<Map<String, String>> tryTicker(@PathVariable Long id, @RequestBody TryTickerRequest request) {
+        return stockRepository.findById(id)
+                .map(stock -> {
+                    String oldTicker = stock.getTickerSymbol();
+                    String newTicker = request.ticker().trim().toUpperCase();
+                    String newCurrency = request.currency() != null && !request.currency().isBlank()
+                            ? request.currency().trim().toUpperCase() : null;
+                    log.info("Admin fix: attempting to resolve stock id={} '{}' → '{}' (currency: {})",
+                            stock.getId(), oldTicker, newTicker, newCurrency);
+                    try {
+                        Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
+                                newTicker, LocalDate.now().minusYears(10), LocalDate.now());
+                        log.info("Yahoo Finance returned {} price point(s) for '{}'", prices.size(), newTicker);
+                        if (prices.isEmpty()) {
+                            log.warn("No price data found for '{}' — aborting fix for stock id={}", newTicker, stock.getId());
+                            return ResponseEntity.badRequest().<Map<String, String>>body(
+                                    Map.of("message", "No price data found for ticker " + newTicker));
+                        }
+
+                        Stock target = stockRepository.findByTickerSymbol(newTicker)
+                                .filter(existing -> !existing.getId().equals(stock.getId()))
+                                .orElse(null);
+
+                        if (target != null) {
+                            log.info("Ticker '{}' already exists as stock id={} — merging stock id={} into it",
+                                    newTicker, target.getId(), stock.getId());
+                            long pickCount = pickRepository.countByStockId(stock.getId());
+                            int relinked = pickRepository.relinkPicks(stock, target);
+                            log.info("Re-linked {} pick(s) from stock id={} ('{}') to stock id={} ('{}')",
+                                    relinked, stock.getId(), oldTicker, target.getId(), newTicker);
+                            int merged = 0;
+                            for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
+                                if (!stockPriceRepository.existsByStockIdAndPriceDate(target.getId(), entry.getKey())) {
+                                    stockPriceRepository.save(new StockPrice(target, entry.getKey(), entry.getValue()));
+                                    merged++;
+                                }
+                            }
+                            log.info("Merged {} new price point(s) into existing stock id={} ('{}')", merged, target.getId(), newTicker);
+                            stockPriceRepository.deleteAllByStockId(stock.getId());
+                            log.info("Deleted any orphan price points for original stock id={}", stock.getId());
+                            stockRepository.delete(stock);
+                            log.info("Deleted original stock id={} ('{}') after merge", stock.getId(), oldTicker);
+                            String msg = "Merged '" + oldTicker + "' into existing '" + newTicker + "' — re-linked "
+                                    + pickCount + " pick(s), added " + merged + " price point(s), original record deleted";
+                            log.info("Fix complete: {}", msg);
+                            return ResponseEntity.ok(Map.of("message", msg));
+                        } else {
+                            if (newCurrency != null) {
+                                stock.setCurrency(newCurrency);
+                            }
+                            stock.setTickerSymbol(newTicker);
+                            stock.setUnknown(false);
+                            stockRepository.save(stock);
+                            log.info("Updated stock id={}: '{}' → '{}', currency={}, unknown=false",
+                                    stock.getId(), oldTicker, newTicker, stock.getCurrency());
+                            int inserted = 0;
+                            for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
+                                if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
+                                    stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
+                                    inserted++;
+                                }
+                            }
+                            log.info("Saved {} price point(s) for '{}' (stock id={})", inserted, newTicker, stock.getId());
+                            String msg = "Resolved '" + oldTicker + "' as '" + newTicker + "' — saved " + inserted + " price point(s)";
+                            log.info("Fix complete: {}", msg);
+                            return ResponseEntity.ok(Map.of("message", msg));
+                        }
+                    } catch (Exception e) {
+                        log.error("Admin fix failed for stock id={} '{}' → '{}': {}", stock.getId(), oldTicker, newTicker, e.getMessage(), e);
+                        return ResponseEntity.badRequest().<Map<String, String>>body(
+                                Map.of("message", "Failed to fetch prices for '" + newTicker + "': " + e.getMessage()));
+                    }
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/stocks/{id}/accept-unknown")
+    @Operation(summary = "Mark an unknown stock as reviewed")
+    public ResponseEntity<Map<String, String>> acceptUnknown(@PathVariable Long id) {
+        return stockRepository.findById(id)
+                .map(stock -> {
+                    stock.setReviewed(true);
+                    stockRepository.save(stock);
+                    return ResponseEntity.ok(Map.of("message", "Stock " + stock.getTickerSymbol() + " marked as reviewed"));
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {

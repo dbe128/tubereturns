@@ -18,8 +18,9 @@ import {
   MessageResponseSchema,
   PendingNotificationSchema,
   TickerDataSchema,
+  UnknownStockSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -151,6 +152,24 @@ export class ApiService {
 
   triggerNotificationCheck(): Observable<unknown> {
     return this.http.post<unknown>('/api/admin/notifications/trigger', null).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  getUnknownStocks(): Observable<UnknownStock[]> {
+    return this.validated(
+      z.array(UnknownStockSchema),
+      this.http.get<unknown>('/api/admin/stocks/unknown').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  tryTicker(id: number, ticker: string, currency: string): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.post<unknown>(`/api/admin/stocks/${id}/try-ticker`, { ticker, currency }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  acceptUnknown(id: number): Observable<unknown> {
+    return this.http.post<unknown>(`/api/admin/stocks/${id}/accept-unknown`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
   reextractVideo(videoId: string): Observable<unknown> {

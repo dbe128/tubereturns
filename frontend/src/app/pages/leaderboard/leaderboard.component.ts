@@ -8,10 +8,16 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
-import type { Channel, ChannelStats, ChannelSearchResult, PipelineStepStatus, PendingNotification } from '../../api/types';
+import type { Channel, ChannelStats, ChannelSearchResult, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
 
 interface ChannelRow extends Channel {
   stats: ChannelStats | null;
+}
+
+interface UnknownStockRow extends UnknownStock {
+  editTicker: string;
+  editCurrency: string;
+  saving: boolean;
 }
 
 @Component({
@@ -19,6 +25,30 @@ interface ChannelRow extends Channel {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, SpyChartComponent],
   template: `
+    @if (toast()) {
+      <div class="fixed top-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
+           [class]="toast()!.type === 'success' ? 'bg-green-600' : 'bg-red-600'">
+        {{ toast()!.message }}
+      </div>
+    }
+    @if (confirmDialog()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" (click)="confirmDialog.set(null)">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" (click)="$event.stopPropagation()">
+          <p class="text-sm text-gray-700 mb-6">{{ confirmDialog()!.message }}</p>
+          <div class="flex justify-end gap-3">
+            <button
+              (click)="confirmDialog.set(null)"
+              class="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors font-medium"
+            >Cancel</button>
+            <button
+              (click)="runConfirm()"
+              class="px-4 py-2 text-sm rounded-lg font-semibold text-white transition-colors"
+              [class]="confirmDialog()!.destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-800 hover:bg-gray-700'"
+            >Confirm</button>
+          </div>
+        </div>
+      </div>
+    }
     <div class="max-w-screen-2xl mx-auto px-6 py-10">
       <div class="mb-8">
         <p class="text-gray-500 text-sm">Finance YouTubers ranked by historical stock pick performance</p>
@@ -452,6 +482,69 @@ interface ChannelRow extends Channel {
           }
         </div>
 
+        <div class="mt-8">
+          <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Unknown Stocks</h2>
+          @if (unknownStockRows().length === 0) {
+            <p class="text-xs text-gray-400">No unreviewed unknown stocks.</p>
+          } @else {
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-50 text-gray-400 uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Ticker</th>
+                    <th class="px-4 py-2 text-left font-medium">Company</th>
+                    <th class="px-4 py-2 text-right font-medium">Picks</th>
+                    <th class="px-4 py-2 text-left font-medium">Currency</th>
+                    <th class="px-4 py-2 text-left font-medium">Created at</th>
+                    <th class="px-4 py-2 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (row of unknownStockRows(); track row.id) {
+                    @let hasChanges = stockHasChanges(row);
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-4 py-2">
+                        <input
+                          [ngModel]="row.editTicker"
+                          (ngModelChange)="updateStockRow(row.id, 'editTicker', $event)"
+                          [disabled]="row.saving"
+                          class="w-28 border border-gray-200 rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                      </td>
+                      <td class="px-4 py-2 text-gray-600">{{ row.companyName ?? '—' }}</td>
+                      <td class="px-4 py-2 text-right font-mono text-gray-700">{{ row.pickCount }}</td>
+                      <td class="px-4 py-2">
+                        <input
+                          [ngModel]="row.editCurrency"
+                          (ngModelChange)="updateStockRow(row.id, 'editCurrency', $event)"
+                          [disabled]="row.saving"
+                          maxlength="3"
+                          class="w-16 border border-gray-200 rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                      </td>
+                      <td class="px-4 py-2 font-mono text-gray-500">{{ row.createdAt | date:'dd MMM yyyy' }}</td>
+                      <td class="px-4 py-2">
+                        <div class="flex gap-2 flex-wrap items-center">
+                          <button
+                            (click)="tryTicker(row)"
+                            [disabled]="row.saving || (hasChanges && !row.editCurrency)"
+                            class="px-2 py-1 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+                          >{{ hasChanges ? 'Fix' : 'Retry' }}</button>
+                          <button
+                            (click)="acceptUnknown(row)"
+                            [disabled]="row.saving"
+                            class="px-2 py-1 bg-gray-700 text-white rounded text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors whitespace-nowrap"
+                          >Accept</button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
 }
       }
     </div>
@@ -469,6 +562,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly disabledSteps = signal<Set<string>>(new Set());
   readonly pendingNotifications = signal<PendingNotification[]>([]);
   readonly triggeringNotifications = signal(false);
+  readonly unknownStockRows = signal<UnknownStockRow[]>([]);
+  readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
+  private toastTimer?: ReturnType<typeof setTimeout>;
+  readonly confirmDialog = signal<{ message: string; destructive: boolean; onConfirm: () => void } | null>(null);
   readonly tickerMap = signal<Record<string, string>>({});
   readonly unknownTickers = signal<ReadonlySet<string>>(new Set());
   readonly myNotifiedHandles = signal<Set<string>>(new Set());
@@ -497,7 +594,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     if (this.auth.isAdmin) {
       this.loadPipelineStatus();
       this.loadPendingNotifications();
-      this.statusPollSub = interval(15000).subscribe(() => { this.loadPipelineStatus(); this.loadPendingNotifications(); });
+      this.loadUnknownStocks();
+      this.statusPollSub = interval(15000).subscribe(() => { this.loadPipelineStatus(); this.loadPendingNotifications(); this.loadUnknownStocks(); });
     }
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
@@ -513,6 +611,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     this.statusPollSub?.unsubscribe();
     this.fastPollSub?.unsubscribe();
     this.searchSub?.unsubscribe();
+    clearTimeout(this.toastTimer);
   }
 
   load(): void {
@@ -692,26 +791,102 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   }
 
   reprocessChannel(handle: string, channelName: string): void {
-    if (!confirm(`Re-extract all picks for "${channelName}"? This will delete all existing picks and re-run extraction.`)) {
-      return;
-    }
-    this.api.reprocessChannel(handle).subscribe({
-      next: () => this.load(),
-      error: () => alert(`Failed to reprocess "${channelName}". Please try again.`),
-    });
+    this.openConfirm(
+      `Re-extract all picks for "${channelName}"? This will delete all existing picks and re-run extraction.`,
+      true,
+      () => this.api.reprocessChannel(handle).subscribe({
+        next: () => this.load(),
+        error: () => this.showToast(`Failed to reprocess "${channelName}". Please try again.`, 'error'),
+      }),
+    );
   }
 
   deleteChannel(channelId: string, channelName: string): void {
-    if (!confirm(`Remove "${channelName}" from TubeReturns? This cannot be undone from the UI.`)) {
-      return;
-    }
-    this.api.deleteChannel(channelId).subscribe({
-      next: () => this.load(),
-      error: () => {
-        this.load();
-        alert(`Failed to remove "${channelName}". Please try again.`);
+    this.openConfirm(
+      `Remove "${channelName}" from TubeReturns? This cannot be undone from the UI.`,
+      true,
+      () => this.api.deleteChannel(channelId).subscribe({
+        next: () => this.load(),
+        error: () => {
+          this.load();
+          this.showToast(`Failed to remove "${channelName}". Please try again.`, 'error');
+        },
+      }),
+    );
+  }
+
+  loadUnknownStocks(): void {
+    this.api.getUnknownStocks().subscribe({
+      next: (stocks) => {
+        const current = new Map(this.unknownStockRows().map((r) => [r.id, r]));
+        this.unknownStockRows.set(stocks.map((s) => {
+          const existing = current.get(s.id);
+          return {
+            ...s,
+            editTicker: existing ? existing.editTicker : s.tickerSymbol,
+            editCurrency: existing ? existing.editCurrency : (s.currency ?? ''),
+            saving: existing ? existing.saving : false,
+          };
+        }));
+      },
+      error: () => {},
+    });
+  }
+
+  updateStockRow(id: number, field: 'editTicker' | 'editCurrency', value: string): void {
+    this.unknownStockRows.update((rows) => rows.map((r) => r.id === id ? { ...r, [field]: value } : r));
+  }
+
+  stockHasChanges(row: UnknownStockRow): boolean {
+    return row.editTicker !== row.tickerSymbol || row.editCurrency !== (row.currency ?? '');
+  }
+
+  tryTicker(row: UnknownStockRow): void {
+    this.unknownStockRows.update((rows) => rows.map((r) => r.id === row.id ? { ...r, saving: true } : r));
+    this.api.tryTicker(row.id, row.editTicker, row.editCurrency).subscribe({
+      next: (resp) => {
+        this.showToast(resp.message, 'success');
+        this.loadUnknownStocks();
+      },
+      error: (err: unknown) => {
+        this.showToast(String(err), 'error');
+        this.unknownStockRows.update((rows) => rows.map((r) => r.id === row.id ? { ...r, saving: false } : r));
       },
     });
+  }
+
+  private showToast(message: string, type: 'success' | 'error'): void {
+    clearTimeout(this.toastTimer);
+    this.toast.set({ message, type });
+    this.toastTimer = setTimeout(() => this.toast.set(null), 6000);
+  }
+
+  private openConfirm(message: string, destructive: boolean, onConfirm: () => void): void {
+    this.confirmDialog.set({ message, destructive, onConfirm });
+  }
+
+  runConfirm(): void {
+    const dialog = this.confirmDialog();
+    this.confirmDialog.set(null);
+    dialog?.onConfirm();
+  }
+
+  acceptUnknown(row: UnknownStockRow): void {
+    const label = row.companyName ?? row.tickerSymbol;
+    this.openConfirm(
+      `Mark "${label}" as accepted unknown? It will be hidden from this list.`,
+      false,
+      () => {
+        this.unknownStockRows.update((rows) => rows.map((r) => r.id === row.id ? { ...r, saving: true } : r));
+        this.api.acceptUnknown(row.id).subscribe({
+          next: () => this.loadUnknownStocks(),
+          error: () => {
+            this.showToast(`Failed to accept "${label}". Please try again.`, 'error');
+            this.unknownStockRows.update((rows) => rows.map((r) => r.id === row.id ? { ...r, saving: false } : r));
+          },
+        });
+      },
+    );
   }
 
   visiblePicks(tickers: string[]): string[] {

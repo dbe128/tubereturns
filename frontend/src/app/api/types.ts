@@ -162,6 +162,16 @@ export const AuthResponseSchema = z.object({
 
 export type PipelineStepStatus = z.infer<typeof PipelineStepStatusSchema>;
 
+export const UnknownStockSchema = z.object({
+  id: z.number(),
+  tickerSymbol: z.string(),
+  companyName: z.string().nullable(),
+  currency: z.string().nullable(),
+  createdAt: z.string(),
+  pickCount: z.number(),
+});
+export type UnknownStock = z.infer<typeof UnknownStockSchema>;
+
 export const PendingNotificationSchema = z.object({
   channelName: z.string(),
   channelHandle: z.string(),

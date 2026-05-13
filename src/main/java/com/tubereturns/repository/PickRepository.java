@@ -1,7 +1,9 @@
 package com.tubereturns.repository;
 
 import com.tubereturns.model.Pick;
+import com.tubereturns.model.Stock;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -32,6 +34,14 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
 
     @Query("SELECT COUNT(p) FROM Pick p WHERE p.video.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
+
+    @Query("SELECT COUNT(p) FROM Pick p WHERE p.stock.id = :stockId")
+    long countByStockId(@Param("stockId") Long stockId);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE Pick p SET p.stock = :newStock WHERE p.stock = :oldStock")
+    int relinkPicks(@Param("oldStock") Stock oldStock, @Param("newStock") Stock newStock);
 
     @Query("SELECT DISTINCT p.stock.tickerSymbol FROM Pick p WHERE p.video.channel.id = :channelId AND p.signal = :signal AND p.video.excluded = false ORDER BY p.stock.tickerSymbol")
     List<String> findDistinctTickersByChannelIdAndSignal(@Param("channelId") Long channelId, @Param("signal") Pick.Signal signal);

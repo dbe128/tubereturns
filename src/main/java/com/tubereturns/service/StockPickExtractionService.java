@@ -160,7 +160,7 @@ public class StockPickExtractionService {
         try {
             LocalDate priceDate = video.getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
             CandidateResult best = null;
-            int maxRetries = 3;
+            int maxRetries = 5;
             int originalModelIndex = aiModelService.getCurrentModelIndex();
 
             try {
