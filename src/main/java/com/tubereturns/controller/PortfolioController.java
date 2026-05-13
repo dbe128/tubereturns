@@ -8,6 +8,7 @@ import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
+import com.tubereturns.service.ExchangeRateService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +34,7 @@ public class PortfolioController {
     private final PickRepository pickRepository;
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
+    private final ExchangeRateService exchangeRateService;
 
     @GetMapping
     public List<PortfolioDto> getPortfolios() {
@@ -124,7 +126,19 @@ public class PortfolioController {
                 NavigableMap<LocalDate, Double> priceMap = new TreeMap<>();
                 prices.forEach(p -> priceMap.put(p.getPriceDate(), p.getClosePrice()));
                 if (!priceMap.isEmpty()) {
-                    tickerPrices.put(ticker, priceMap);
+                    NavigableMap<LocalDate, Double> fxRates = exchangeRateService.getUsdRates(
+                            stock.getCurrency(), startDate.minusDays(7), LocalDate.now());
+                    if (!fxRates.isEmpty()) {
+                        NavigableMap<LocalDate, Double> usdPrices = new TreeMap<>();
+                        priceMap.forEach((date, price) -> {
+                            Map.Entry<LocalDate, Double> fxEntry = fxRates.floorEntry(date);
+                            double rate = fxEntry != null ? fxEntry.getValue() : 1.0;
+                            usdPrices.put(date, price * rate);
+                        });
+                        tickerPrices.put(ticker, usdPrices);
+                    } else {
+                        tickerPrices.put(ticker, priceMap);
+                    }
                 }
             });
         }

@@ -43,6 +43,7 @@ public class StockPickExtractionService {
     private final ObjectMapper objectMapper;
     private final AiModelService aiModelService;
     private final PipelineStatusRegistry registry;
+    private final ExchangeRateService exchangeRateService;
 
     private final ExecutorService extractionExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "extraction-worker");
@@ -199,8 +200,16 @@ public class StockPickExtractionService {
             try {
                 Pick.Signal signal = Pick.Signal.valueOf(pickDto.signal().toUpperCase());
 
+                boolean isNewStock = stockRepository.findByTickerSymbol(pickDto.tickerSymbol().toUpperCase()).isEmpty();
                 Stock stock = stockRepository.findByTickerSymbol(pickDto.tickerSymbol().toUpperCase())
-                        .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName())));
+                        .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName(), pickDto.currency())));
+                if (pickDto.currency() != null && stock.getCurrency() == null) {
+                    stock.setCurrency(pickDto.currency().toUpperCase());
+                    stockRepository.save(stock);
+                }
+                if (isNewStock && pickDto.currency() != null && !"USD".equalsIgnoreCase(pickDto.currency())) {
+                    exchangeRateService.ensureCurrencyHistoricalRates(pickDto.currency());
+                }
 
                 savedPicks.add(pickRepository.save(new Pick(video, stock, signal)));
 

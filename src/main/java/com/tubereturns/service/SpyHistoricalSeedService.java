@@ -30,7 +30,7 @@ public class SpyHistoricalSeedService {
     public void seedSpyHistory() {
         try {
             Stock spy = stockRepository.findByTickerSymbol(TICKER)
-                    .orElseGet(() -> stockRepository.save(new Stock(TICKER, "SPDR S&P 500 ETF")));
+                    .orElseGet(() -> stockRepository.save(new Stock(TICKER, "SPDR S&P 500 ETF", "USD")));
 
             LocalDate from = LocalDate.now().minusYears(20);
             LocalDate to = LocalDate.now();

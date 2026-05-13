@@ -41,6 +41,7 @@ public class PipelineSchedulerService {
     private final TranscriptDownloadService transcriptService;
     private final StockPickExtractionService extractionService;
     private final StockPriceRefreshService priceRefreshService;
+    private final ExchangeRateService exchangeRateService;
     private final PipelineStatusRegistry registry;
     private final VideoRepository videoRepository;
 
@@ -105,12 +106,20 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.price-refresh.cron}")
     public void runPriceRefresh() {
-        runStep("price-refresh", priceRefreshService::refreshAllPrices);
+        runStep("price-refresh", () -> {
+            int prices = priceRefreshService.refreshAllPrices();
+            exchangeRateService.refreshRecentRates();
+            return prices;
+        });
     }
 
     @Async
     public void triggerPriceRefresh() {
-        runStep("price-refresh", priceRefreshService::refreshAllPrices);
+        runStep("price-refresh", () -> {
+            int prices = priceRefreshService.refreshAllPrices();
+            exchangeRateService.refreshRecentRates();
+            return prices;
+        });
     }
 
     private void runStep(String step, IntSupplier task) {

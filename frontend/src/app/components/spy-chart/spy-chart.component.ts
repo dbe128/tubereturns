@@ -93,7 +93,7 @@ interface SeriesData {
               <button (click)="refresh.emit()" title="Refresh"
                 class="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors text-base leading-none">↺</button>
             </div>
-            <p class="text-xs text-gray-400 mt-0.5">Equal-weighted % return since first pick vs S&amp;P 500</p>
+            <p class="text-xs text-gray-400 mt-0.5">Equal-weighted % return in USD since first pick vs S&amp;P 500</p>
           } @else {
             <div class="flex items-baseline gap-3">
               <h2 class="text-base font-semibold text-gray-800">S&amp;P 500 (SPY)</h2>

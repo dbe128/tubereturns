@@ -6,5 +6,7 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="db/changelog/001-initial-schema.sql"/>
+    <include file="db/changelog/002-stock-currency-and-ticker-length.sql"/>
+    <include file="db/changelog/003-exchange-rates.sql"/>
 
 </databaseChangeLog>

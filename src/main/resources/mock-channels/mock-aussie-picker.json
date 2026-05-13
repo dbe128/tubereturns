@@ -12,7 +12,8 @@
           "ticker": "AFLL.AX",
           "companyName": "Airlie Australian Share Fund",
           "signal": "BUY",
-          "unknown": true
+          "unknown": true,
+          "currency": "AUD"
         }
       ]
     }

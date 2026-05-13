@@ -63,7 +63,7 @@ TubeReturns ranks finance YouTubers by their historical stock pick performance. 
 - **Java 25 + Spring Boot 4** (Kotlin DSL Gradle: `build.gradle.kts`)
 - **Lombok** — `@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)` on JPA entities; `@Slf4j @RequiredArgsConstructor` on services/controllers; always `log.xxx` not `logger.xxx`
 - **Spring Data JPA + PostgreSQL** (prod) / **H2 in-memory** (dev)
-- **Liquibase** — all schema changes as new numbered SQL files in `src/main/resources/db/changelog/`; never mutate applied migrations
+- **Liquibase** — all schema changes as new numbered SQL files in `src/main/resources/db/changelog/`; add an `<include>` entry in `db.changelog-master.xml`; **never edit or delete existing migration files or changesets**
 - **OpenAPI** via springdoc — annotate all new endpoints with `@Operation`
 - **`@Value` fields** for config injection (not constructor-injected via Lombok)
 
@@ -94,7 +94,7 @@ YouTubeDiscoveryService → TranscriptDownloadService → StockPickExtractionSer
 - Uses H2 in-memory DB (no PostgreSQL needed)
 - Mock channels loaded from `classpath:mock-channels/*.json` via `MockChannelDataSeedService` — these are seeded with `discoveryComplete = true` and all videos as `COMPLETED`
 - `tubereturns.transcript.ytbsd-path = scripts/ytbsd.py` (local path)
-- AI is still enabled in dev; set `tubereturns.ai.enabled=false` to disable
+- AI is always enabled; no flag to disable it
 
 ### Prod channel seed
 `src/main/resources/channels-config.yml` lists channels with `handle`, `channelName`, and `enabled`. `ChannelInitializationService` seeds them on startup.
@@ -108,7 +108,17 @@ YouTubeDiscoveryService → TranscriptDownloadService → StockPickExtractionSer
 - Pages use `signal<T>()` and `forkJoin` for parallel data loading; no RxJS subjects except `searchSubject` in leaderboard
 
 ### Adding a database migration
-Create `src/main/resources/db/changelog/NNN-description.sql` and add an `<include>` entry in `db.changelog-master.xml`. Use standard PostgreSQL DDL; Liquibase runs it on startup.
+Create a new file `src/main/resources/db/changelog/NNN-description.sql` and add an `<include>` entry in `db.changelog-master.xml`. Use standard PostgreSQL DDL; Liquibase runs it on startup. **Never modify or delete existing migration files or changesets** — they may already be applied to production.
+
+### Multi-currency returns (USD-denominated)
+Stock prices are stored in their local currency (the `currency` column on `Stock`). Portfolio returns are shown in USD by converting each price point via historical exchange rates.
+
+- `currencies` table: one row per currency code (EUR, GBP, HUF, etc.)
+- `exchange_rates` table: daily `rate_to_usd` for each currency (e.g., for EUR: `EURUSD=X` from Yahoo Finance)
+- `ExchangeRateService`: seeds popular currencies with 10 yr of history on first startup (if `currencies` table is empty); refreshed alongside stock prices on the price-refresh cron
+- When a new non-USD currency appears during extraction, `ExchangeRateService.ensureCurrencyHistoricalRates(code)` is called to fetch historical rates immediately
+- `PortfolioController.buildPortfolioPrices` applies the floor-entry FX rate to each local-currency price before computing % returns; USD stocks (null or "USD" currency) are unaffected (rate = 1.0)
+- Yahoo Finance FX ticker format: `<CODE>USD=X` (e.g., `EURUSD=X`, `GBPUSD=X`)
 
 ### Notification flow
 `ChannelProcessingNotification` rows are created when a user subscribes (via `POST /api/channels/{handle}/notify`). `ChannelNotificationService` checks every 120 s: if `channel.discoveryComplete` is true and no videos have PENDING/DOWNLOADING transcript or PENDING/PROCESSING extraction status, it sends the email and marks the row with `sentAt`.

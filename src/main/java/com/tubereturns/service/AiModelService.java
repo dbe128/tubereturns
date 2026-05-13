@@ -33,7 +33,7 @@ public class AiModelService {
         Video title: %s
 
         Look for:
-        1. Stock ticker symbols (e.g., AAPL, TSLA, MSFT)
+        1. Stock ticker symbols
         2. Company names being discussed as investments
         3. Explicit BUY or SELL recommendations made by the video creator
         4. Implicit signals based on the creator's own analysis or opinion — see signal rules below
@@ -46,6 +46,7 @@ public class AiModelService {
             {
               "tickerSymbol": "TICKER",
               "companyName": "Company Name",
+              "currency": "USD",
               "signal": "BUY"
             }
           ]
@@ -54,7 +55,18 @@ public class AiModelService {
         Rules:
         - You MUST include EVERY investment recommendation mentioned in the transcript — do not skip or summarise any
         - signal must be either "BUY" or "SELL"
-        - tickerSymbol must be a valid stock ticker
+        - tickerSymbol must be in Yahoo Finance format:
+          - US stocks (NYSE, NASDAQ, etc.): no suffix — e.g. AAPL, TSLA, FL
+          - German stocks (XETRA): append .DE — e.g. VOW3.DE, SAP.DE
+          - UK stocks (LSE): append .L — e.g. BARC.L, SHEL.L
+          - Australian stocks (ASX): append .AX — e.g. CBA.AX, BHP.AX
+          - French stocks (Euronext Paris): append .PA — e.g. AIR.PA, MC.PA
+          - Dutch stocks (Euronext Amsterdam): append .AS — e.g. ASML.AS, PHIA.AS
+          - Canadian stocks (TSX): append .TO — e.g. RY.TO, TD.TO
+          - Japanese stocks (TSE): append .T — e.g. 7203.T, 6758.T
+          - Swiss stocks (SIX): append .SW — e.g. NESN.SW, NOVN.SW
+          - Hong Kong stocks (HKEX): append .HK — e.g. 0700.HK, 9988.HK
+        - currency must be a 3-letter ISO currency code matching the stock's primary exchange — e.g. USD, EUR, GBP, AUD, CAD, JPY, CHF, HKD
         - If no picks are found, return an empty extractions array
         - Set externalPositions to true if the transcript only presents positions or trades made by someone else (another person, an AI agent, a portfolio manager, etc.) rather than the video creator's own picks — the creator is merely reporting or reviewing them, not recommending them personally
         - Implicit BUY signals: the creator expresses that a stock is undervalued, attractively priced, a good investment, a compelling opportunity, has strong upside, or otherwise indicates bullish conviction based on their own analysis — treat this as BUY

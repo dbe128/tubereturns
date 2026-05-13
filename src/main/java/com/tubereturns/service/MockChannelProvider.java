@@ -66,6 +66,7 @@ public class MockChannelProvider {
         String ticker,
         String companyName,
         String signal,
-        boolean unknown
+        boolean unknown,
+        String currency
     ) {}
 }

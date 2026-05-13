@@ -50,7 +50,7 @@ public class MockChannelPriceSeedService {
     private void seedTicker(String ticker, String companyName, LocalDate from) {
         try {
             Stock stock = stockRepository.findByTickerSymbol(ticker)
-                .orElseGet(() -> stockRepository.save(new Stock(ticker, companyName)));
+                .orElseGet(() -> stockRepository.save(new Stock(ticker, companyName, null)));
 
             Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(ticker, from.minusDays(7), LocalDate.now());
 

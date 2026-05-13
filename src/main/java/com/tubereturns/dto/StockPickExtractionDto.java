@@ -14,8 +14,9 @@ public record StockPickExtractionDto(
 ) {
 
     public record PickExtractionDto(
-        @NotBlank @Size(max = 10) String tickerSymbol,
+        @NotBlank @Size(max = 20) String tickerSymbol,
         @Size(max = 500) String companyName,
+        @Size(max = 3) String currency,
         @NotBlank String signal
     ) {}
 }

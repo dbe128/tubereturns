@@ -22,7 +22,7 @@ public class Stock {
     private Long id;
 
     @NotBlank
-    @Size(max = 10)
+    @Size(max = 20)
     @Column(name = "ticker_symbol", unique = true, nullable = false)
     private String tickerSymbol;
 
@@ -30,15 +30,20 @@ public class Stock {
     @Column(name = "company_name")
     private String companyName;
 
+    @Size(max = 3)
+    @Column(name = "currency", length = 3)
+    private String currency;
+
     @Column(name = "is_unknown", nullable = false)
     private boolean unknown = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    public Stock(String tickerSymbol, String companyName) {
+    public Stock(String tickerSymbol, String companyName, String currency) {
         this.tickerSymbol = tickerSymbol.toUpperCase();
         this.companyName = companyName;
+        this.currency = currency != null ? currency.toUpperCase() : null;
     }
 
     @PrePersist
