@@ -324,6 +324,6 @@ public class AdminController {
     }
 
     private AiModelStatusDto toAiModelStatusDto(AiModelService.AiModelStatus s) {
-        return new AiModelStatusDto(s.currentIndex(), s.currentModel(), s.model0ResetAt() != null ? s.model0ResetAt().toString() : null);
+        return new AiModelStatusDto(s.currentIndex(), s.currentModel(), s.model0ResetAt() != null ? s.model0ResetAt().toString() : null, s.lastCallDurationMs());
     }
 }

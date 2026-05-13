@@ -3,5 +3,6 @@ package com.tubereturns.dto;
 public record AiModelStatusDto(
         int currentIndex,
         String currentModel,
-        String model0ResetAt
+        String model0ResetAt,
+        Long lastCallDurationMs
 ) {}

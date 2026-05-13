@@ -100,6 +100,7 @@ public class AiModelService {
     private List<String> models;
     private final AtomicInteger currentModelIndex = new AtomicInteger(0);
     private volatile Instant lastModel0AttemptAt = null;
+    private volatile Long lastCallDurationMs = null;
 
     private RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -134,7 +135,7 @@ public class AiModelService {
 
     public record ExtractionResult(String content, String model) {}
 
-    public record AiModelStatus(int currentIndex, String currentModel, Instant model0ResetAt) {}
+    public record AiModelStatus(int currentIndex, String currentModel, Instant model0ResetAt, Long lastCallDurationMs) {}
 
     public AiModelStatus getStatus() {
         int idx = currentModelIndex.get();
@@ -142,7 +143,7 @@ public class AiModelService {
         Instant resetAt = lastModel0AttemptAt != null && idx > 0
                 ? lastModel0AttemptAt.plusSeconds(modelResetMinutes * 60L)
                 : null;
-        return new AiModelStatus(idx, model, resetAt);
+        return new AiModelStatus(idx, model, resetAt, lastCallDurationMs);
     }
 
     public ExtractionResult extractStockPicks(String videoId, String videoTitle, String transcriptText) {
@@ -237,6 +238,7 @@ public class AiModelService {
         while (true) {
             String response = null;
             try {
+                Instant callStart = Instant.now();
                 response = restClient.post()
                     .uri("https://openrouter.ai/api/v1/chat/completions")
                     .header("Authorization", "Bearer " + apiKey)
@@ -244,10 +246,11 @@ public class AiModelService {
                     .body(body)
                     .retrieve()
                     .body(String.class);
+                lastCallDurationMs = Duration.between(callStart, Instant.now()).toMillis();
 
                 JsonNode root = objectMapper.readTree(response);
                 String actualModel = root.path("model").asText(model);
-                log.info("OpenRouter used model: {}", actualModel);
+                log.info("OpenRouter used model: {} — call took {}ms", actualModel, lastCallDurationMs);
                 String text = root.path("choices").get(0).path("message").path("content").asText();
                 return new ExtractionResult(stripJsonFences(text), actualModel);
 

@@ -428,6 +428,12 @@ interface UnknownStockRow extends UnknownStock {
                       </dd>
                     }
                   </div>
+                  @if (step.aiModelStatus) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">Last OpenRouter call</dt>
+                    <dd class="text-gray-700 font-mono">{{ step.aiModelStatus.lastCallDurationMs != null ? aiCallDuration(step.aiModelStatus.lastCallDurationMs) : '—' }}</dd>
+                  </div>
+                  }
                   <div class="flex justify-between">
                     <dt class="text-gray-400">Last run duration</dt>
                     <dd class="text-gray-700 font-mono">{{ stepDuration(step) ?? '—' }}</dd>
@@ -901,6 +907,13 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
       return null;
     }
     const totalSeconds = Math.round(step.lastRunDurationMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  }
+
+  aiCallDuration(ms: number): string {
+    const totalSeconds = Math.round(ms / 1000);
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;

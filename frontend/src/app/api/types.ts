@@ -103,6 +103,7 @@ export const AiModelStatusSchema = z.object({
   currentIndex: z.number(),
   currentModel: z.string(),
   model0ResetAt: z.string().nullable(),
+  lastCallDurationMs: z.number().nullable(),
 });
 
 export type AiModelStatus = z.infer<typeof AiModelStatusSchema>;
