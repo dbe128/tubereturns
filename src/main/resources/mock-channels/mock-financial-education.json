@@ -1,0 +1,340 @@
+{
+  "handle": "mock-financial-education",
+  "channelName": "Mock Financial Education",
+  "description": "Mock channel with financial education content and stock picks from 2016.",
+  "videos": [
+    {
+      "videoId": "mock-feducation-2692",
+      "title": "Is Netflix Stock a Buy? - Episode 1 - Is it a Buy!",
+      "publishedAt": "2016-10-05T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "NFLX",
+          "companyName": "Netflix, Inc.",
+          "signal": "SELL",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2695",
+      "title": "3 Stocks im buying Now! October 2016",
+      "publishedAt": "2016-10-01T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "GPRO",
+          "companyName": "GoPro Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "WYNN",
+          "companyName": "Wynn Resorts, Limited",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2696",
+      "title": "My Biggest Investing Mistakes Revealed!",
+      "publishedAt": "2016-09-30T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "META",
+          "companyName": "Meta Platforms, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "MNST",
+          "companyName": "Monster Beverage Corp",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2703",
+      "title": "Balance Sheet Tutorial! - Reading a Balance Sheet!",
+      "publishedAt": "2016-09-20T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2704",
+      "title": "Income Statement Tutorial! - Reading an Income Statement!",
+      "publishedAt": "2016-09-19T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2705",
+      "title": "Why every Investor should Know what are Call Options and Put Options!",
+      "publishedAt": "2016-09-19T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "GPRO",
+          "companyName": "GoPro Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2710",
+      "title": "Why Im Buying Apple Stock! - Iphone 7!",
+      "publishedAt": "2016-09-08T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2715",
+      "title": "3 Stocks im buying Now! September 2016",
+      "publishedAt": "2016-09-01T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "GPRO",
+          "companyName": "GoPro Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "RH",
+          "companyName": "Restoration Hardware",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "WYNN",
+          "companyName": "Wynn Resorts, Limited",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2732",
+      "title": "3 Stock im buying NOW! August 2016",
+      "publishedAt": "2016-08-04T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "GRPN",
+          "companyName": "GoPro",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "RH",
+          "companyName": "Restoration Hardware",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "WYNN",
+          "companyName": "Wynn Resorts, Limited",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2756",
+      "title": "What are options",
+      "publishedAt": "2016-05-23T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2766",
+      "title": "Amazon TAKE OVER of retail",
+      "publishedAt": "2016-05-02T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMZN",
+          "companyName": "Amazon.com, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2772",
+      "title": "How to start buying stocks",
+      "publishedAt": "2016-04-20T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "CMG",
+          "companyName": "Chipotle Mexican Grill",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "KO",
+          "companyName": "Coca-Cola Company",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2777",
+      "title": "Key to Investing! | How to Invest in Stocks!",
+      "publishedAt": "2016-04-12T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "MNST",
+          "companyName": "Monster Beverage Corp",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2778",
+      "title": "Should you go to College",
+      "publishedAt": "2016-04-09T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "META",
+          "companyName": "Meta Platforms, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2781",
+      "title": "Is Walmart next Kmart?",
+      "publishedAt": "2016-04-06T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "WMT",
+          "companyName": "Walmart",
+          "signal": "SELL",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2784",
+      "title": "First Trillion Dollar company",
+      "publishedAt": "2016-04-02T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "META",
+          "companyName": "Meta Platforms, Inc.",
+          "signal": "SELL",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2785",
+      "title": "Tesla take over of Auto Industry",
+      "publishedAt": "2016-04-01T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "TSLA",
+          "companyName": "Tesla",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2786",
+      "title": "Stock market going to all time high?",
+      "publishedAt": "2016-03-31T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2787",
+      "title": "Who is next Steve Jobs",
+      "publishedAt": "2016-03-30T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "GPRO",
+          "companyName": "GoPro Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2788",
+      "title": "Next billion dollar company bankruptcy",
+      "publishedAt": "2016-03-29T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "IBM",
+          "companyName": "International Business Machines Corporation",
+          "signal": "SELL",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-feducation-2791",
+      "title": "Apple stock down 30% this year",
+      "publishedAt": "2016-03-21T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AAPL",
+          "companyName": "Apple Inc.",
+          "signal": "SELL",
+          "currency": "USD"
+        }
+      ]
+    }
+  ]
+}
