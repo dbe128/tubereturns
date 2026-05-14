@@ -131,7 +131,7 @@ interface IndexedVideo {
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4 mb-4">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
-            @if (filterTranscript() || filterProcessing() || filterPick()) {
+            @if (filterTranscript() || filterProcessing() || filterPick() || !hideNoPicks()) {
               <button
                 (click)="clearFilters()"
                 class="text-xs text-primary-600 hover:text-primary-800 font-medium"
@@ -184,6 +184,18 @@ interface IndexedVideo {
                   <option [value]="ticker">{{ ticker }}</option>
                 }
               </select>
+            </div>
+
+            <div class="flex items-end pb-1">
+              <label class="flex items-center gap-2 text-sm text-gray-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  [ngModel]="hideNoPicks()"
+                  (ngModelChange)="hideNoPicks.set($event)"
+                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
+                />
+                Hide processed without picks
+              </label>
             </div>
 
             <div class="flex items-end pb-1">
@@ -457,6 +469,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly filterProcessing = signal<VideoSummary['processingStatus'] | ''>('');
   readonly filterPick = signal('');
   readonly showExcluded = signal(false);
+  readonly hideNoPicks = signal(true);
 
   readonly transcriptPopup = signal<string | null>(null);
   readonly transcriptPopupPos = signal({ top: 0, left: 0, width: 520, maxHeight: 600 });
@@ -473,6 +486,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly filtered = computed(() =>
     this.videos().filter((v) => {
       if (!this.showExcluded() && v.excluded) return false;
+      if (this.hideNoPicks() && v.processingStatus === 'COMPLETED' && v.buyPicks.length === 0 && v.sellPicks.length === 0) return false;
       if (this.filterTranscript() && v.transcriptStatus !== this.filterTranscript()) return false;
       if (this.filterProcessing() && v.processingStatus !== this.filterProcessing()) return false;
       if (this.filterPick() && !v.buyPicks.includes(this.filterPick()) && !v.sellPicks.includes(this.filterPick())) return false;
@@ -564,6 +578,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.filterProcessing.set('');
     this.filterPick.set('');
     this.showExcluded.set(false);
+    this.hideNoPicks.set(true);
   }
 
   handleToggleExclusion(video: VideoSummary): void {
