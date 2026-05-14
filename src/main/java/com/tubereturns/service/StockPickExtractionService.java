@@ -361,8 +361,17 @@ public class StockPickExtractionService {
 
     private void fetchAndSaveStockPrice(Stock stock, LocalDate priceDate) {
         try {
-            Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
-                    stock.getTickerSymbol(), priceDate.minusDays(7), LocalDate.now());
+            Map<LocalDate, Double> prices;
+            try {
+                prices = StockPriceService.fetchHistoricalClosePrices(
+                        stock.getTickerSymbol(), priceDate.minusDays(7), LocalDate.now());
+            } catch (Exception e) {
+                if (!stock.getTickerSymbol().contains(".")) {
+                    throw e;
+                }
+                log.info("Fetch threw exception for {} ({}) — will retry with dash: {}", stock.getTickerSymbol(), stock.getCompanyName(), e.getMessage());
+                prices = Map.of();
+            }
             if (prices.isEmpty() && stock.getTickerSymbol().contains(".")) {
                 String alt = stock.getTickerSymbol().replace(".", "-");
                 log.info("No prices for {} ({}) — retrying with {}", stock.getTickerSymbol(), stock.getCompanyName(), alt);
