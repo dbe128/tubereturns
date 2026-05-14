@@ -63,7 +63,7 @@ TubeReturns ranks finance YouTubers by their historical stock pick performance. 
 - **Java 25 + Spring Boot 4** (Kotlin DSL Gradle: `build.gradle.kts`)
 - **Lombok** — `@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)` on JPA entities; `@Slf4j @RequiredArgsConstructor` on services/controllers; always `log.xxx` not `logger.xxx`
 - **Spring Data JPA + PostgreSQL** (prod) / **H2 in-memory** (dev)
-- **Liquibase** — all schema changes as new numbered SQL files in `src/main/resources/db/changelog/`; add an `<include>` entry in `db.changelog-master.xml`; **never edit or delete existing migration files or changesets**
+- **Liquibase** — all schema changes as new numbered SQL files in `src/main/resources/db/changelog/`; add an `<include>` entry in `db.changelog-master.xml`; **never edit or delete existing migration files or changesets** — exception: migration files that have not yet been committed to git may be freely modified, as they have not been applied to any environment
 - **OpenAPI** via springdoc — annotate all new endpoints with `@Operation`
 - **`@Value` fields** for config injection (not constructor-injected via Lombok)
 

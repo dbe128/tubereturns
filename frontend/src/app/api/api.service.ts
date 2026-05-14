@@ -13,6 +13,8 @@ import {
   PortfolioSchema,
   PipelineStepStatusSchema,
   ChannelSearchResultSchema,
+  ChannelSuggestionSchema,
+  MyChannelSuggestionSchema,
   RegisterResponseSchema,
   AuthResponseSchema,
   MessageResponseSchema,
@@ -20,7 +22,7 @@ import {
   TickerDataSchema,
   UnknownStockSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -204,6 +206,52 @@ export class ApiService {
       params = params.set('subscriberCount', subscriberCount);
     }
     return this.http.post<unknown>(`/api/channels/${handle}/add`, null, { params }).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  suggestChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean): Observable<MessageResponse> {
+    let params = new HttpParams()
+      .set('handle', handle)
+      .set('channelName', channelName)
+      .set('channelUrl', channelUrl)
+      .set('thumbnailUrl', thumbnailUrl)
+      .set('description', description)
+      .set('notifyOnComplete', notifyOnComplete);
+    if (subscriberCount != null) {
+      params = params.set('subscriberCount', subscriberCount);
+    }
+    return this.validated(MessageResponseSchema, this.http.post<unknown>('/api/channel-suggestions', null, { params }).pipe(catchError((e) => this.handleError(e))));
+  }
+
+  getPendingChannelSuggestions(): Observable<ChannelSuggestion[]> {
+    return this.validated(
+      z.array(ChannelSuggestionSchema),
+      this.http.get<unknown>('/api/admin/channel-suggestions').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getMyChannelSuggestions(): Observable<MyChannelSuggestion[]> {
+    return this.validated(
+      z.array(MyChannelSuggestionSchema),
+      this.http.get<unknown>('/api/channel-suggestions/my').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  setChannelSuggestionNotify(handle: string, enabled: boolean): Observable<unknown> {
+    return this.http.patch<unknown>(`/api/channel-suggestions/${handle}/notify`, null, {
+      params: new HttpParams().set('enabled', enabled),
+    }).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  deleteMyChannelSuggestion(handle: string): Observable<unknown> {
+    return this.http.delete<unknown>(`/api/channel-suggestions/${handle}`).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  addChannelSuggestion(handle: string): Observable<unknown> {
+    return this.http.post<unknown>(`/api/admin/channel-suggestions/${handle}/add`, null).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  rejectChannelSuggestion(handle: string): Observable<unknown> {
+    return this.http.post<unknown>(`/api/admin/channel-suggestions/${handle}/reject`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
   searchChannels(q: string, filterByKeywords: boolean): Observable<ChannelSearchResult[]> {

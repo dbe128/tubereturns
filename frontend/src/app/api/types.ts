@@ -174,6 +174,30 @@ export const UnknownStockSchema = z.object({
 });
 export type UnknownStock = z.infer<typeof UnknownStockSchema>;
 
+export const ChannelSuggestionSchema = z.object({
+  handle: z.string(),
+  channelName: z.string(),
+  channelUrl: z.string().nullable(),
+  description: z.string().nullable(),
+  subscriberCount: z.number().nullable(),
+  suggestionCount: z.number(),
+  firstSuggestedAt: z.string(),
+  status: z.string(),
+});
+export type ChannelSuggestion = z.infer<typeof ChannelSuggestionSchema>;
+
+export const MyChannelSuggestionSchema = z.object({
+  handle: z.string(),
+  channelName: z.string(),
+  channelUrl: z.string().nullable(),
+  description: z.string().nullable(),
+  subscriberCount: z.number().nullable(),
+  notifyOnComplete: z.boolean(),
+  subscribedAt: z.string(),
+  status: z.string(),
+});
+export type MyChannelSuggestion = z.infer<typeof MyChannelSuggestionSchema>;
+
 export const PendingNotificationSchema = z.object({
   channelName: z.string(),
   channelHandle: z.string(),

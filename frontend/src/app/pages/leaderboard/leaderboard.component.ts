@@ -8,7 +8,7 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
-import type { Channel, ChannelSearchResult, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
+import type { Channel, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
 
 interface ChannelRow extends Channel {
   stats: { totalVideos: number; processedVideos: number; return1y: number | null; return3y: number | null; return5y: number | null } | null;
@@ -49,6 +49,26 @@ interface UnknownStockRow extends UnknownStock {
         </div>
       </div>
     }
+    @if (showAuthModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" (click)="showAuthModal.set(false)">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 relative" (click)="$event.stopPropagation()">
+          <button (click)="showAuthModal.set(false)"
+                  class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+          <h2 class="text-base font-semibold text-gray-800 mb-2">Sign up to suggest channels</h2>
+          <p class="text-sm text-gray-500 mb-6">TubeReturns is free to join. Create an account to suggest channels for analysis.</p>
+          <div class="flex flex-col gap-3">
+            <a routerLink="/register" (click)="setReturnToSuggest()"
+               class="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold text-center hover:bg-gray-700 transition-colors">
+              Create free account
+            </a>
+            <a routerLink="/login" (click)="setReturnToSuggest()"
+               class="w-full py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold text-center hover:bg-gray-50 transition-colors">
+              Sign in
+            </a>
+          </div>
+        </div>
+      </div>
+    }
     <div class="max-w-screen-2xl mx-auto px-6 py-10">
       <div class="mb-8">
         <p class="text-gray-500 text-sm">Finance YouTubers ranked by historical stock pick performance</p>
@@ -67,20 +87,27 @@ interface UnknownStockRow extends UnknownStock {
       }
 
       @if (!loading() && !error()) {
-        @if (auth.isAuthenticated && !showAddForm()) {
+        @if (!showAddForm() && !showSuggestForm()) {
           <div class="mb-4 flex justify-end">
-            <button
-              (click)="openAddForm()"
-              class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
-            >+ Add Channel</button>
+            @if (auth.isAdmin) {
+              <button
+                (click)="openAddForm()"
+                class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+              >+ Add Channel</button>
+            } @else {
+              <button
+                (click)="openSuggestOrAuth()"
+                class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
+              >Suggest a channel</button>
+            }
           </div>
         }
 
-        @if (auth.isAuthenticated && showAddForm()) {
+        @if ((auth.isAdmin && showAddForm()) || (auth.isAuthenticated && !auth.isAdmin && showSuggestForm())) {
           <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 w-full mb-4">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="text-sm font-semibold text-gray-700">Add stock picking channel</h3>
-              <button (click)="cancelAddChannel()" class="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">&times;</button>
+              <h3 class="text-sm font-semibold text-gray-700">{{ auth.isAdmin ? 'Add stock picking channel' : 'Suggest a stock picking channel' }}</h3>
+              <button (click)="handleCancelForm()" class="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">&times;</button>
             </div>
             <input
               [(ngModel)]="searchQuery"
@@ -108,7 +135,7 @@ interface UnknownStockRow extends UnknownStock {
                 @for (result of searchResults(); track result.handle) {
                   <li>
                     <button
-                      (click)="selectChannel(result)"
+                      (click)="handleChannelSelect(result)"
                       [disabled]="addingChannelId() !== null"
                       class="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
                     >
@@ -131,7 +158,7 @@ interface UnknownStockRow extends UnknownStock {
                       @if (addingChannelId() === result.handle) {
                         <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent flex-shrink-0"></div>
                       } @else {
-                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
+                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">{{ auth.isAdmin ? 'Add' : 'Suggest' }}</span>
                       }
                     </button>
                   </li>
@@ -302,6 +329,93 @@ interface UnknownStockRow extends UnknownStock {
 
       @if (!error()) {
         <app-spy-chart (refresh)="load()" [leaderboardTimeframe]="timeframe()" />
+
+        @if (auth.isAuthenticated && !auth.isAdmin && myChannelSuggestions().length > 0) {
+          <div class="mt-10">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">My Channel Suggestions</h2>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-50 text-gray-400 uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Channel</th>
+                    <th class="px-4 py-2 text-left font-medium">Status</th>
+                    <th class="px-4 py-2 text-left font-medium">Suggested</th>
+                    <th class="px-4 py-2 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (s of myChannelSuggestions(); track s.handle) {
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-4 py-2">
+                        <div class="flex items-center gap-2">
+                          <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
+                               [alt]="s.channelName"
+                               (error)="$any($event.target).style.display='none'"
+                               class="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
+                          <div>
+                            <p class="font-semibold text-gray-800">{{ s.channelName }}</p>
+                            <p class="text-gray-400">&#64;{{ s.handle }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-2">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                              [class]="s.status === 'PENDING' ? 'bg-amber-100 text-amber-700' : s.status === 'ADDED' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
+                          {{ s.status === 'PENDING' ? 'Pending' : s.status === 'ADDED' ? 'Added' : 'Rejected' }}
+                        </span>
+                      </td>
+                      <td class="px-4 py-2 font-mono text-gray-500">{{ s.subscribedAt | date:'dd MMM yyyy' }}</td>
+                      <td class="px-4 py-2">
+                        <div class="flex items-center gap-2">
+                          @if (s.status === 'PENDING') {
+                          @if (togglingNotifyFor() === s.handle) {
+                            <div class="animate-spin rounded-full h-5 w-5 border-2 border-amber-400 border-t-transparent"></div>
+                          } @else if (s.notifyOnComplete) {
+                            <button
+                              (click)="toggleSuggestionNotify(s)"
+                              class="relative group/tip text-amber-400 hover:text-amber-500 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                              </svg>
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                                Unsubscribe from notification
+                              </span>
+                            </button>
+                          } @else {
+                            <button
+                              (click)="toggleSuggestionNotify(s)"
+                              class="relative group/tip text-gray-300 hover:text-amber-400 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                              </svg>
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                                Notify me when added
+                              </span>
+                            </button>
+                          }
+                          <button
+                            (click)="deleteMyChannelSuggestion(s)"
+                            class="relative group/tip text-gray-300 hover:text-danger-500 transition-colors"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                              Remove suggestion
+                            </span>
+                          </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
 
         @if (auth.isAdmin) {
         <div class="mt-10">
@@ -541,6 +655,62 @@ interface UnknownStockRow extends UnknownStock {
           }
         </div>
 
+        <div class="mt-8">
+          <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Channel Suggestions</h2>
+          @if (pendingChannelSuggestions().length === 0) {
+            <p class="text-xs text-gray-400">No pending channel suggestions.</p>
+          } @else {
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-50 text-gray-400 uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Channel</th>
+                    <th class="px-4 py-2 text-right font-medium">Subscribers</th>
+                    <th class="px-4 py-2 text-right font-medium">Suggestions</th>
+                    <th class="px-4 py-2 text-left font-medium">First suggested</th>
+                    <th class="px-4 py-2 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                  @for (s of pendingChannelSuggestions(); track s.handle) {
+                    <tr class="hover:bg-gray-50">
+                      <td class="px-4 py-2">
+                        <div class="flex items-center gap-2">
+                          <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
+                               [alt]="s.channelName"
+                               (error)="$any($event.target).style.display='none'"
+                               class="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
+                          <div>
+                            <p class="font-semibold text-gray-800">{{ s.channelName }}</p>
+                            <p class="text-gray-400">&#64;{{ s.handle }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-2 text-right font-mono text-gray-700">
+                        {{ s.subscriberCount != null ? formatSubscriberCount(s.subscriberCount) : '—' }}
+                      </td>
+                      <td class="px-4 py-2 text-right font-mono text-gray-700">{{ s.suggestionCount }}</td>
+                      <td class="px-4 py-2 font-mono text-gray-500">{{ s.firstSuggestedAt | date:'dd MMM yyyy' }}</td>
+                      <td class="px-4 py-2">
+                        <div class="flex gap-2">
+                          <button
+                            (click)="approveSuggestion(s)"
+                            class="px-2 py-1 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 transition-colors"
+                          >Add</button>
+                          <button
+                            (click)="rejectSuggestion(s)"
+                            class="px-2 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition-colors"
+                          >Reject</button>
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
 }
       }
     </div>
@@ -586,6 +756,11 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly myNotifiedHandles = signal<Set<string>>(new Set());
   readonly togglingNotificationFor = signal<string | null>(null);
   readonly showAddForm = signal(false);
+  readonly showSuggestForm = signal(false);
+  readonly showAuthModal = signal(false);
+  readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
+  readonly myChannelSuggestions = signal<MyChannelSuggestion[]>([]);
+  readonly togglingNotifyFor = signal<string | null>(null);
   @ViewChild('searchInput') private searchInputRef?: ElementRef<HTMLInputElement>;
   readonly searchResults = signal<ChannelSearchResult[]>([]);
   readonly searching = signal(false);
@@ -605,11 +780,24 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     if (this.auth.isAuthenticated) {
       this.loadMyNotifications();
     }
+    if (this.auth.isAuthenticated && !this.auth.isAdmin) {
+      this.loadMyChannelSuggestions();
+    }
+    if (this.auth.isAuthenticated && !this.auth.isAdmin && localStorage.getItem('pendingAction') === 'suggest') {
+      localStorage.removeItem('pendingAction');
+      setTimeout(() => this.openSuggestForm(), 0);
+    }
     if (this.auth.isAdmin) {
       this.loadPipelineStatus();
       this.loadPendingNotifications();
       this.loadUnknownStocks();
-      this.statusPollSub = interval(15000).subscribe(() => { this.loadPipelineStatus(); this.loadPendingNotifications(); this.loadUnknownStocks(); });
+      this.loadPendingChannelSuggestions();
+      this.statusPollSub = interval(15000).subscribe(() => {
+        this.loadPipelineStatus();
+        this.loadPendingNotifications();
+        this.loadUnknownStocks();
+        this.loadPendingChannelSuggestions();
+      });
     }
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
@@ -802,6 +990,120 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     this.searchResults.set([]);
     this.searching.set(false);
     this.addError.set(null);
+  }
+
+  openSuggestForm(): void {
+    this.showSuggestForm.set(true);
+    setTimeout(() => this.searchInputRef?.nativeElement.focus(), 0);
+  }
+
+  cancelSuggestForm(): void {
+    this.showSuggestForm.set(false);
+    this.searchQuery = '';
+    this.searchResults.set([]);
+    this.searching.set(false);
+    this.addError.set(null);
+  }
+
+  openSuggestOrAuth(): void {
+    if (this.auth.isAuthenticated) {
+      this.openSuggestForm();
+    } else {
+      this.showAuthModal.set(true);
+    }
+  }
+
+  setReturnToSuggest(): void {
+    localStorage.setItem('pendingAction', 'suggest');
+    this.showAuthModal.set(false);
+  }
+
+  handleCancelForm(): void {
+    if (this.auth.isAdmin) {
+      this.cancelAddChannel();
+    } else {
+      this.cancelSuggestForm();
+    }
+  }
+
+  handleChannelSelect(result: ChannelSearchResult): void {
+    if (this.auth.isAdmin) {
+      this.selectChannel(result);
+    } else {
+      this.submitSuggestion(result);
+    }
+  }
+
+  submitSuggestion(result: ChannelSearchResult): void {
+    this.addingChannelId.set(result.handle);
+    this.addError.set(null);
+    this.api.suggestChannel(result.handle, result.channelName, result.channelUrl ?? '', result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, this.notifyOnComplete).subscribe({
+      next: (resp) => {
+        this.addingChannelId.set(null);
+        this.cancelSuggestForm();
+        this.loadMyChannelSuggestions();
+        this.showToast(resp.message, 'success');
+      },
+      error: (err: unknown) => {
+        this.addingChannelId.set(null);
+        this.showToast(String(err), 'error');
+      },
+    });
+  }
+
+  loadPendingChannelSuggestions(): void {
+    this.api.getPendingChannelSuggestions().subscribe({
+      next: (suggestions) => this.pendingChannelSuggestions.set(suggestions),
+      error: () => {},
+    });
+  }
+
+  loadMyChannelSuggestions(): void {
+    this.api.getMyChannelSuggestions().subscribe({
+      next: (suggestions) => this.myChannelSuggestions.set(suggestions),
+      error: () => {},
+    });
+  }
+
+  toggleSuggestionNotify(s: MyChannelSuggestion): void {
+    if (this.togglingNotifyFor() !== null) { return; }
+    this.togglingNotifyFor.set(s.handle);
+    this.api.setChannelSuggestionNotify(s.handle, !s.notifyOnComplete).subscribe({
+      next: () => {
+        this.myChannelSuggestions.update((list) => list.map((item) => item.handle === s.handle ? { ...item, notifyOnComplete: !s.notifyOnComplete } : item));
+        this.togglingNotifyFor.set(null);
+      },
+      error: () => this.togglingNotifyFor.set(null),
+    });
+  }
+
+  deleteMyChannelSuggestion(s: MyChannelSuggestion): void {
+    this.openConfirm(
+      `Remove your suggestion for "${s.channelName}"?`,
+      true,
+      () => this.api.deleteMyChannelSuggestion(s.handle).subscribe({
+        next: () => this.loadMyChannelSuggestions(),
+        error: () => this.showToast(`Failed to remove suggestion for "${s.channelName}".`, 'error'),
+      }),
+    );
+  }
+
+  approveSuggestion(s: ChannelSuggestion): void {
+    this.api.addChannelSuggestion(s.handle).subscribe({
+      next: () => { this.loadPendingChannelSuggestions(); this.load(); },
+      error: () => this.showToast(`Failed to add "${s.channelName}".`, 'error'),
+    });
+  }
+
+  rejectSuggestion(s: ChannelSuggestion): void {
+    this.openConfirm(
+      `Reject suggestion for "${s.channelName}"?`,
+      true,
+      () => this.api.rejectChannelSuggestion(s.handle).subscribe({
+        next: () => this.loadPendingChannelSuggestions(),
+        error: () => this.showToast(`Failed to reject "${s.channelName}".`, 'error'),
+      }),
+    );
   }
 
   reprocessChannel(handle: string, channelName: string): void {
