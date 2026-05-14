@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -8,10 +8,10 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
-import type { Channel, ChannelStats, ChannelSearchResult, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
+import type { Channel, ChannelSearchResult, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
 
 interface ChannelRow extends Channel {
-  stats: ChannelStats | null;
+  stats: { totalVideos: number; processedVideos: number; return1y: number | null; return3y: number | null; return5y: number | null } | null;
 }
 
 interface UnknownStockRow extends UnknownStock {
@@ -145,6 +145,21 @@ interface UnknownStockRow extends UnknownStock {
         }
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div class="flex items-center justify-between px-6 py-3 border-b border-gray-100">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ranked by return</span>
+            <div class="flex gap-1">
+              @for (tf of leaderboardTimeframes; track tf) {
+                <button
+                  (click)="timeframe.set(tf)"
+                  class="px-3 py-1 text-xs rounded-lg font-semibold transition-colors"
+                  [class.bg-primary-600]="timeframe() === tf"
+                  [class.text-white]="timeframe() === tf"
+                  [class.bg-gray-100]="timeframe() !== tf"
+                  [class.text-gray-500]="timeframe() !== tf"
+                >{{ tf }}</button>
+              }
+            </div>
+          </div>
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-200 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -153,12 +168,7 @@ interface UnknownStockRow extends UnknownStock {
                 <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
                 <th class="px-6 py-4 text-right">Processed</th>
-                <th class="px-6 py-4">
-                  <span class="text-primary-600">▲</span> Buy Picks
-                </th>
-                <th class="px-6 py-4">
-                  <span class="text-danger-500">▼</span> Sell Picks
-                </th>
+                <th class="px-6 py-4 text-right">{{ timeframe() }} Return</th>
                 <th class="px-6 py-4">Actions</th>
               </tr>
             </thead>
@@ -170,7 +180,7 @@ interface UnknownStockRow extends UnknownStock {
                   </td>
                 </tr>
               } @else {
-                @for (row of rows(); track row.handle; let i = $index) {
+                @for (row of visibleRows(); track row.handle; let i = $index) {
                   <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td class="px-6 py-4 text-gray-300 font-mono text-sm">{{ i + 1 }}</td>
                     <td class="px-6 py-4">
@@ -213,35 +223,8 @@ interface UnknownStockRow extends UnknownStock {
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
                       {{ row.stats?.processedVideos ?? '—' }}
                     </td>
-                    <td class="px-6 py-4 text-sm font-mono text-primary-600 font-medium">
-                      @if (row.stats && visiblePicks(row.stats.buyPicks).length > 0) {
-                        @for (ticker of visiblePicks(row.stats.buyPicks); track ticker; let last = $last) {
-                          <span class="inline-block whitespace-nowrap">
-                            <span class="relative group/tk inline-block">{{ ticker }}
-                              @if (tickerMap()[ticker]) {
-                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                              }
-                            </span>@if (auth.isAdmin && unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
-                          </span>
-                        }
-                      } @else {
-                        <span class="text-gray-200 font-normal">—</span>
-                      }
-                    </td>
-                    <td class="px-6 py-4 text-sm font-mono text-danger-500 font-medium">
-                      @if (row.stats && visiblePicks(row.stats.sellPicks).length > 0) {
-                        @for (ticker of visiblePicks(row.stats.sellPicks); track ticker; let last = $last) {
-                          <span class="inline-block whitespace-nowrap">
-                            <span class="relative group/tk inline-block">{{ ticker }}
-                              @if (tickerMap()[ticker]) {
-                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                              }
-                            </span>@if (auth.isAdmin && unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
-                          </span>
-                        }
-                      } @else {
-                        <span class="text-gray-200 font-normal">—</span>
-                      }
+                    <td class="px-6 py-4 text-right font-mono text-sm font-medium" [ngClass]="returnClass(activeReturn(row))">
+                      {{ formatReturn(activeReturn(row)) }}
                     </td>
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
@@ -304,6 +287,13 @@ interface UnknownStockRow extends UnknownStock {
                     </td>
                   </tr>
                 }
+                @if (!auth.isAdmin && sortedRows().length > 5) {
+                  <tr>
+                    <td colspan="7" class="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
+                      {{ sortedRows().length - 5 }} more channel{{ sortedRows().length - 5 === 1 ? '' : 's' }} not shown
+                    </td>
+                  </tr>
+                }
               }
             </tbody>
           </table>
@@ -311,7 +301,7 @@ interface UnknownStockRow extends UnknownStock {
       }
 
       @if (!error()) {
-        <app-spy-chart (refresh)="load()" />
+        <app-spy-chart (refresh)="load()" [leaderboardTimeframe]="timeframe()" />
 
         @if (auth.isAdmin) {
         <div class="mt-10">
@@ -562,6 +552,27 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   private readonly recovery = inject(BackendRecoveryService);
 
   readonly rows = signal<ChannelRow[]>([]);
+  readonly timeframe = signal<'1Y' | '3Y' | '5Y'>('3Y');
+  readonly leaderboardTimeframes: readonly ('1Y' | '3Y' | '5Y')[] = ['1Y', '3Y', '5Y'];
+
+  readonly sortedRows = computed(() => {
+    const tf = this.timeframe();
+    const getReturn = (row: ChannelRow): number | null => {
+      if (!row.stats) return null;
+      return tf === '1Y' ? row.stats.return1y : tf === '3Y' ? row.stats.return3y : row.stats.return5y;
+    };
+    return [...this.rows()].sort((a, b) => {
+      const ra = getReturn(a);
+      const rb = getReturn(b);
+      if (ra === null && rb === null) return 0;
+      if (ra === null) return 1;
+      if (rb === null) return -1;
+      return rb - ra;
+    });
+  });
+
+  readonly visibleRows = computed(() => this.auth.isAdmin ? this.sortedRows() : this.sortedRows().slice(0, 5));
+
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly pipelineStatus = signal<PipelineStepStatus[]>([]);
@@ -572,8 +583,6 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
   private toastTimer?: ReturnType<typeof setTimeout>;
   readonly confirmDialog = signal<{ message: string; destructive: boolean; onConfirm: () => void } | null>(null);
-  readonly tickerMap = signal<Record<string, string>>({});
-  readonly unknownTickers = signal<ReadonlySet<string>>(new Set());
   readonly myNotifiedHandles = signal<Set<string>>(new Set());
   readonly togglingNotificationFor = signal<string | null>(null);
   readonly showAddForm = signal(false);
@@ -593,7 +602,6 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
-    this.api.getTickers().subscribe({ next: (d) => { this.tickerMap.set(d.companies); this.unknownTickers.set(new Set(d.unknownTickers)); }, error: () => {} });
     if (this.auth.isAuthenticated) {
       this.loadMyNotifications();
     }
@@ -895,11 +903,21 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     );
   }
 
-  visiblePicks(tickers: string[]): string[] {
-    if (this.auth.isAdmin) {
-      return tickers;
-    }
-    return tickers.filter(t => !this.unknownTickers().has(t));
+  activeReturn(row: ChannelRow): number | null {
+    if (!row.stats) return null;
+    const tf = this.timeframe();
+    return tf === '1Y' ? row.stats.return1y : tf === '3Y' ? row.stats.return3y : row.stats.return5y;
+  }
+
+  formatReturn(value: number | null): string {
+    if (value === null || value === undefined) return '—';
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value.toFixed(1)}%`;
+  }
+
+  returnClass(value: number | null): string {
+    if (value === null || value === undefined) return 'text-gray-300';
+    return value >= 0 ? 'text-primary-600' : 'text-danger-500';
   }
 
   stepDuration(step: PipelineStepStatus): string | null {

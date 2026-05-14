@@ -1,0 +1,20 @@
+{
+  "handle": "mock-amd-buyer",
+  "channelName": "Mock AMD Buyer",
+  "description": "Mock channel that bought AMD 13 years ago.",
+  "videos": [
+    {
+      "videoId": "mock-amd-buyer-001",
+      "title": "Why I'm buying AMD",
+      "publishedAt": "2013-05-14T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    }
+  ]
+}

@@ -17,8 +17,9 @@ export const ChannelStatsSchema = z.object({
   channelName: z.string(),
   totalVideos: z.number(),
   processedVideos: z.number(),
-  buyPicks: z.array(z.string()),
-  sellPicks: z.array(z.string()),
+  return1y: z.number().nullable(),
+  return3y: z.number().nullable(),
+  return5y: z.number().nullable(),
 });
 
 export const VideoSummarySchema = z.object({

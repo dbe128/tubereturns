@@ -1,6 +1,7 @@
 package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelResponseDto;
+import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.ChannelStatsDto;
 import com.tubereturns.dto.VideoSummaryDto;
 import com.tubereturns.model.Channel;
@@ -11,9 +12,9 @@ import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
-import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.PortfolioService;
 import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,6 +46,7 @@ public class ChannelController {
     private final YouTubeDiscoveryService discoveryService;
     private final YouTubeApiService youTubeApiService;
     private final PipelineSchedulerService scheduler;
+    private final PortfolioService portfolioService;
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -216,15 +218,15 @@ public class ChannelController {
     private ChannelStatsDto toStatsDto(Channel channel) {
         long totalVideos = videoRepository.countByChannelId(channel.getId());
         long processedVideos = videoRepository.countByChannelIdAndProcessingStatus(channel.getId(), Video.ProcessingStatus.COMPLETED);
-        List<String> buyPicks = pickRepository.findDistinctTickersByChannelIdAndSignal(channel.getId(), Pick.Signal.BUY);
-        List<String> sellPicks = pickRepository.findDistinctTickersByChannelIdAndSignal(channel.getId(), Pick.Signal.SELL);
+        PortfolioService.ChannelReturns returns = portfolioService.computeChannelReturns(channel);
         return new ChannelStatsDto(
             channel.getHandle(),
             channel.getChannelName(),
             totalVideos,
             processedVideos,
-            buyPicks,
-            sellPicks
+            returns.return1y(),
+            returns.return3y(),
+            returns.return5y()
         );
     }
 }

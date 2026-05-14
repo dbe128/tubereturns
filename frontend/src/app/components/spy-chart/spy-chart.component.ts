@@ -89,7 +89,7 @@ interface SeriesData {
         <div>
           @if (hasPortfolios()) {
             <div class="flex items-center gap-2">
-              <h2 class="text-base font-semibold text-gray-800">Portfolio Comparison</h2>
+              <h2 class="text-base font-semibold text-gray-800">Channel Returns Comparison</h2>
               <button (click)="refresh.emit()" title="Refresh"
                 class="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors text-base leading-none">↺</button>
             </div>
@@ -167,6 +167,19 @@ interface SeriesData {
 })
 export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
   @Input() channelId?: string;
+  @Input() set leaderboardTimeframe(tf: '1Y' | '3Y' | '5Y') {
+    if (this.timeframe() !== tf) {
+      this.timeframe.set(tf);
+      this.visibleIds = new Set();
+      if (this.initialized) {
+        if (this.hasPortfolios()) {
+          this.loadComparisonData(this.portfolios(), tf);
+        } else {
+          this.loadSpyData(tf);
+        }
+      }
+    }
+  }
   @Output() readonly refresh = new EventEmitter<void>();
 
   private readonly api = inject(ApiService);
@@ -196,8 +209,10 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
   private allSeries: SeriesData[] = [];
   private visibleIds = new Set<string>();
   private colorMap = new Map<string, string>();
+  private initialized = false;
 
   ngOnInit(): void {
+    this.initialized = true;
     this.api.getPortfolios().pipe(catchError(() => of<Portfolio[]>([]))).subscribe((portfolios) => {
       this.portfolios.set(portfolios);
       if (portfolios.length > 0) {
@@ -220,6 +235,7 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
 
   setTimeframe(tf: Timeframe): void {
     this.timeframe.set(tf);
+    this.visibleIds = new Set();
     if (this.hasPortfolios()) {
       this.loadComparisonData(this.portfolios(), tf);
     } else {
