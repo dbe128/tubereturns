@@ -217,7 +217,7 @@ public class ChannelController {
 
     private ChannelStatsDto toStatsDto(Channel channel) {
         long totalVideos = videoRepository.countByChannelId(channel.getId());
-        long processedVideos = videoRepository.countByChannelIdAndExtractionStatus(channel.getId(), Video.ExtractionStatus.EXTRACTED);
+        long processedVideos = videoRepository.countProcessedByChannelId(channel.getId());
         PortfolioService.ChannelReturns returns = portfolioService.computeChannelReturns(channel);
         return new ChannelStatsDto(
             channel.getHandle(),

@@ -224,6 +224,7 @@ public class TranscriptDownloadService {
                                 log.info("Transcript downloaded: {} (https://youtu.be/{})", v.getTitle(), videoId);
                             } else {
                                 v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
+                                v.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
                                 log.warn("No transcript for: {} (https://youtu.be/{})", v.getTitle(), videoId);
                             }
                             videoRepository.save(v);

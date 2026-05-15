@@ -302,7 +302,7 @@ interface IndexedVideo {
                           class="text-gray-900 hover:text-primary-600 block truncate"
                         >{{ item.v.title }}</a>
                         <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
-                        @if (item.v.transcriptStatus === 'DOWNLOADING' || (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTED')) {
+                        @if (item.v.transcriptStatus === 'PENDING' || item.v.transcriptStatus === 'DOWNLOADING' || (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTED')) {
                           <span class="relative group/tip flex-shrink-0">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
