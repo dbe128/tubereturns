@@ -50,7 +50,7 @@ public class MockChannelDataSeedService {
 
                 Video video = new Video(videoData.videoId(), channel, videoData.title(), videoData.publishedAt());
                 video.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
+                video.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
                 videoRepository.save(video);
 
                 for (MockChannelProvider.MockPickData pickData : videoData.picks()) {

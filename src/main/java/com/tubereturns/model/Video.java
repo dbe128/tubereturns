@@ -58,8 +58,8 @@ public class Video {
     private TranscriptStatus transcriptStatus = TranscriptStatus.PENDING;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "processing_status", length = 50)
-    private ProcessingStatus processingStatus = ProcessingStatus.PENDING;
+    @Column(name = "extraction_status", length = 50)
+    private ExtractionStatus extractionStatus = ExtractionStatus.PENDING;
 
     @Column(name = "extraction_model", length = 100)
     private String extractionModel;
@@ -103,7 +103,7 @@ public class Video {
         PENDING, DOWNLOADING, DOWNLOADED, NO_TRANSCRIPT, FAILED
     }
 
-    public enum ProcessingStatus {
-        PENDING, PROCESSING, COMPLETED, FAILED
+    public enum ExtractionStatus {
+        PENDING, EXTRACTING, EXTRACTED, FAILED
     }
 }

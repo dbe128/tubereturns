@@ -205,7 +205,7 @@ public class ChannelController {
             video.getPublishedAt(),
             video.getViewCount(),
             video.getTranscriptStatus().name(),
-            video.getProcessingStatus().name(),
+            video.getExtractionStatus().name(),
             video.getExtractionModel(),
             buyPicks,
             sellPicks,
@@ -217,7 +217,7 @@ public class ChannelController {
 
     private ChannelStatsDto toStatsDto(Channel channel) {
         long totalVideos = videoRepository.countByChannelId(channel.getId());
-        long processedVideos = videoRepository.countByChannelIdAndProcessingStatus(channel.getId(), Video.ProcessingStatus.COMPLETED);
+        long processedVideos = videoRepository.countByChannelIdAndExtractionStatus(channel.getId(), Video.ExtractionStatus.EXTRACTED);
         PortfolioService.ChannelReturns returns = portfolioService.computeChannelReturns(channel);
         return new ChannelStatsDto(
             channel.getHandle(),

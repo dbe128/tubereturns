@@ -34,16 +34,16 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.transcriptStatus IN :statuses AND v.excluded = false ORDER BY v.publishedAt ASC")
     List<Video> findAllByTranscriptStatusIn(@Param("statuses") List<Video.TranscriptStatus> statuses);
 
-    @Query("SELECT v FROM Video v WHERE v.processingStatus = :status")
-    List<Video> findByProcessingStatus(@Param("status") Video.ProcessingStatus status);
+    @Query("SELECT v FROM Video v WHERE v.extractionStatus = :status")
+    List<Video> findByExtractionStatus(@Param("status") Video.ExtractionStatus status);
 
     @Query("SELECT v FROM Video v WHERE v.publishedAt >= :since ORDER BY v.publishedAt DESC")
     List<Video> findVideosPublishedSince(@Param("since") Instant since);
 
-    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus = 'PENDING' AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
+    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.extractionStatus = 'PENDING' AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
     List<Video> findVideosReadyForProcessing(@Param("limit") int limit);
 
-    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.processingStatus IN ('PENDING', 'FAILED') AND v.excluded = false ORDER BY v.publishedAt ASC")
+    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.extractionStatus IN ('PENDING', 'FAILED') AND v.excluded = false ORDER BY v.publishedAt ASC")
     List<Video> findAllVideosReadyForProcessing();
 
     boolean existsByVideoId(String videoId);
@@ -53,17 +53,17 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     int resetStaleTranscriptStatuses();
 
     @Modifying
-    @Query("UPDATE Video v SET v.processingStatus = 'PENDING' WHERE v.processingStatus = 'PROCESSING'")
-    int resetStaleProcessingStatuses();
+    @Query("UPDATE Video v SET v.extractionStatus = 'PENDING' WHERE v.extractionStatus = 'EXTRACTING'")
+    int resetStaleExtractionStatuses();
 
     @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
 
-    @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId AND v.processingStatus = :status")
-    long countByChannelIdAndProcessingStatus(@Param("channelId") Long channelId, @Param("status") Video.ProcessingStatus status);
+    @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId AND v.extractionStatus = :status")
+    long countByChannelIdAndExtractionStatus(@Param("channelId") Long channelId, @Param("status") Video.ExtractionStatus status);
 
-    @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId AND v.processingStatus IN :statuses AND v.excluded = false")
-    long countByChannelIdAndProcessingStatusIn(@Param("channelId") Long channelId, @Param("statuses") java.util.Collection<Video.ProcessingStatus> statuses);
+    @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId AND v.extractionStatus IN :statuses AND v.excluded = false")
+    long countByChannelIdAndExtractionStatusIn(@Param("channelId") Long channelId, @Param("statuses") java.util.Collection<Video.ExtractionStatus> statuses);
 
     @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId AND v.transcriptStatus IN :statuses AND v.excluded = false")
     long countByChannelIdAndTranscriptStatusIn(@Param("channelId") Long channelId, @Param("statuses") java.util.Collection<Video.TranscriptStatus> statuses);

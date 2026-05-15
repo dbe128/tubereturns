@@ -149,12 +149,12 @@ public class StockPickExtractionService {
 
         if (video.getTranscriptText() == null || video.getTranscriptText().isBlank()) {
             log.warn("No transcript text for {} ({})", video.getTitle(), videoUrl);
-            video.setProcessingStatus(Video.ProcessingStatus.FAILED);
+            video.setExtractionStatus(Video.ExtractionStatus.FAILED);
             videoRepository.save(video);
             return false;
         }
 
-        video.setProcessingStatus(Video.ProcessingStatus.PROCESSING);
+        video.setExtractionStatus(Video.ExtractionStatus.EXTRACTING);
         videoRepository.save(video);
 
         try {
@@ -206,7 +206,7 @@ public class StockPickExtractionService {
             }
 
             savePicks(video, best.dto(), priceDate, best.priceCache());
-            video.setProcessingStatus(Video.ProcessingStatus.COMPLETED);
+            video.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
             video.setExtractionModel(best.model());
             if (best.dto().externalPositions()) {
                 log.info("Video {} contains only external positions — auto-excluding", videoUrl);
@@ -218,7 +218,7 @@ public class StockPickExtractionService {
             return true;
         } catch (Exception e) {
             log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
-            video.setProcessingStatus(Video.ProcessingStatus.FAILED);
+            video.setExtractionStatus(Video.ExtractionStatus.FAILED);
             videoRepository.save(video);
             return false;
         }

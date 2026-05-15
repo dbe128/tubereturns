@@ -111,7 +111,7 @@ public class AdminController {
                             continue;
                         }
                         pickRepository.deleteByVideoId(video.getId());
-                        video.setProcessingStatus(Video.ProcessingStatus.PENDING);
+                        video.setExtractionStatus(Video.ExtractionStatus.PENDING);
                         video.setExtractionModel(null);
                         if (!"Manual".equals(video.getExclusionReason())) {
                             video.setExcluded(false);
@@ -135,7 +135,7 @@ public class AdminController {
                         return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
                     }
                     pickRepository.deleteByVideoId(video.getId());
-                    video.setProcessingStatus(Video.ProcessingStatus.PENDING);
+                    video.setExtractionStatus(Video.ExtractionStatus.PENDING);
                     video.setExtractionModel(null);
                     videoRepository.save(video);
                     stockPickExtractionService.enqueueForReextraction(videoId);
@@ -155,7 +155,7 @@ public class AdminController {
                     pickRepository.deleteByVideoId(video.getId());
                     video.setTranscriptText(null);
                     video.setTranscriptStatus(Video.TranscriptStatus.PENDING);
-                    video.setProcessingStatus(Video.ProcessingStatus.PENDING);
+                    video.setExtractionStatus(Video.ExtractionStatus.PENDING);
                     video.setExtractionModel(null);
                     videoRepository.save(video);
                     transcriptDownloadService.downloadTranscript(video);

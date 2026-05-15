@@ -57,12 +57,12 @@ public class PipelineSchedulerService {
     @Transactional
     void resetStaleStatuses() {
         int transcriptReset = videoRepository.resetStaleTranscriptStatuses();
-        int processingReset = videoRepository.resetStaleProcessingStatuses();
+        int processingReset = videoRepository.resetStaleExtractionStatuses();
         if (transcriptReset > 0) {
             log.info("Reset {} video(s) from DOWNLOADING → PENDING (transcript)", transcriptReset);
         }
         if (processingReset > 0) {
-            log.info("Reset {} video(s) from PROCESSING → PENDING (extraction)", processingReset);
+            log.info("Reset {} video(s) from EXTRACTING → PENDING (extraction)", processingReset);
         }
     }
 

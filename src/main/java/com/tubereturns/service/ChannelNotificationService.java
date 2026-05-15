@@ -23,8 +23,8 @@ public class ChannelNotificationService {
     private static final List<Video.TranscriptStatus> INCOMPLETE_TRANSCRIPT_STATUSES =
             List.of(Video.TranscriptStatus.PENDING, Video.TranscriptStatus.DOWNLOADING);
 
-    private static final List<Video.ProcessingStatus> INCOMPLETE_PROCESSING_STATUSES =
-            List.of(Video.ProcessingStatus.PENDING, Video.ProcessingStatus.PROCESSING);
+    private static final List<Video.ExtractionStatus> INCOMPLETE_EXTRACTION_STATUSES =
+            List.of(Video.ExtractionStatus.PENDING, Video.ExtractionStatus.EXTRACTING);
 
     private final ChannelProcessingNotificationRepository notificationRepository;
     private final VideoRepository videoRepository;
@@ -64,7 +64,7 @@ public class ChannelNotificationService {
                 log.info("Skipping notification for {} → {} transcript(s) still pending", channel.getHandle(), pendingTranscripts);
                 continue;
             }
-            long pendingExtractions = videoRepository.countByChannelIdAndProcessingStatusIn(channel.getId(), INCOMPLETE_PROCESSING_STATUSES);
+            long pendingExtractions = videoRepository.countByChannelIdAndExtractionStatusIn(channel.getId(), INCOMPLETE_EXTRACTION_STATUSES);
             if (pendingExtractions > 0) {
                 log.info("Skipping notification for {} → {} extraction(s) still pending", channel.getHandle(), pendingExtractions);
                 continue;

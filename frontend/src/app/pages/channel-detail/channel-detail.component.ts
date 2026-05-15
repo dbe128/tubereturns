@@ -16,15 +16,15 @@ import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import type { Channel, ChannelStats, VideoSummary } from '../../api/types';
 
-type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'processingStatus';
+type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'extractionStatus';
 type SortDir = 'asc' | 'desc';
 
 const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
   DOWNLOADED: 0, NO_TRANSCRIPT: 1, PENDING: 2, DOWNLOADING: 3, FAILED: 4,
 };
 
-const PROCESSING_ORDER: Record<VideoSummary['processingStatus'], number> = {
-  COMPLETED: 0, PROCESSING: 1, PENDING: 2, FAILED: 3,
+const EXTRACTION_ORDER: Record<VideoSummary['extractionStatus'], number> = {
+  EXTRACTED: 0, EXTRACTING: 1, PENDING: 2, FAILED: 3,
 };
 
 const TRANSCRIPT_LABELS: Record<VideoSummary['transcriptStatus'], string> = {
@@ -35,9 +35,9 @@ const TRANSCRIPT_LABELS: Record<VideoSummary['transcriptStatus'], string> = {
   PENDING: 'Pending',
 };
 
-const PROCESSING_LABELS: Record<VideoSummary['processingStatus'], string> = {
-  COMPLETED: 'Extracted',
-  PROCESSING: 'Processing',
+const EXTRACTION_LABELS: Record<VideoSummary['extractionStatus'], string> = {
+  EXTRACTED: 'Extracted',
+  EXTRACTING: 'Extracting',
   FAILED: 'Failed',
   PENDING: 'Pending',
 };
@@ -50,9 +50,9 @@ const TRANSCRIPT_STYLES: Record<VideoSummary['transcriptStatus'], string> = {
   PENDING: 'bg-gray-100 text-gray-400',
 };
 
-const PROCESSING_STYLES: Record<VideoSummary['processingStatus'], string> = {
-  COMPLETED: 'bg-primary-50 text-primary-700',
-  PROCESSING: 'bg-blue-50 text-blue-600',
+const EXTRACTION_STYLES: Record<VideoSummary['extractionStatus'], string> = {
+  EXTRACTED: 'bg-primary-50 text-primary-700',
+  EXTRACTING: 'bg-blue-50 text-blue-600',
   FAILED: 'bg-danger-50 text-danger-500',
   PENDING: 'bg-gray-100 text-gray-400',
 };
@@ -164,8 +164,8 @@ interface IndexedVideo {
                 class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
               >
                 <option value="">All pick statuses</option>
-                <option value="COMPLETED">Extracted</option>
-                <option value="PROCESSING">Processing</option>
+                <option value="EXTRACTED">Extracted</option>
+                <option value="EXTRACTING">Extracting</option>
                 <option value="FAILED">Failed</option>
                 <option value="PENDING">Pending</option>
               </select>
@@ -195,6 +195,18 @@ interface IndexedVideo {
                   class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
                 />
                 Hide processed without picks
+              </label>
+            </div>
+
+            <div class="flex items-end pb-1">
+              <label class="flex items-center gap-2 text-sm text-gray-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  [ngModel]="hideUnprocessed()"
+                  (ngModelChange)="hideUnprocessed.set($event)"
+                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
+                />
+                Hide unprocessed
               </label>
             </div>
 
@@ -245,8 +257,8 @@ interface IndexedVideo {
                 >Transcript<span class="ml-1" [class.text-primary-500]="sortKey() === 'transcriptStatus'" [class.text-gray-300]="sortKey() !== 'transcriptStatus'">{{ sortKey() === 'transcriptStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th
                   class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
-                  (click)="toggleSort('processingStatus')"
-                >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'processingStatus'" [class.text-gray-300]="sortKey() !== 'processingStatus'">{{ sortKey() === 'processingStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  (click)="toggleSort('extractionStatus')"
+                >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'extractionStatus'" [class.text-gray-300]="sortKey() !== 'extractionStatus'">{{ sortKey() === 'extractionStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
                 }
                 <th class="px-4 py-3 w-28 text-primary-600 whitespace-nowrap">▲ Buy</th>
@@ -282,7 +294,7 @@ interface IndexedVideo {
                       </a>
                     </td>
                     <td class="px-4 py-3 max-w-0">
-                      <div class="relative group/title">
+                      <div class="relative group/title flex items-center gap-1.5">
                         <a
                           [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
                           target="_blank"
@@ -290,6 +302,16 @@ interface IndexedVideo {
                           class="text-gray-900 hover:text-primary-600 block truncate"
                         >{{ item.v.title }}</a>
                         <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
+                        @if (item.v.transcriptStatus === 'DOWNLOADING' || (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTED')) {
+                          <span class="relative group/tip flex-shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity z-50">
+                              Processing...
+                            </span>
+                          </span>
+                        }
                       </div>
                     </td>
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
@@ -311,8 +333,8 @@ interface IndexedVideo {
                     <td class="px-4 py-3">
                       <span
                         class="inline-block px-2 py-0.5 rounded text-xs font-medium"
-                        [ngClass]="processingStyle(item.v.processingStatus)"
-                      >{{ processingLabel(item.v.processingStatus) }}</span>
+                        [ngClass]="processingStyle(item.v.extractionStatus)"
+                      >{{ processingLabel(item.v.extractionStatus) }}</span>
                     </td>
                     <td class="px-4 py-3 text-gray-400 font-mono text-xs">
                       @if (item.v.extractionModel) {
@@ -375,7 +397,7 @@ interface IndexedVideo {
                               <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
                             </svg>
                           </button>
-                          @if (item.v.transcriptStatus === 'DOWNLOADED' && item.v.processingStatus !== 'PROCESSING') {
+                          @if (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTING') {
                             <button
                               (click)="handleReextract(item.v.videoId)"
                               [disabled]="reextracting() === item.v.videoId"
@@ -466,10 +488,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly sortKey = signal<SortKey>('publishedAt');
   readonly sortDir = signal<SortDir>('desc');
   readonly filterTranscript = signal<VideoSummary['transcriptStatus'] | ''>('');
-  readonly filterProcessing = signal<VideoSummary['processingStatus'] | ''>('');
+  readonly filterProcessing = signal<VideoSummary['extractionStatus'] | ''>('');
   readonly filterPick = signal('');
   readonly showExcluded = signal(false);
   readonly hideNoPicks = signal(true);
+  readonly hideUnprocessed = signal(true);
 
   readonly transcriptPopup = signal<string | null>(null);
   readonly transcriptPopupPos = signal({ top: 0, left: 0, width: 520, maxHeight: 600 });
@@ -486,9 +509,14 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly filtered = computed(() =>
     this.videos().filter((v) => {
       if (!this.showExcluded() && v.excluded) return false;
-      if (this.hideNoPicks() && v.processingStatus === 'COMPLETED' && v.buyPicks.length === 0 && v.sellPicks.length === 0) return false;
+      if (this.hideUnprocessed() && (
+        v.transcriptStatus === 'PENDING' ||
+        v.transcriptStatus === 'DOWNLOADING' ||
+        (v.transcriptStatus === 'DOWNLOADED' && v.extractionStatus !== 'EXTRACTED')
+      )) return false;
+      if (this.hideNoPicks() && v.extractionStatus === 'EXTRACTED' && v.buyPicks.length === 0 && v.sellPicks.length === 0) return false;
       if (this.filterTranscript() && v.transcriptStatus !== this.filterTranscript()) return false;
-      if (this.filterProcessing() && v.processingStatus !== this.filterProcessing()) return false;
+      if (this.filterProcessing() && v.extractionStatus !== this.filterProcessing()) return false;
       if (this.filterPick() && !v.buyPicks.includes(this.filterPick()) && !v.sellPicks.includes(this.filterPick())) return false;
       return true;
     }),
@@ -512,8 +540,8 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
         cmp = (a.v.viewCount ?? -1) - (b.v.viewCount ?? -1);
       } else if (key === 'transcriptStatus') {
         cmp = TRANSCRIPT_ORDER[a.v.transcriptStatus] - TRANSCRIPT_ORDER[b.v.transcriptStatus];
-      } else if (key === 'processingStatus') {
-        cmp = PROCESSING_ORDER[a.v.processingStatus] - PROCESSING_ORDER[b.v.processingStatus];
+      } else if (key === 'extractionStatus') {
+        cmp = EXTRACTION_ORDER[a.v.extractionStatus] - EXTRACTION_ORDER[b.v.extractionStatus];
       }
       return dir === 'asc' ? cmp : -cmp;
     });
@@ -664,15 +692,15 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     return TRANSCRIPT_LABELS[status];
   }
 
-  processingLabel(status: VideoSummary['processingStatus']): string {
-    return PROCESSING_LABELS[status];
+  processingLabel(status: VideoSummary['extractionStatus']): string {
+    return EXTRACTION_LABELS[status];
   }
 
   transcriptStyle(status: VideoSummary['transcriptStatus']): string {
     return TRANSCRIPT_STYLES[status];
   }
 
-  processingStyle(status: VideoSummary['processingStatus']): string {
-    return PROCESSING_STYLES[status];
+  processingStyle(status: VideoSummary['extractionStatus']): string {
+    return EXTRACTION_STYLES[status];
   }
 }

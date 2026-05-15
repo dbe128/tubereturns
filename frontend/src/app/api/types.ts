@@ -28,7 +28,7 @@ export const VideoSummarySchema = z.object({
   publishedAt: z.string(),
   viewCount: z.number().nullable(),
   transcriptStatus: z.enum(['PENDING', 'DOWNLOADING', 'DOWNLOADED', 'NO_TRANSCRIPT', 'FAILED']),
-  processingStatus: z.enum(['PENDING', 'PROCESSING', 'COMPLETED', 'FAILED']),
+  extractionStatus: z.enum(['PENDING', 'EXTRACTING', 'EXTRACTED', 'FAILED']),
   extractionModel: z.string().nullable(),
   buyPicks: z.array(z.string()),
   sellPicks: z.array(z.string()),
