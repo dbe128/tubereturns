@@ -2,7 +2,6 @@ import {
   Component,
   inject,
   signal,
-  computed,
   AfterViewInit,
   OnDestroy,
   ViewChild,
@@ -22,13 +21,12 @@ import {
   CategoryScale,
   LinearScale,
   Tooltip,
-  Filler,
   Legend,
 } from 'chart.js';
 import { ApiService } from '../../api/api.service';
 import type { PortfolioPricePoint, Channel } from '../../api/types';
 
-Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler, Legend);
+Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Legend);
 
 type Timeframe = '1W' | '1M' | 'YTD' | '1Y' | '2Y' | '3Y' | '4Y' | '5Y' | '10Y';
 
@@ -50,14 +48,6 @@ function fromDate(tf: Timeframe): string {
     case '10Y': now.setFullYear(now.getFullYear() - 10); break;
   }
   return now.toISOString().slice(0, 10);
-}
-
-function formatXLabel(dateStr: string, tf: Timeframe): string {
-  const d = new Date(dateStr);
-  if (tf === '1W' || tf === '1M') {
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
 }
 
 function maxPointsForTimeframe(tf: Timeframe): number {
@@ -86,27 +76,12 @@ interface SeriesData {
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
       <div class="flex items-start justify-between mb-4 gap-4 flex-wrap">
         <div>
-          @if (hasPortfolios()) {
-            <div class="flex items-center gap-2">
-              <h2 class="text-base font-semibold text-gray-800">Channel Returns Comparison</h2>
-              <button (click)="refresh.emit()" title="Refresh"
-                class="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors text-base leading-none">↺</button>
-            </div>
-            <p class="text-xs text-gray-400 mt-0.5">Equal-weighted % return in USD since first pick vs S&amp;P 500</p>
-          } @else {
-            <div class="flex items-baseline gap-3">
-              <h2 class="text-base font-semibold text-gray-800">S&amp;P 500 (SPY)</h2>
-              @if (!loading() && spyData().length > 0) {
-                <span class="text-xl font-bold text-gray-900">\${{ lastClose().toFixed(2) }}</span>
-                <span
-                  class="text-sm font-semibold"
-                  [class.text-primary-600]="spyChange() >= 0"
-                  [class.text-danger-500]="spyChange() < 0"
-                >{{ spyChange() >= 0 ? '+' : '' }}{{ spyChange().toFixed(2) }}%</span>
-              }
-            </div>
-            <p class="text-xs text-gray-400 mt-0.5">Historical closing prices</p>
-          }
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-semibold text-gray-800">Channel Returns Comparison</h2>
+            <button (click)="refresh.emit()" title="Refresh"
+              class="p-1 text-gray-400 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors text-base leading-none">↺</button>
+          </div>
+          <p class="text-xs text-gray-400 mt-0.5">Equal-weighted % return in USD since first pick vs S&amp;P 500</p>
         </div>
 
         <div class="flex flex-col items-end gap-2">
@@ -123,28 +98,26 @@ interface SeriesData {
               >{{ tf }}</button>
             }
           </div>
-          @if (hasPortfolios()) {
-            <div class="flex flex-wrap gap-2 justify-end">
+          <div class="flex flex-wrap gap-2 justify-end">
+            <button
+              (click)="toggleSeries('SPY')"
+              class="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-semibold border transition-colors"
+              [class.opacity-40]="!isVisible('SPY')"
+            >
+              <span class="w-5 h-1 inline-block rounded-sm" style="background:#6b7280"></span>
+              SPY
+            </button>
+            @for (p of channelList(); track p.handle) {
               <button
-                (click)="toggleSeries('SPY')"
+                (click)="toggleSeries(p.handle)"
                 class="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-semibold border transition-colors"
-                [class.opacity-40]="!isVisible('SPY')"
+                [class.opacity-40]="!isVisible(p.handle)"
               >
-                <span class="w-5 h-1 inline-block rounded-sm" style="background:#6b7280"></span>
-                SPY
+                <span class="w-5 h-1 inline-block rounded-sm" [style.background]="colorFor(p.handle)"></span>
+                {{ p.channelName }}
               </button>
-              @for (p of channelList(); track p.handle) {
-                <button
-                  (click)="toggleSeries(p.handle)"
-                  class="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-semibold border transition-colors"
-                  [class.opacity-40]="!isVisible(p.handle)"
-                >
-                  <span class="w-5 h-1 inline-block rounded-sm" [style.background]="colorFor(p.handle)"></span>
-                  {{ p.channelName }}
-                </button>
-              }
-            </div>
-          }
+            }
+          </div>
         </div>
       </div>
 
@@ -169,21 +142,13 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
     if (this.timeframe() !== tf) {
       this.timeframe.set(tf);
       this.visibleIds = new Set();
-      if (this.hasPortfolios()) {
-        this.loadComparisonData(this.channelList(), tf);
-      } else {
-        this.loadSpyData(tf);
-      }
+      this.loadComparisonData(this.channelList(), tf);
     }
   }
   @Input() set channels(value: Channel[]) {
     this.channelList.set(value);
     this.visibleIds = new Set();
-    if (value.length > 0) {
-      this.loadComparisonData(value, this.timeframe());
-    } else {
-      this.loadSpyData(this.timeframe());
-    }
+    this.loadComparisonData(value, this.timeframe());
   }
   @Output() readonly refresh = new EventEmitter<void>();
 
@@ -196,19 +161,6 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
   readonly spyData = signal<PortfolioPricePoint[]>([]);
   readonly loading = signal(true);
   readonly channelList = signal<Channel[]>([]);
-  readonly hasPortfolios = computed(() => this.channelList().length > 0);
-
-  readonly lastClose = computed(() => {
-    const d = this.spyData();
-    const last = d.length > 0 ? d[d.length - 1].close : null;
-    return last ?? 0;
-  });
-
-  readonly spyChange = computed(() => {
-    const d = this.spyData();
-    if (d.length === 0) return 0;
-    return d[d.length - 1].changePercent;
-  });
 
   private chart: Chart | null = null;
   private allSeries: SeriesData[] = [];
@@ -228,11 +180,7 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
   setTimeframe(tf: Timeframe): void {
     this.timeframe.set(tf);
     this.visibleIds = new Set();
-    if (this.hasPortfolios()) {
-      this.loadComparisonData(this.channelList(), tf);
-    } else {
-      this.loadSpyData(tf);
-    }
+    this.loadComparisonData(this.channelList(), tf);
   }
 
   toggleSeries(id: string): void {
@@ -252,23 +200,6 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
 
   colorFor(channelId: string): string {
     return this.colorMap.get(channelId) ?? '#6b7280';
-  }
-
-  private loadSpyData(tf: Timeframe): void {
-    this.loading.set(true);
-    this.api.getPortfolioPrices('SPY', fromDate(tf)).subscribe({
-      next: (pts) => {
-        this.spyData.set(pts);
-        this.allSeries = [{ id: 'SPY', label: 'SPY', points: pts, color: '#6b7280' }];
-        this.visibleIds = new Set(['SPY']);
-        this.loading.set(false);
-        setTimeout(() => this.rebuildChart(), 0);
-      },
-      error: () => {
-        this.spyData.set([]);
-        this.loading.set(false);
-      },
-    });
   }
 
   private loadComparisonData(channels: Channel[], tf: Timeframe): void {
@@ -325,96 +256,9 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
     if (!this.canvasRef) return;
     const ctx = this.canvasRef.nativeElement.getContext('2d');
     if (!ctx) return;
-
     const visible = this.allSeries.filter((s) => this.visibleIds.has(s.id));
     if (visible.length === 0) return;
-
-    const spyOnly = visible.length === 1 && visible[0].id === 'SPY' && !this.hasPortfolios();
-
-    if (spyOnly) {
-      this.buildSpyChart(ctx, visible[0].points);
-    } else {
-      this.buildComparisonChart(ctx, visible);
-    }
-  }
-
-  private buildSpyChart(ctx: CanvasRenderingContext2D, pts: PortfolioPricePoint[]): void {
-    const tf = this.timeframe();
-    const thinned = thinData(pts, maxPointsForTimeframe(tf));
-    const change = this.spyChange();
-    const positive = change >= 0;
-    const color = positive ? '#2d7a2d' : '#cc1a1a';
-
-    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
-    gradient.addColorStop(0.05, positive ? 'rgba(45,122,45,0.15)' : 'rgba(204,26,26,0.15)');
-    gradient.addColorStop(0.95, 'rgba(0,0,0,0)');
-
-    this.chart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: thinned.map((p) => p.date),
-        datasets: [
-          {
-            label: 'SPY',
-            data: thinned.map((p) => p.close ?? 0),
-            borderColor: color,
-            borderWidth: 2,
-            pointRadius: 0,
-            pointHoverRadius: 4,
-            fill: true,
-            backgroundColor: gradient,
-            tension: 0,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              title: (items) =>
-                new Date(items[0].label).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                }),
-              label: (item) => `$${(item.parsed.y as number).toFixed(2)}`,
-            },
-            bodyFont: { size: 12 },
-            cornerRadius: 8,
-            borderColor: '#e5e7eb',
-            borderWidth: 1,
-          },
-        },
-        scales: {
-          x: {
-            ticks: {
-              font: { size: 11 },
-              color: '#9ca3af',
-              maxTicksLimit: 8,
-              callback: (_val, idx) => {
-                const label = thinned[idx]?.date ?? '';
-                return formatXLabel(label, tf);
-              },
-            },
-            grid: { display: false },
-            border: { display: true, color: '#000' },
-          },
-          y: {
-            ticks: {
-              font: { size: 11 },
-              color: '#9ca3af',
-              callback: (v) => `$${Number(v).toFixed(0)}`,
-            },
-            grid: { color: '#cbd5e1' },
-            border: { display: true, color: '#000' },
-          },
-        },
-      },
-    });
+    this.buildComparisonChart(ctx, visible);
   }
 
   private buildComparisonChart(ctx: CanvasRenderingContext2D, visible: SeriesData[]): void {
