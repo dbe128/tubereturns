@@ -1194,7 +1194,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   formatReturn(value: number | null): string {
     if (value === null || value === undefined) return '—';
     const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(1)}%`;
+    return `${sign}${value.toFixed(2)}%`;
   }
 
   returnClass(value: number | null): string {

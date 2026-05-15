@@ -57,7 +57,12 @@ function maxPointsForTimeframe(tf: Timeframe): number {
 function thinData(data: PortfolioPricePoint[], max: number): PortfolioPricePoint[] {
   if (!isFinite(max) || data.length <= max) return data;
   const n = Math.ceil(data.length / max);
-  return data.filter((_, i) => i % n === 0);
+  const result = data.filter((_, i) => i % n === 0);
+  const last = data[data.length - 1];
+  if (result[result.length - 1] !== last) {
+    result.push(last);
+  }
+  return result;
 }
 
 interface SeriesData {

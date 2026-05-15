@@ -50,24 +50,11 @@ public class PortfolioService {
 
     @Cacheable(value = "channelReturns", key = "#channel.id")
     public ChannelReturns computeChannelReturns(Channel channel) {
-        List<Pick> buyPicks = pickRepository.findBuyPicksByChannelId(channel.getId());
-        if (buyPicks.isEmpty()) {
-            return new ChannelReturns(null, null, null);
-        }
-        LocalDate startDate = adjustToTradingDay(
-                buyPicks.getFirst().getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate());
-        Map<String, List<LocalDate>> buyDatesByTicker = pickDatesToMap(buyPicks);
-        Map<String, List<LocalDate>> sellDatesByTicker = pickDatesToMap(
-                pickRepository.findSellPicksByChannelId(channel.getId()));
-        Map<String, NavigableMap<LocalDate, Double>> tickerPrices = buildTickerPriceMap(buyDatesByTicker, startDate);
-        if (tickerPrices.isEmpty()) {
-            return new ChannelReturns(null, null, null);
-        }
-        Map<String, List<PositionGroup>> groupsByTicker = buildGroupsByTicker(buyDatesByTicker, sellDatesByTicker);
+        LocalDate now = LocalDate.now();
         return new ChannelReturns(
-                lastReturn(tickerPrices, groupsByTicker, startDate, LocalDate.now().minusYears(1)),
-                lastReturn(tickerPrices, groupsByTicker, startDate, LocalDate.now().minusYears(3)),
-                lastReturn(tickerPrices, groupsByTicker, startDate, LocalDate.now().minusYears(5)));
+                lastPoint(buildPortfolioPricesForChannel(channel, now.minusYears(1))),
+                lastPoint(buildPortfolioPricesForChannel(channel, now.minusYears(3))),
+                lastPoint(buildPortfolioPricesForChannel(channel, now.minusYears(5))));
     }
 
     @CacheEvict(value = "channelReturns", key = "#channelId")
@@ -86,11 +73,7 @@ public class PortfolioService {
         return date;
     }
 
-    private Double lastReturn(
-            Map<String, NavigableMap<LocalDate, Double>> tickerPrices,
-            Map<String, List<PositionGroup>> groupsByTicker,
-            LocalDate startDate, LocalDate clipFrom) {
-        List<PortfolioPricePointDto> pts = computePricePoints(tickerPrices, groupsByTicker, startDate, clipFrom);
+    private Double lastPoint(List<PortfolioPricePointDto> pts) {
         return pts.isEmpty() ? null : pts.getLast().changePercent();
     }
 
