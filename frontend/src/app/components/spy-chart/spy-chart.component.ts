@@ -3,7 +3,6 @@ import {
   inject,
   signal,
   computed,
-  OnInit,
   AfterViewInit,
   OnDestroy,
   ViewChild,
@@ -27,7 +26,7 @@ import {
   Legend,
 } from 'chart.js';
 import { ApiService } from '../../api/api.service';
-import type { PortfolioPricePoint, Portfolio } from '../../api/types';
+import type { PortfolioPricePoint, Channel } from '../../api/types';
 
 Chart.register(LineController, LineElement, PointElement, CategoryScale, LinearScale, Tooltip, Filler, Legend);
 
@@ -134,14 +133,14 @@ interface SeriesData {
                 <span class="w-5 h-1 inline-block rounded-sm" style="background:#6b7280"></span>
                 SPY
               </button>
-              @for (p of portfolios(); track p.channelId) {
+              @for (p of channelList(); track p.handle) {
                 <button
-                  (click)="toggleSeries(p.channelId)"
+                  (click)="toggleSeries(p.handle)"
                   class="flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-semibold border transition-colors"
-                  [class.opacity-40]="!isVisible(p.channelId)"
+                  [class.opacity-40]="!isVisible(p.handle)"
                 >
-                  <span class="w-5 h-1 inline-block rounded-sm" [style.background]="colorFor(p.channelId)"></span>
-                  {{ p.name }}
+                  <span class="w-5 h-1 inline-block rounded-sm" [style.background]="colorFor(p.handle)"></span>
+                  {{ p.channelName }}
                 </button>
               }
             </div>
@@ -165,19 +164,25 @@ interface SeriesData {
     </div>
   `,
 })
-export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
-  @Input() channelId?: string;
+export class SpyChartComponent implements AfterViewInit, OnDestroy {
   @Input() set leaderboardTimeframe(tf: '1Y' | '3Y' | '5Y') {
     if (this.timeframe() !== tf) {
       this.timeframe.set(tf);
       this.visibleIds = new Set();
-      if (this.initialized) {
-        if (this.hasPortfolios()) {
-          this.loadComparisonData(this.portfolios(), tf);
-        } else {
-          this.loadSpyData(tf);
-        }
+      if (this.hasPortfolios()) {
+        this.loadComparisonData(this.channelList(), tf);
+      } else {
+        this.loadSpyData(tf);
       }
+    }
+  }
+  @Input() set channels(value: Channel[]) {
+    this.channelList.set(value);
+    this.visibleIds = new Set();
+    if (value.length > 0) {
+      this.loadComparisonData(value, this.timeframe());
+    } else {
+      this.loadSpyData(this.timeframe());
     }
   }
   @Output() readonly refresh = new EventEmitter<void>();
@@ -190,8 +195,8 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly timeframe = signal<Timeframe>('1Y');
   readonly spyData = signal<PortfolioPricePoint[]>([]);
   readonly loading = signal(true);
-  readonly portfolios = signal<Portfolio[]>([]);
-  readonly hasPortfolios = computed(() => this.portfolios().length > 0);
+  readonly channelList = signal<Channel[]>([]);
+  readonly hasPortfolios = computed(() => this.channelList().length > 0);
 
   readonly lastClose = computed(() => {
     const d = this.spyData();
@@ -209,19 +214,6 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
   private allSeries: SeriesData[] = [];
   private visibleIds = new Set<string>();
   private colorMap = new Map<string, string>();
-  private initialized = false;
-
-  ngOnInit(): void {
-    this.initialized = true;
-    this.api.getPortfolios().pipe(catchError(() => of<Portfolio[]>([]))).subscribe((portfolios) => {
-      this.portfolios.set(portfolios);
-      if (portfolios.length > 0) {
-        this.loadComparisonData(portfolios, this.timeframe());
-      } else {
-        this.loadSpyData(this.timeframe());
-      }
-    });
-  }
 
   ngAfterViewInit(): void {
     if (this.spyData().length > 0) {
@@ -237,7 +229,7 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
     this.timeframe.set(tf);
     this.visibleIds = new Set();
     if (this.hasPortfolios()) {
-      this.loadComparisonData(this.portfolios(), tf);
+      this.loadComparisonData(this.channelList(), tf);
     } else {
       this.loadSpyData(tf);
     }
@@ -279,19 +271,19 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
-  private loadComparisonData(portfolios: Portfolio[], tf: Timeframe): void {
+  private loadComparisonData(channels: Channel[], tf: Timeframe): void {
     this.loading.set(true);
 
     const tfFrom = fromDate(tf);
 
-    portfolios.forEach((p, i) => {
-      this.colorMap.set(p.channelId, PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length]);
+    channels.forEach((p, i) => {
+      this.colorMap.set(p.handle, PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length]);
     });
 
     const requests = [
       this.api.getPortfolioPrices('SPY', tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
-      ...portfolios.map((p) =>
-        this.api.getPortfolioPrices(p.channelId, tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
+      ...channels.map((p) =>
+        this.api.getPortfolioPrices(p.handle, tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
       ),
     ];
 
@@ -302,9 +294,9 @@ export class SpyChartComponent implements OnInit, AfterViewInit, OnDestroy {
 
         this.allSeries = [
           { id: 'SPY', label: 'SPY', points: spyPts, color: '#6b7280' },
-          ...portfolios.map((p, i) => ({
-            id: p.channelId,
-            label: p.name,
+          ...channels.map((p, i) => ({
+            id: p.handle,
+            label: p.channelName,
             points: results[i + 1],
             color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
           })),

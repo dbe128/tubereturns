@@ -18,6 +18,7 @@ import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.PortfolioService;
 import com.tubereturns.service.StockPriceService;
 import com.tubereturns.service.TranscriptDownloadService;
 import com.tubereturns.service.PipelineStatusRegistry;
@@ -58,6 +59,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
+    private final PortfolioService portfolioService;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
@@ -92,6 +94,9 @@ public class AdminController {
     @DeleteMapping("/channels/{handle}")
     @Operation(summary = "Soft-delete a channel")
     public ResponseEntity<Map<String, String>> deleteChannel(@PathVariable String handle) {
+        channelRepository.findByHandle(handle).ifPresent(channel -> {
+            portfolioService.evictChannelReturns(channel.getId());
+        });
         discoveryService.softDeleteChannel(handle);
         return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
     }
@@ -104,6 +109,7 @@ public class AdminController {
                     if (handle.startsWith("mock-")) {
                         return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
                     }
+                    boolean hadPicks = pickRepository.countByChannelId(channel.getId()) > 0;
                     List<Video> videos = videoRepository.findByChannelIdOrderByPublishedAtDesc(channel.getId());
                     int count = 0;
                     for (Video video : videos) {
@@ -120,6 +126,9 @@ public class AdminController {
                         videoRepository.save(video);
                         count++;
                     }
+                    if (hadPicks) {
+                        portfolioService.evictChannelReturns(channel.getId());
+                    }
                     scheduler.triggerExtraction();
                     return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Reprocessing " + count + " video(s) for channel: " + handle));
                 })
@@ -134,10 +143,14 @@ public class AdminController {
                     if (video.getChannel().getHandle().startsWith("mock-")) {
                         return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
                     }
+                    boolean hadPicks = pickRepository.countByVideoEntityId(video.getId()) > 0;
                     pickRepository.deleteByVideoId(video.getId());
                     video.setExtractionStatus(Video.ExtractionStatus.PENDING);
                     video.setExtractionModel(null);
                     videoRepository.save(video);
+                    if (hadPicks) {
+                        portfolioService.evictChannelReturns(video.getChannel().getId());
+                    }
                     stockPickExtractionService.enqueueForReextraction(videoId);
                     return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Re-extraction started for video: " + videoId));
                 })
@@ -174,6 +187,7 @@ public class AdminController {
                     video.setExcluded(excluded);
                     video.setExclusionReason(excluded ? "Manual" : null);
                     videoRepository.save(video);
+                    portfolioService.evictChannelReturns(video.getChannel().getId());
                     return ResponseEntity.ok(Map.of("message", "Video " + videoId + " excluded=" + excluded));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -232,6 +246,8 @@ public class AdminController {
                             ? request.currency().trim().toUpperCase() : null;
                     log.info("Admin fix: attempting to resolve stock id={} '{}' → '{}' (currency: {})",
                             stock.getId(), oldTicker, newTicker, newCurrency);
+                    List<Long> affectedChannelIds = new java.util.ArrayList<>(
+                            pickRepository.findDistinctChannelIdsByStockId(stock.getId()));
                     try {
                         Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
                                 newTicker, LocalDate.now().minusYears(10), LocalDate.now());
@@ -249,6 +265,7 @@ public class AdminController {
                         if (target != null) {
                             log.info("Ticker '{}' already exists as stock id={} — merging stock id={} into it",
                                     newTicker, target.getId(), stock.getId());
+                            affectedChannelIds.addAll(pickRepository.findDistinctChannelIdsByStockId(target.getId()));
                             long pickCount = pickRepository.countByStockId(stock.getId());
                             int relinked = pickRepository.relinkPicks(stock, target);
                             log.info("Re-linked {} pick(s) from stock id={} ('{}') to stock id={} ('{}')",
@@ -265,6 +282,7 @@ public class AdminController {
                             log.info("Deleted any orphan price points for original stock id={}", stock.getId());
                             stockRepository.delete(stock);
                             log.info("Deleted original stock id={} ('{}') after merge", stock.getId(), oldTicker);
+                            affectedChannelIds.forEach(portfolioService::evictChannelReturns);
                             String msg = "Merged '" + oldTicker + "' into existing '" + newTicker + "' — re-linked "
                                     + pickCount + " pick(s), added " + merged + " price point(s), original record deleted";
                             log.info("Fix complete: {}", msg);
@@ -286,6 +304,7 @@ public class AdminController {
                                 }
                             }
                             log.info("Saved {} price point(s) for '{}' (stock id={})", inserted, newTicker, stock.getId());
+                            affectedChannelIds.forEach(portfolioService::evictChannelReturns);
                             String msg = "Resolved '" + oldTicker + "' as '" + newTicker + "' — saved " + inserted + " price point(s)";
                             log.info("Fix complete: {}", msg);
                             return ResponseEntity.ok(Map.of("message", msg));

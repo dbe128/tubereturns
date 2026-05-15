@@ -10,7 +10,6 @@ import {
   PickSchema,
   PricePointSchema,
   PortfolioPricePointSchema,
-  PortfolioSchema,
   PipelineStepStatusSchema,
   ChannelSearchResultSchema,
   ChannelSuggestionSchema,
@@ -22,7 +21,7 @@ import {
   TickerDataSchema,
   UnknownStockSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, Portfolio, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
+import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -266,13 +265,6 @@ export class ApiService {
     return this.validated(
       z.array(PricePointSchema),
       this.http.get<unknown>(`/api/stocks/${ticker}/prices`, { params }).pipe(catchError((e) => this.handleError(e))),
-    );
-  }
-
-  getPortfolios(): Observable<Portfolio[]> {
-    return this.validated(
-      z.array(PortfolioSchema),
-      this.http.get<unknown>('/api/portfolios').pipe(catchError((e) => this.handleError(e))),
     );
   }
 

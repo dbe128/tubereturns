@@ -328,7 +328,7 @@ interface UnknownStockRow extends UnknownStock {
       }
 
       @if (!error()) {
-        <app-spy-chart (refresh)="load()" [leaderboardTimeframe]="timeframe()" />
+        <app-spy-chart (refresh)="load()" [leaderboardTimeframe]="timeframe()" [channels]="channelsForChart()" />
 
         @if (auth.isAuthenticated && !auth.isAdmin && myChannelSuggestions().length > 0) {
           <div class="mt-10">
@@ -724,6 +724,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly rows = signal<ChannelRow[]>([]);
   readonly timeframe = signal<'1Y' | '3Y' | '5Y'>('3Y');
   readonly leaderboardTimeframes: readonly ('1Y' | '3Y' | '5Y')[] = ['1Y', '3Y', '5Y'];
+
+  readonly channelsForChart = computed(() =>
+    this.rows().filter((r) => r.stats && (r.stats.return1y !== null || r.stats.return3y !== null || r.stats.return5y !== null))
+  );
 
   readonly sortedRows = computed(() => {
     const tf = this.timeframe();

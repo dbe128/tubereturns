@@ -1,11 +1,8 @@
 package com.tubereturns.controller;
 
-import com.tubereturns.dto.PortfolioDto;
 import com.tubereturns.dto.PortfolioPricePointDto;
-import com.tubereturns.model.Pick;
 import com.tubereturns.model.StockPrice;
 import com.tubereturns.repository.ChannelRepository;
-import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import com.tubereturns.service.PortfolioService;
@@ -18,8 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
-import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -28,30 +23,9 @@ import java.util.List;
 public class PortfolioController {
 
     private final ChannelRepository channelRepository;
-    private final PickRepository pickRepository;
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
     private final PortfolioService portfolioService;
-
-    @GetMapping
-    public List<PortfolioDto> getPortfolios() {
-        List<PortfolioDto> portfolios = new ArrayList<>();
-        channelRepository.findAll().forEach(channel -> {
-            List<String> tickers = pickRepository.findDistinctTickersByChannelIdAndSignal(
-                    channel.getId(), Pick.Signal.BUY);
-            if (!tickers.isEmpty()) {
-                LocalDate startDate = pickRepository.findEarliestBuyPickPublishedAt(channel.getId())
-                        .map(instant -> portfolioService.adjustToTradingDay(instant.atZone(ZoneOffset.UTC).toLocalDate()))
-                        .orElse(LocalDate.now());
-                portfolios.add(new PortfolioDto(
-                        channel.getHandle(),
-                        channel.getChannelName(),
-                        startDate.toString(),
-                        tickers));
-            }
-        });
-        return portfolios;
-    }
 
     @GetMapping("/{channelId}/prices")
     public ResponseEntity<List<PortfolioPricePointDto>> getPortfolioPrices(

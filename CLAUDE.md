@@ -125,6 +125,24 @@ Stock prices are stored in their local currency (the `currency` column on `Stock
 
 ---
 
+### Caching
+
+`PortfolioService.computeChannelReturns` is cached under `"channelReturns"` (Caffeine, 1-day TTL, max 500 entries). Eviction is also explicit — **whenever you modify data that feeds into channel return calculations, evict the affected cache entries** rather than waiting for TTL expiry.
+
+When to evict `channelReturns`:
+- **Picks added/changed for a channel** — evict that channel's entry (happens in `StockPickExtractionService` on `EXTRACTED`)
+- **Picks deleted** — evict that channel's entry (only if picks actually existed before deletion); relevant in `AdminController.reextractVideo` and `reprocessChannel`
+- **Video excluded/un-excluded** — evict the video's channel (excluded picks don't enter portfolio math)
+- **Stock prices refreshed** — evict all entries when `refreshAllPrices()` returns > 0
+- **Exchange rates refreshed** — evict all entries when `refreshRecentRates()` returns > 0; evict affected channels when `ensureCurrencyHistoricalRates` inserts new rates
+- **Stock ticker fixed (admin)** — evict all channels with picks for the original or merged stock (`AdminController.tryTicker`)
+- **Channel deleted** — evict that channel's entry
+
+Eviction methods on `PortfolioService`: `evictChannelReturns(Long channelId)` and `evictAllChannelReturns()`.
+`ExchangeRateService` uses `CacheManager` directly (cannot inject `PortfolioService` — circular dependency).
+
+---
+
 ## Code Style
 
 - **No comments** — self-explanatory naming only; no Javadoc, no inline comments

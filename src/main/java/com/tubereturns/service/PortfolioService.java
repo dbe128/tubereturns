@@ -8,6 +8,8 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
@@ -46,6 +48,7 @@ public class PortfolioService {
         return computePricePoints(tickerPrices, buildGroupsByTicker(buyDatesByTicker, sellDatesByTicker), startDate, clipFrom);
     }
 
+    @Cacheable(value = "channelReturns", key = "#channel.id")
     public ChannelReturns computeChannelReturns(Channel channel) {
         List<Pick> buyPicks = pickRepository.findBuyPicksByChannelId(channel.getId());
         if (buyPicks.isEmpty()) {
@@ -66,6 +69,12 @@ public class PortfolioService {
                 lastReturn(tickerPrices, groupsByTicker, startDate, LocalDate.now().minusYears(3)),
                 lastReturn(tickerPrices, groupsByTicker, startDate, LocalDate.now().minusYears(5)));
     }
+
+    @CacheEvict(value = "channelReturns", key = "#channelId")
+    public void evictChannelReturns(Long channelId) {}
+
+    @CacheEvict(value = "channelReturns", allEntries = true)
+    public void evictAllChannelReturns() {}
 
     public LocalDate adjustToTradingDay(LocalDate date) {
         if (date.getDayOfWeek() == DayOfWeek.SATURDAY) {

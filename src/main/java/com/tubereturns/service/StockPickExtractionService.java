@@ -46,6 +46,7 @@ public class StockPickExtractionService {
     private final AiModelService aiModelService;
     private final PipelineStatusRegistry registry;
     private final ExchangeRateService exchangeRateService;
+    private final PortfolioService portfolioService;
 
     private final ExecutorService extractionExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "extraction-worker");
@@ -208,6 +209,7 @@ public class StockPickExtractionService {
             savePicks(video, best.dto(), priceDate, best.priceCache());
             video.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
             video.setExtractionModel(best.model());
+            portfolioService.evictChannelReturns(video.getChannel().getId());
             if (best.dto().externalPositions()) {
                 log.info("Video {} contains only external positions — auto-excluding", videoUrl);
                 video.setExcluded(true);

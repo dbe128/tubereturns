@@ -19,6 +19,7 @@ public class StockPriceRefreshService {
 
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
+    private final PortfolioService portfolioService;
 
     public int refreshAllPrices() {
         List<Stock> stocks = stockRepository.findAll();
@@ -68,6 +69,9 @@ public class StockPriceRefreshService {
         }
 
         log.info("Price refresh complete — {} new price point(s) across {} stock(s)", totalInserted, stocks.size());
+        if (totalInserted > 0) {
+            portfolioService.evictAllChannelReturns();
+        }
         return totalInserted;
     }
 }

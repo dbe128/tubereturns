@@ -4,9 +4,11 @@ import com.tubereturns.model.Currency;
 import com.tubereturns.model.ExchangeRate;
 import com.tubereturns.repository.CurrencyRepository;
 import com.tubereturns.repository.ExchangeRateRepository;
+import com.tubereturns.repository.PickRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,8 @@ public class ExchangeRateService {
 
     private final CurrencyRepository currencyRepository;
     private final ExchangeRateRepository exchangeRateRepository;
+    private final PickRepository pickRepository;
+    private final CacheManager cacheManager;
 
     @Async
     @EventListener(ApplicationReadyEvent.class)
@@ -56,7 +60,16 @@ public class ExchangeRateService {
             return;
         }
 
-        fetchAndSaveRates(currency, LocalDate.now().minusYears(10), LocalDate.now());
+        int inserted = fetchAndSaveRates(currency, LocalDate.now().minusYears(10), LocalDate.now());
+        if (inserted > 0) {
+            List<Long> affected = pickRepository.findDistinctChannelIdsByCurrency(upperCode);
+            if (!affected.isEmpty()) {
+                var cache = cacheManager.getCache("channelReturns");
+                if (cache != null) {
+                    affected.forEach(id -> cache.evict(id));
+                }
+            }
+        }
     }
 
     public int refreshRecentRates() {
@@ -71,6 +84,12 @@ public class ExchangeRateService {
             total += fetchAndSaveRates(currency, from, to);
         }
         log.info("Exchange rate refresh complete — {} new rate points inserted", total);
+        if (total > 0) {
+            var cache = cacheManager.getCache("channelReturns");
+            if (cache != null) {
+                cache.clear();
+            }
+        }
         return total;
     }
 
