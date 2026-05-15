@@ -5,6 +5,7 @@ import com.tubereturns.model.ExchangeRate;
 import com.tubereturns.repository.CurrencyRepository;
 import com.tubereturns.repository.ExchangeRateRepository;
 import com.tubereturns.repository.PickRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -33,17 +35,29 @@ public class ExchangeRateService {
     private final ExchangeRateRepository exchangeRateRepository;
     private final PickRepository pickRepository;
     private final CacheManager cacheManager;
+    private final StartupCoordinator startupCoordinator;
+
+    private CompletableFuture<Void> initTask;
+
+    @PostConstruct
+    void init() {
+        initTask = startupCoordinator.register();
+    }
 
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void seedExchangeRates() {
-        if (currencyRepository.count() > 0) {
-            log.info("Currencies already present in DB — skipping initial exchange rate seed");
-            return;
-        }
-        log.info("Seeding {} popular currencies with 10yr historical exchange rates", SEED_CURRENCIES.size());
-        for (String code : SEED_CURRENCIES) {
-            ensureCurrencyHistoricalRates(code);
+        try {
+            if (currencyRepository.count() > 0) {
+                log.info("Currencies already present in DB — skipping initial exchange rate seed");
+                return;
+            }
+            log.info("Seeding {} popular currencies with 10yr historical exchange rates", SEED_CURRENCIES.size());
+            for (String code : SEED_CURRENCIES) {
+                ensureCurrencyHistoricalRates(code);
+            }
+        } finally {
+            initTask.complete(null);
         }
     }
 

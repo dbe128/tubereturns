@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +31,7 @@ public class MockChannelDataSeedService {
 
     @Transactional
     @EventListener(ApplicationReadyEvent.class)
+    @Order(20)
     public void seedData() {
         for (MockChannelProvider.MockChannelData channelData : mockChannelProvider.getChannels()) {
             Channel channel = channelRepository.findByHandle(channelData.handle())

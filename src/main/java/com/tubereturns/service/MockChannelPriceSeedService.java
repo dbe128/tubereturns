@@ -4,6 +4,7 @@ import com.tubereturns.model.Stock;
 import com.tubereturns.model.StockPrice;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,6 +17,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -26,11 +28,23 @@ public class MockChannelPriceSeedService {
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
     private final MockChannelProvider mockChannelProvider;
+    private final StartupCoordinator startupCoordinator;
+
+    private CompletableFuture<Void> initTask;
+
+    @PostConstruct
+    void init() {
+        initTask = startupCoordinator.register();
+    }
 
     @Async
     @EventListener(ApplicationReadyEvent.class)
     public void seedPrices() {
-        collectTickers().forEach((ticker, entry) -> seedTicker(ticker, entry.companyName(), entry.startDate()));
+        try {
+            collectTickers().forEach((ticker, entry) -> seedTicker(ticker, entry.companyName(), entry.startDate()));
+        } finally {
+            initTask.complete(null);
+        }
     }
 
     private Map<String, TickerEntry> collectTickers() {

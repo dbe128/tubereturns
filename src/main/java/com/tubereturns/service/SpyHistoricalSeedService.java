@@ -4,6 +4,7 @@ import com.tubereturns.model.Stock;
 import com.tubereturns.model.StockPrice;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,6 +26,14 @@ public class SpyHistoricalSeedService {
 
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
+    private final StartupCoordinator startupCoordinator;
+
+    private CompletableFuture<Void> initTask;
+
+    @PostConstruct
+    void init() {
+        initTask = startupCoordinator.register();
+    }
 
     @Async
     @EventListener(ApplicationReadyEvent.class)
@@ -45,6 +55,8 @@ public class SpyHistoricalSeedService {
             log.info("SPY historical seed complete — {} new price points inserted", inserted);
         } catch (Exception e) {
             log.error("Failed to seed SPY historical prices: {}", e.getMessage(), e);
+        } finally {
+            initTask.complete(null);
         }
     }
 
