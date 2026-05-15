@@ -183,7 +183,7 @@ public class YouTubeApiService {
                     .setKey(apiKey)
                     .execute();
             if (response.getItems() != null && !response.getItems().isEmpty()) {
-                var videoPublishedAt = response.getItems().get(0).getContentDetails().getVideoPublishedAt();
+                var videoPublishedAt = response.getItems().getFirst().getContentDetails().getVideoPublishedAt();
                 if (videoPublishedAt != null) {
                     return Instant.ofEpochMilli(videoPublishedAt.getValue()).toString().substring(0, 10);
                 }
@@ -241,7 +241,7 @@ public class YouTubeApiService {
             return null;
         }
 
-        var item = response.getItems().get(0);
+        var item = response.getItems().getFirst();
         String uploadsPlaylistId = item.getContentDetails().getRelatedPlaylists().getUploads();
         String thumbnailUrl = null;
         if (item.getSnippet() != null && item.getSnippet().getThumbnails() != null) {

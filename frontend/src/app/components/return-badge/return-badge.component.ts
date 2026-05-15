@@ -1,10 +1,9 @@
 import { Component, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-return-badge',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     @if (value() == null) {
       <span class="text-gray-400 text-sm">—</span>

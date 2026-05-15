@@ -23,7 +23,6 @@ public class StockPriceService {
 
     private static final Map<String, Double> cache = new ConcurrentHashMap<>();
 
-    /** Non-null when rate-limited; fetches are blocked until this instant. */
     private static final AtomicReference<Instant> rateLimitedUntil = new AtomicReference<>(null);
 
     public static double getClosePrice(String ticker, LocalDate date) throws Exception {

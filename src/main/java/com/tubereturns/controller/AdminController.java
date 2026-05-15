@@ -13,7 +13,6 @@ import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
-import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.ChannelNotificationService;
@@ -35,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +56,6 @@ public class AdminController {
     private final TranscriptDownloadService transcriptDownloadService;
     private final ChannelNotificationService channelNotificationService;
     private final ChannelProcessingNotificationRepository notificationRepository;
-    private final UserRepository userRepository;
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
     private final PortfolioService portfolioService;
@@ -107,7 +106,7 @@ public class AdminController {
         return channelRepository.findByHandle(handle)
                 .map(channel -> {
                     if (handle.startsWith("mock-")) {
-                        return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
+                        return ResponseEntity.badRequest().body(Map.of("message", "Operation not allowed for mock channels"));
                     }
                     boolean hadPicks = pickRepository.countByChannelId(channel.getId()) > 0;
                     List<Video> videos = videoRepository.findByChannelIdOrderByPublishedAtDesc(channel.getId());
@@ -130,7 +129,7 @@ public class AdminController {
                         portfolioService.evictChannelReturns(channel.getId());
                     }
                     scheduler.triggerExtraction();
-                    return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Reprocessing " + count + " video(s) for channel: " + handle));
+                    return ResponseEntity.accepted().body(Map.of("message", "Reprocessing " + count + " video(s) for channel: " + handle));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -141,7 +140,7 @@ public class AdminController {
         return videoRepository.findByVideoId(videoId)
                 .map(video -> {
                     if (video.getChannel().getHandle().startsWith("mock-")) {
-                        return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
+                        return ResponseEntity.badRequest().body(Map.of("message", "Operation not allowed for mock channels"));
                     }
                     boolean hadPicks = pickRepository.countByVideoEntityId(video.getId()) > 0;
                     pickRepository.deleteByVideoId(video.getId());
@@ -152,7 +151,7 @@ public class AdminController {
                         portfolioService.evictChannelReturns(video.getChannel().getId());
                     }
                     stockPickExtractionService.enqueueForReextraction(videoId);
-                    return ResponseEntity.accepted().<Map<String, String>>body(Map.of("message", "Re-extraction started for video: " + videoId));
+                    return ResponseEntity.accepted().body(Map.of("message", "Re-extraction started for video: " + videoId));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -163,7 +162,7 @@ public class AdminController {
         return videoRepository.findByVideoId(videoId)
                 .map(video -> {
                     if (video.getChannel().getHandle().startsWith("mock-")) {
-                        return ResponseEntity.badRequest().<Map<String, String>>body(Map.of("message", "Operation not allowed for mock channels"));
+                        return ResponseEntity.badRequest().body(Map.of("message", "Operation not allowed for mock channels"));
                     }
                     pickRepository.deleteByVideoId(video.getId());
                     video.setTranscriptText(null);
@@ -246,7 +245,7 @@ public class AdminController {
                             ? request.currency().trim().toUpperCase() : null;
                     log.info("Admin fix: attempting to resolve stock id={} '{}' → '{}' (currency: {})",
                             stock.getId(), oldTicker, newTicker, newCurrency);
-                    List<Long> affectedChannelIds = new java.util.ArrayList<>(
+                    List<Long> affectedChannelIds = new ArrayList<>(
                             pickRepository.findDistinctChannelIdsByStockId(stock.getId()));
                     try {
                         Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
@@ -254,7 +253,7 @@ public class AdminController {
                         log.info("Yahoo Finance returned {} price point(s) for '{}'", prices.size(), newTicker);
                         if (prices.isEmpty()) {
                             log.warn("No price data found for '{}' — aborting fix for stock id={}", newTicker, stock.getId());
-                            return ResponseEntity.badRequest().<Map<String, String>>body(
+                            return ResponseEntity.badRequest().body(
                                     Map.of("message", "No price data found for ticker " + newTicker));
                         }
 
@@ -311,7 +310,7 @@ public class AdminController {
                         }
                     } catch (Exception e) {
                         log.error("Admin fix failed for stock id={} '{}' → '{}': {}", stock.getId(), oldTicker, newTicker, e.getMessage(), e);
-                        return ResponseEntity.badRequest().<Map<String, String>>body(
+                        return ResponseEntity.badRequest().body(
                                 Map.of("message", "Failed to fetch prices for '" + newTicker + "': " + e.getMessage()));
                     }
                 })
@@ -332,10 +331,6 @@ public class AdminController {
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {
         return toDto(step, label, queueSize, ytbsdStats, registry.isRunning(step), null);
-    }
-
-    private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running) {
-        return toDto(step, label, queueSize, ytbsdStats, running, null);
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running, AiModelStatusDto aiModelStatus) {

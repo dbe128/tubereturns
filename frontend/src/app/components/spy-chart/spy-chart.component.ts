@@ -10,9 +10,8 @@ import {
   EventEmitter,
   Input,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { forkJoin, of, Subject, Subscription } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 import {
   Chart,
   LineController,
@@ -71,7 +70,7 @@ interface SeriesData {
 @Component({
   selector: 'app-spy-chart',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
       <div class="flex items-start justify-between mb-4 gap-4 flex-wrap">
@@ -142,13 +141,13 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
     if (this.timeframe() !== tf) {
       this.timeframe.set(tf);
       this.visibleIds = new Set();
-      this.loadComparisonData(this.channelList(), tf);
+      this.trigger$.next({ channels: this.channelList(), tf });
     }
   }
   @Input() set channels(value: Channel[]) {
     this.channelList.set(value);
     this.visibleIds = new Set();
-    this.loadComparisonData(value, this.timeframe());
+    this.trigger$.next({ channels: value, tf: this.timeframe() });
   }
   @Output() readonly refresh = new EventEmitter<void>();
 
@@ -167,6 +166,45 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
   private visibleIds = new Set<string>();
   private colorMap = new Map<string, string>();
 
+  private readonly trigger$ = new Subject<{ channels: Channel[]; tf: Timeframe }>();
+  private readonly sub: Subscription = this.trigger$.pipe(
+    switchMap(({ channels, tf }) => {
+      this.loading.set(true);
+      const tfFrom = fromDate(tf);
+      channels.forEach((p, i) => this.colorMap.set(p.handle, PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length]));
+      const requests = [
+        this.api.getPortfolioPrices('SPY', tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
+        ...channels.map((p) =>
+          this.api.getPortfolioPrices(p.handle, tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
+        ),
+      ];
+      return forkJoin(requests).pipe(map((results) => ({ results, channels })));
+    }),
+  ).subscribe({
+    next: ({ results, channels }) => {
+      const spyPts = results[0];
+      this.spyData.set(spyPts);
+      this.allSeries = [
+        { id: 'SPY', label: 'SPY', points: spyPts, color: '#6b7280' },
+        ...channels.map((p, i) => ({
+          id: p.handle,
+          label: p.channelName,
+          points: results[i + 1],
+          color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
+        })),
+      ];
+      if (this.visibleIds.size === 0) {
+        this.visibleIds = new Set(this.allSeries.map((s) => s.id));
+      }
+      this.loading.set(false);
+      setTimeout(() => this.rebuildChart(), 0);
+    },
+    error: () => {
+      this.spyData.set([]);
+      this.loading.set(false);
+    },
+  });
+
   ngAfterViewInit(): void {
     if (this.spyData().length > 0) {
       this.buildChart();
@@ -174,13 +212,14 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.sub.unsubscribe();
     this.chart?.destroy();
   }
 
   setTimeframe(tf: Timeframe): void {
     this.timeframe.set(tf);
     this.visibleIds = new Set();
-    this.loadComparisonData(this.channelList(), tf);
+    this.trigger$.next({ channels: this.channelList(), tf });
   }
 
   toggleSeries(id: string): void {
@@ -200,50 +239,6 @@ export class SpyChartComponent implements AfterViewInit, OnDestroy {
 
   colorFor(channelId: string): string {
     return this.colorMap.get(channelId) ?? '#6b7280';
-  }
-
-  private loadComparisonData(channels: Channel[], tf: Timeframe): void {
-    this.loading.set(true);
-
-    const tfFrom = fromDate(tf);
-
-    channels.forEach((p, i) => {
-      this.colorMap.set(p.handle, PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length]);
-    });
-
-    const requests = [
-      this.api.getPortfolioPrices('SPY', tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
-      ...channels.map((p) =>
-        this.api.getPortfolioPrices(p.handle, tfFrom).pipe(catchError(() => of<PortfolioPricePoint[]>([]))),
-      ),
-    ];
-
-    forkJoin(requests).subscribe({
-      next: (results) => {
-        const spyPts = results[0];
-        this.spyData.set(spyPts);
-
-        this.allSeries = [
-          { id: 'SPY', label: 'SPY', points: spyPts, color: '#6b7280' },
-          ...channels.map((p, i) => ({
-            id: p.handle,
-            label: p.channelName,
-            points: results[i + 1],
-            color: PORTFOLIO_COLORS[i % PORTFOLIO_COLORS.length],
-          })),
-        ];
-
-        if (this.visibleIds.size === 0) {
-          this.visibleIds = new Set(this.allSeries.map((s) => s.id));
-        }
-        this.loading.set(false);
-        setTimeout(() => this.rebuildChart(), 0);
-      },
-      error: () => {
-        this.spyData.set([]);
-        this.loading.set(false);
-      },
-    });
   }
 
   private rebuildChart(): void {

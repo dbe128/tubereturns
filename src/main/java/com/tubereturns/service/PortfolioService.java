@@ -37,7 +37,7 @@ public class PortfolioService {
             return List.of();
         }
         LocalDate startDate = adjustToTradingDay(
-                buyPicks.get(0).getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate());
+                buyPicks.getFirst().getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate());
         Map<String, List<LocalDate>> buyDatesByTicker = pickDatesToMap(buyPicks);
         Map<String, List<LocalDate>> sellDatesByTicker = pickDatesToMap(
                 pickRepository.findSellPicksByChannelId(channel.getId()));
@@ -55,7 +55,7 @@ public class PortfolioService {
             return new ChannelReturns(null, null, null);
         }
         LocalDate startDate = adjustToTradingDay(
-                buyPicks.get(0).getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate());
+                buyPicks.getFirst().getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate());
         Map<String, List<LocalDate>> buyDatesByTicker = pickDatesToMap(buyPicks);
         Map<String, List<LocalDate>> sellDatesByTicker = pickDatesToMap(
                 pickRepository.findSellPicksByChannelId(channel.getId()));
@@ -76,7 +76,7 @@ public class PortfolioService {
     @CacheEvict(value = "channelReturns", allEntries = true)
     public void evictAllChannelReturns() {}
 
-    public LocalDate adjustToTradingDay(LocalDate date) {
+    private LocalDate adjustToTradingDay(LocalDate date) {
         if (date.getDayOfWeek() == DayOfWeek.SATURDAY) {
             return date.minusDays(1);
         }
@@ -91,7 +91,7 @@ public class PortfolioService {
             Map<String, List<PositionGroup>> groupsByTicker,
             LocalDate startDate, LocalDate clipFrom) {
         List<PortfolioPricePointDto> pts = computePricePoints(tickerPrices, groupsByTicker, startDate, clipFrom);
-        return pts.isEmpty() ? null : pts.get(pts.size() - 1).changePercent();
+        return pts.isEmpty() ? null : pts.getLast().changePercent();
     }
 
     private List<PortfolioPricePointDto> computePricePoints(
@@ -109,7 +109,7 @@ public class PortfolioService {
                     List<Double> returns = tickerPrices.entrySet().stream()
                             .map(e -> computeTickerReturn(
                                     date, groupsByTicker.getOrDefault(e.getKey(), List.of()), e.getValue()))
-                            .filter(r -> r != null)
+                            .filter(Objects::nonNull)
                             .toList();
                     double avg = returns.isEmpty() ? 0 : returns.stream().mapToDouble(Double::doubleValue).average().orElse(0);
                     return new PortfolioPricePointDto(date.toString(), avg, null);
@@ -119,7 +119,7 @@ public class PortfolioService {
         if (points.isEmpty() || effectiveFrom.equals(startDate)) {
             return points;
         }
-        double base = points.get(0).changePercent();
+        double base = points.getFirst().changePercent();
         double baseFactor = 1.0 + base / 100.0;
         return points.stream()
                 .map(p -> new PortfolioPricePointDto(

@@ -50,7 +50,7 @@ public class PortfolioController {
             if (prices.isEmpty()) {
                 return List.<PortfolioPricePointDto>of();
             }
-            double base = prices.get(0).getClosePrice();
+            double base = prices.getFirst().getClosePrice();
             return prices.stream()
                     .map(p -> new PortfolioPricePointDto(
                             p.getPriceDate().toString(),
