@@ -10,5 +10,6 @@
     <include file="db/changelog/003-exchange-rates.sql"/>
     <include file="db/changelog/004-stock-reviewed.sql"/>
     <include file="db/changelog/005-channel-suggestions.sql"/>
+    <include file="db/changelog/006-seed-users.sql"/>
 
 </databaseChangeLog>
