@@ -2,7 +2,6 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.dto.ChannelSearchResultDto;
-import com.tubereturns.dto.ChannelStatsDto;
 import com.tubereturns.dto.VideoSummaryDto;
 import com.tubereturns.model.Channel;
 import com.tubereturns.model.Pick;
@@ -61,14 +60,6 @@ public class ChannelController {
             @Parameter(description = "Channel handle") @PathVariable String handle) {
         return channelRepository.findByHandle(handle)
                 .map(c -> ResponseEntity.ok(toResponseDto(c)))
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    @GetMapping("/{handle}/stats")
-    @Operation(summary = "Get channel statistics")
-    public ResponseEntity<ChannelStatsDto> getChannelStats(@PathVariable String handle) {
-        return channelRepository.findByHandle(handle)
-                .map(c -> ResponseEntity.ok(toStatsDto(c)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -164,19 +155,10 @@ public class ChannelController {
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }
 
-    @GetMapping("/top-performers")
-    @Operation(summary = "Get channels ranked by pick count")
-    public ResponseEntity<List<ChannelStatsDto>> getTopPerformers(
-            @RequestParam(defaultValue = "10") int limit) {
-        List<Channel> channels = channelRepository.findAll();
-        List<ChannelStatsDto> stats = channels.stream()
-                .limit(limit)
-                .map(this::toStatsDto)
-                .toList();
-        return ResponseEntity.ok(stats);
-    }
-
     private ChannelResponseDto toResponseDto(Channel channel) {
+        long totalVideos = videoRepository.countByChannelId(channel.getId());
+        long processedVideos = videoRepository.countProcessedByChannelId(channel.getId());
+        PortfolioService.ChannelReturns returns = portfolioService.computeChannelReturns(channel);
         return new ChannelResponseDto(
             channel.getId(),
             channel.getHandle(),
@@ -186,7 +168,12 @@ public class ChannelController {
             channel.getCreatedAt(),
             channel.getUpdatedAt(),
             channel.getSubscriberCount(),
-            channel.isDiscoveryComplete()
+            channel.isDiscoveryComplete(),
+            totalVideos,
+            processedVideos,
+            returns.return1y(),
+            returns.return3y(),
+            returns.return5y()
         );
     }
 
@@ -215,18 +202,4 @@ public class ChannelController {
         );
     }
 
-    private ChannelStatsDto toStatsDto(Channel channel) {
-        long totalVideos = videoRepository.countByChannelId(channel.getId());
-        long processedVideos = videoRepository.countProcessedByChannelId(channel.getId());
-        PortfolioService.ChannelReturns returns = portfolioService.computeChannelReturns(channel);
-        return new ChannelStatsDto(
-            channel.getHandle(),
-            channel.getChannelName(),
-            totalVideos,
-            processedVideos,
-            returns.return1y(),
-            returns.return3y(),
-            returns.return5y()
-        );
-    }
 }

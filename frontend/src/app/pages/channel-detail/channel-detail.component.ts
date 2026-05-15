@@ -9,12 +9,11 @@ import {
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { forkJoin, of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
-import type { Channel, ChannelStats, VideoSummary } from '../../api/types';
+import type { Channel, VideoSummary } from '../../api/types';
 
 type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'extractionStatus';
 type SortDir = 'asc' | 'desc';
@@ -107,11 +106,11 @@ interface IndexedVideo {
             <div class="flex items-center gap-6 flex-shrink-0">
               <div class="flex gap-8 text-sm text-gray-400">
                 <div class="text-center">
-                  <div class="text-2xl font-bold text-gray-800">{{ stats()?.totalVideos ?? '—' }}</div>
+                  <div class="text-2xl font-bold text-gray-800">{{ channel()?.totalVideos ?? '—' }}</div>
                   <div class="text-xs uppercase tracking-wide">Videos</div>
                 </div>
                 <div class="text-center">
-                  <div class="text-2xl font-bold text-primary-600">{{ stats()?.processedVideos ?? '—' }}</div>
+                  <div class="text-2xl font-bold text-primary-600">{{ channel()?.processedVideos ?? '—' }}</div>
                   <div class="text-xs uppercase tracking-wide">Processed</div>
                 </div>
               </div>
@@ -476,7 +475,6 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly tickerMap = signal<Record<string, string>>({});
   readonly unknownTickers = signal<ReadonlySet<string>>(new Set());
   readonly channel = signal<Channel | null>(null);
-  readonly stats = signal<ChannelStats | null>(null);
   readonly videos = signal<VideoSummary[]>([]);
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -567,12 +565,10 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
 
     forkJoin({
       channel: this.api.getChannel(id),
-      stats: this.api.getChannelStats(id).pipe(catchError(() => of(null))),
       videos: this.api.getVideosForChannel(id),
     }).subscribe({
-      next: ({ channel, stats, videos }) => {
+      next: ({ channel, videos }) => {
         this.channel.set(channel);
-        this.stats.set(stats);
         this.videos.set(videos);
         this.loading.set(false);
       },

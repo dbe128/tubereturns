@@ -10,11 +10,6 @@ export const ChannelSchema = z.object({
   updatedAt: z.string(),
   subscriberCount: z.number().nullable(),
   discoveryComplete: z.boolean(),
-});
-
-export const ChannelStatsSchema = z.object({
-  handle: z.string(),
-  channelName: z.string(),
   totalVideos: z.number(),
   processedVideos: z.number(),
   return1y: z.number().nullable(),
@@ -133,7 +128,6 @@ export const PipelineStepStatusSchema = z.object({
 });
 
 export type Channel = z.infer<typeof ChannelSchema>;
-export type ChannelStats = z.infer<typeof ChannelStatsSchema>;
 export type VideoSummary = z.infer<typeof VideoSummarySchema>;
 export type Performance = z.infer<typeof PerformanceSchema>;
 export type Pick = z.infer<typeof PickSchema>;

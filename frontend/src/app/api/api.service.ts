@@ -5,7 +5,6 @@ import { catchError, map } from 'rxjs/operators';
 import { z } from 'zod';
 import {
   ChannelSchema,
-  ChannelStatsSchema,
   VideoSummarySchema,
   PickSchema,
   PricePointSchema,
@@ -21,7 +20,7 @@ import {
   TickerDataSchema,
   UnknownStockSchema,
 } from './types';
-import type { Channel, ChannelStats, VideoSummary, Pick, PricePoint, PortfolioPricePoint, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
+import type { Channel, VideoSummary, Pick, PricePoint, PortfolioPricePoint, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -72,20 +71,6 @@ export class ApiService {
     return this.validated(
       ChannelSchema,
       this.http.get<unknown>(`/api/channels/${handle}`).pipe(catchError((e) => this.handleError(e))),
-    );
-  }
-
-  getTopChannels(): Observable<ChannelStats[]> {
-    return this.validated(
-      z.array(ChannelStatsSchema),
-      this.http.get<unknown>('/api/channels/top-performers').pipe(catchError((e) => this.handleError(e))),
-    );
-  }
-
-  getChannelStats(handle: string): Observable<ChannelStats> {
-    return this.validated(
-      ChannelStatsSchema,
-      this.http.get<unknown>(`/api/channels/${handle}/stats`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

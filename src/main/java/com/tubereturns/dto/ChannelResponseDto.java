@@ -11,5 +11,10 @@ public record ChannelResponseDto(
     Instant createdAt,
     Instant updatedAt,
     Long subscriberCount,
-    boolean discoveryComplete
+    boolean discoveryComplete,
+    long totalVideos,
+    long processedVideos,
+    Double return1y,
+    Double return3y,
+    Double return5y
 ) {}

@@ -2,17 +2,13 @@ import { Component, inject, signal, computed, OnDestroy, OnInit, ViewChild, Elem
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { forkJoin, interval, of, Subject, Subscription } from 'rxjs';
+import { interval, of, Subject, Subscription } from 'rxjs';
 import { catchError, debounceTime, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
 import type { Channel, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
-
-interface ChannelRow extends Channel {
-  stats: { totalVideos: number; processedVideos: number; return1y: number | null; return3y: number | null; return5y: number | null } | null;
-}
 
 interface UnknownStockRow extends UnknownStock {
   editTicker: string;
@@ -245,10 +241,10 @@ interface UnknownStockRow extends UnknownStock {
                       {{ row.subscriberCount != null ? formatSubscriberCount(row.subscriberCount) : '—' }}
                     </td>
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
-                      {{ row.stats?.totalVideos ?? '—' }}
+                      {{ row.totalVideos }}
                     </td>
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
-                      {{ row.stats?.processedVideos ?? '—' }}
+                      {{ row.processedVideos }}
                     </td>
                     <td class="px-6 py-4 text-right font-mono text-sm font-medium" [ngClass]="returnClass(activeReturn(row))">
                       {{ formatReturn(activeReturn(row)) }}
@@ -721,20 +717,18 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly recovery = inject(BackendRecoveryService);
 
-  readonly rows = signal<ChannelRow[]>([]);
+  readonly rows = signal<Channel[]>([]);
   readonly timeframe = signal<'1Y' | '3Y' | '5Y'>('3Y');
   readonly leaderboardTimeframes: readonly ('1Y' | '3Y' | '5Y')[] = ['1Y', '3Y', '5Y'];
 
   readonly channelsForChart = computed(() =>
-    this.rows().filter((r) => r.stats && (r.stats.return1y !== null || r.stats.return3y !== null || r.stats.return5y !== null))
+    this.rows().filter((r) => r.return1y !== null || r.return3y !== null || r.return5y !== null)
   );
 
   readonly sortedRows = computed(() => {
     const tf = this.timeframe();
-    const getReturn = (row: ChannelRow): number | null => {
-      if (!row.stats) return null;
-      return tf === '1Y' ? row.stats.return1y : tf === '3Y' ? row.stats.return3y : row.stats.return5y;
-    };
+    const getReturn = (row: Channel): number | null =>
+      tf === '1Y' ? row.return1y : tf === '3Y' ? row.return3y : row.return5y;
     return [...this.rows()].sort((a, b) => {
       const ra = getReturn(a);
       const rb = getReturn(b);
@@ -827,25 +821,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
     this.api.getChannels().subscribe({
       next: (channels) => {
-        if (channels.length === 0) {
-          this.rows.set([]);
-          this.loading.set(false);
-          return;
-        }
-        const stats$ = channels.map((ch) =>
-          this.api.getChannelStats(ch.handle).pipe(catchError(() => of(null))),
-        );
-        forkJoin(stats$).subscribe({
-          next: (statsArray) => {
-            this.rows.set(channels.map((ch, i) => ({ ...ch, stats: statsArray[i] })));
-            this.loading.set(false);
-          },
-          error: (err: unknown) => {
-            this.error.set(String(err));
-            this.loading.set(false);
-            this.recovery.startPolling(() => this.load());
-          },
-        });
+        this.rows.set(channels);
+        this.loading.set(false);
       },
       error: (err: unknown) => {
         this.error.set(String(err));
@@ -862,13 +839,13 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  isNotFullyProcessed(row: ChannelRow): boolean {
+  isNotFullyProcessed(row: Channel): boolean {
     if (!row.discoveryComplete) { return true; }
-    if (row.stats && row.stats.processedVideos < row.stats.totalVideos) { return true; }
+    if (row.processedVideos < row.totalVideos) { return true; }
     return false;
   }
 
-  toggleNotification(row: ChannelRow): void {
+  toggleNotification(row: Channel): void {
     if (this.togglingNotificationFor() !== null) { return; }
     const handle = row.handle;
     const subscribed = this.myNotifiedHandles().has(handle);
@@ -1209,10 +1186,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     );
   }
 
-  activeReturn(row: ChannelRow): number | null {
-    if (!row.stats) return null;
+  activeReturn(row: Channel): number | null {
     const tf = this.timeframe();
-    return tf === '1Y' ? row.stats.return1y : tf === '3Y' ? row.stats.return3y : row.stats.return5y;
+    return tf === '1Y' ? row.return1y : tf === '3Y' ? row.return3y : row.return5y;
   }
 
   formatReturn(value: number | null): string {
