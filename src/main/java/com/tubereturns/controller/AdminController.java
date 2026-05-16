@@ -72,7 +72,7 @@ public class AdminController {
         return List.of(
                 toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
-                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null, stockPickExtractionService.isWorkerRunning(), toAiModelStatusDto(aiModelService.getStatus())),
+                toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null, stockPickExtractionService.isWorkerRunning(), toAiModelStatusDto(aiModelService.getStatus()), stockPickExtractionService.getActiveWorkers()),
                 toDto("price-refresh", "Stock Price Refresh", null, null)
         );
     }
@@ -330,11 +330,15 @@ public class AdminController {
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {
-        return toDto(step, label, queueSize, ytbsdStats, registry.isRunning(step), null);
+        return toDto(step, label, queueSize, ytbsdStats, registry.isRunning(step), null, null);
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running, AiModelStatusDto aiModelStatus) {
-        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats, registry.getFatalError(step), aiModelStatus, registry.getLastRunDurationMs(step));
+        return toDto(step, label, queueSize, ytbsdStats, running, aiModelStatus, null);
+    }
+
+    private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats, boolean running, AiModelStatusDto aiModelStatus, Integer activeWorkers) {
+        return new PipelineStepStatusDto(step, label, registry.getLastStartedAt(step), registry.getLastFinishedAt(step), registry.getNextRunAt(step), running, registry.getLastRunCount(step), registry.getLimit(step), queueSize, ytbsdStats, registry.getFatalError(step), aiModelStatus, registry.getLastRunDurationMs(step), activeWorkers);
     }
 
     private AiModelStatusDto toAiModelStatusDto(AiModelService.AiModelStatus s) {

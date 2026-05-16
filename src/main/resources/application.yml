@@ -79,6 +79,7 @@ tubereturns:
       batch-size: 300
     extraction:
       cron: "0 30 * * * *"
+      threads: 5
     price-refresh:
       cron: "0 0 14,18,22 * * *"
 

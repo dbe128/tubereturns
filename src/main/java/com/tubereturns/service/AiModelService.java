@@ -19,7 +19,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -98,7 +98,8 @@ public class AiModelService {
     private int timeoutRetries;
 
     private List<String> models;
-    private final AtomicInteger currentModelIndex = new AtomicInteger(0);
+    private final ThreadLocal<Integer> currentModelIndex = ThreadLocal.withInitial(() -> 0);
+    private volatile int lastKnownModelIndex = 0;
     private volatile Instant lastModel0AttemptAt = null;
     private volatile Long lastCallDurationMs = null;
 
@@ -118,14 +119,14 @@ public class AiModelService {
         Path path = Path.of(modelsFilePath);
         if (Files.exists(path)) {
             try {
-                models = Files.readAllLines(path).stream()
+                models = new CopyOnWriteArrayList<>(Files.readAllLines(path).stream()
                         .map(String::strip)
                         .filter(l -> !l.isBlank() && !l.startsWith("#"))
-                        .collect(Collectors.toList());
+                        .toList());
                 log.info("Loaded {} AI model(s) from {}: first={}", models.size(), modelsFilePath, models.isEmpty() ? "none" : models.getFirst());
             } catch (Exception e) {
                 log.error("Failed to read models file {}: {}", modelsFilePath, e.getMessage());
-                models = List.of("openrouter/owl-alpha");
+                models = new CopyOnWriteArrayList<>(List.of("openrouter/owl-alpha"));
             }
         } else {
             log.warn("Models file not found at {} — using default model", modelsFilePath);
@@ -138,7 +139,7 @@ public class AiModelService {
     public record AiModelStatus(int currentIndex, String currentModel, Instant model0ResetAt, Long lastCallDurationMs) {}
 
     public AiModelStatus getStatus() {
-        int idx = currentModelIndex.get();
+        int idx = lastKnownModelIndex;
         String model = (models != null && !models.isEmpty()) ? models.get(idx % models.size()) : "unknown";
         Instant resetAt = lastModel0AttemptAt != null && idx > 0
                 ? lastModel0AttemptAt.plusSeconds(modelResetMinutes * 60L)
@@ -161,7 +162,9 @@ public class AiModelService {
     public void advanceModel() {
         int size = models.size();
         if (size > 1) {
-            int next = currentModelIndex.updateAndGet(i -> (i + 1) % size);
+            int next = (currentModelIndex.get() + 1) % size;
+            currentModelIndex.set(next);
+            lastKnownModelIndex = next;
             log.info("Advanced AI model to index {} ({})", next, models.get(next));
         }
     }
@@ -184,6 +187,7 @@ public class AiModelService {
         while (!models.isEmpty() && attemptsWithoutRemoval < maxAttempts) {
             int idx = currentModelIndex.get() % models.size();
             String model = models.get(idx);
+            lastKnownModelIndex = idx;
             if (idx == 0) {
                 lastModel0AttemptAt = Instant.now();
             }
@@ -192,6 +196,7 @@ public class AiModelService {
             } catch (RateLimitedException e) {
                 int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
+                lastKnownModelIndex = nextIdx;
                 attemptsWithoutRemoval++;
                 if (attemptsWithoutRemoval < maxAttempts) {
                     log.warn("Rate limited on model {} — switching to {}", model, models.get(nextIdx));
@@ -201,6 +206,7 @@ public class AiModelService {
             } catch (TimedOutException e) {
                 int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
+                lastKnownModelIndex = nextIdx;
                 attemptsWithoutRemoval++;
                 if (attemptsWithoutRemoval < maxAttempts) {
                     log.warn("Timed out on model {} after {} retries — switching to {}", model, timeoutRetries, models.get(nextIdx));
@@ -213,7 +219,9 @@ public class AiModelService {
                     log.error("Payment required on model {} — no more models available", model);
                     throw new RuntimeException("All AI models have exhausted their credits for video " + videoId);
                 }
-                currentModelIndex.set(idx % models.size());
+                int safeIdx = idx % models.size();
+                currentModelIndex.set(safeIdx);
+                lastKnownModelIndex = safeIdx;
                 maxAttempts = models.size();
                 attemptsWithoutRemoval = 0;
                 log.warn("Payment required on model {} — removed from model list, {} remaining: {}", model, models.size(), models);
@@ -262,7 +270,7 @@ public class AiModelService {
                     log.error("OpenRouter returned 402 Payment Required — insufficient credits");
                     throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
                 }
-                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response, e);
+                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
                 throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
             } catch (ResourceAccessException e) {
                 attemptsLeft--;
@@ -275,7 +283,7 @@ public class AiModelService {
             } catch (RateLimitedException | PaymentRequiredException | TimedOutException e) {
                 throw e;
             } catch (Exception e) {
-                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response, e);
+                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
                 throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
             }
         }

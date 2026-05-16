@@ -471,6 +471,12 @@ interface UnknownStockRow extends UnknownStock {
                     <dd class="text-gray-700 font-mono">{{ step.queueSize }}</dd>
                   </div>
                   }
+                  @if (step.activeWorkers !== null) {
+                  <div class="flex justify-between">
+                    <dt class="text-gray-400">Active workers</dt>
+                    <dd class="text-gray-700 font-mono">{{ step.activeWorkers }}</dd>
+                  </div>
+                  }
                   @if (step.fatalError) {
                   <div class="flex justify-between gap-4">
                     <dt class="text-gray-400 shrink-0">Error</dt>

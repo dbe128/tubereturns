@@ -11,6 +11,7 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.VideoRepository;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -48,20 +49,20 @@ public class StockPickExtractionService {
     private final ExchangeRateService exchangeRateService;
     private final PortfolioService portfolioService;
 
-    private final ExecutorService extractionExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "extraction-worker");
-        t.setDaemon(true);
-        return t;
-    });
+    @Value("${tubereturns.pipeline.extraction.threads}")
+    private int threadCount;
+
+    private ExecutorService extractionExecutor;
 
     private final LinkedList<String> pendingVideoIds = new LinkedList<>();
     private final Set<String> queuedVideoIds = new HashSet<>();
     private final Object queueLock = new Object();
-    private boolean draining = false;
+    private int activeWorkers = 0;
     @Getter
     private volatile boolean workerRunning = false;
 
     private final java.util.concurrent.atomic.AtomicInteger sessionCount = new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger workerCounter = new java.util.concurrent.atomic.AtomicInteger();
 
     public int getQueueSize() {
         synchronized (queueLock) {
@@ -69,9 +70,25 @@ public class StockPickExtractionService {
         }
     }
 
+    @PostConstruct
+    public void init() {
+        extractionExecutor = Executors.newFixedThreadPool(threadCount, r -> {
+            Thread t = new Thread(r, "extraction-worker-" + workerCounter.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
+        log.info("Extraction thread pool initialized with {} thread(s)", threadCount);
+    }
+
     @PreDestroy
     public void shutdown() {
         extractionExecutor.shutdown();
+    }
+
+    public int getActiveWorkers() {
+        synchronized (queueLock) {
+            return activeWorkers;
+        }
     }
 
     public void enqueueAllPending() {
@@ -100,11 +117,15 @@ public class StockPickExtractionService {
             if (queuedVideoIds.contains(videoId)) {
                 return;
             }
+            if (activeWorkers == 0) {
+                sessionCount.set(0);
+                registry.markStarted("extraction");
+                workerRunning = true;
+            }
             queuedVideoIds.add(videoId);
             pendingVideoIds.addLast(videoId);
-            if (!draining) {
-                draining = true;
-                sessionCount.set(0);
+            if (activeWorkers < threadCount) {
+                activeWorkers++;
                 extractionExecutor.submit(this::drainNext);
             }
         }
@@ -115,30 +136,26 @@ public class StockPickExtractionService {
         synchronized (queueLock) {
             videoId = pendingVideoIds.pollFirst();
             if (videoId == null) {
-                workerRunning = false;
-                draining = false;
+                if (--activeWorkers == 0) {
+                    registry.markFinished("extraction", sessionCount.get());
+                    workerRunning = false;
+                }
                 return;
             }
         }
 
-        if (!workerRunning) {
-            workerRunning = true;
-            registry.markStarted("extraction");
-        }
-        int result = 0;
         try {
-            result = videoRepository.findByVideoIdWithChannel(videoId).map(this::doProcessVideo).orElse(false) ? 1 : 0;
+            videoRepository.findByVideoIdWithChannel(videoId).map(this::doProcessVideo).orElse(false);
             sessionCount.incrementAndGet();
-            registry.markProgress("extraction", result);
+            registry.markProgress("extraction", sessionCount.get());
         } finally {
             synchronized (queueLock) {
                 queuedVideoIds.remove(videoId);
                 if (!pendingVideoIds.isEmpty()) {
                     extractionExecutor.submit(this::drainNext);
-                } else {
-                    registry.markFinished("extraction", result);
+                } else if (--activeWorkers == 0) {
+                    registry.markFinished("extraction", sessionCount.get());
                     workerRunning = false;
-                    draining = false;
                 }
             }
         }
