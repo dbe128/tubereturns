@@ -65,7 +65,7 @@ public class YouTubeApiService {
 
             Map<String, com.google.api.services.youtube.model.Channel> detailMap = new HashMap<>();
             var detailResponse = youtube.channels()
-                    .list(List.of("snippet", "brandingSettings", "statistics", "contentDetails"))
+                    .list(List.of("snippet", "brandingSettings", "statistics"))
                     .setId(channelIds)
                     .setKey(apiKey)
                     .execute();
@@ -120,15 +120,9 @@ public class YouTubeApiService {
                             .toString().substring(0, 10);
                 }
 
-                String uploadsPlaylistId = null;
-                if (detail.getContentDetails() != null && detail.getContentDetails().getRelatedPlaylists() != null) {
-                    uploadsPlaylistId = detail.getContentDetails().getRelatedPlaylists().getUploads();
-                }
-
                 results.add(new ChannelSearchResultDto(
                         handle, item.getSnippet().getTitle(), channelUrl, thumbnailUrl, description,
-                        subscriberCount, videoCount, channelCreatedAt,
-                        fetchLatestVideoDate(youtube, uploadsPlaylistId)));
+                        subscriberCount, videoCount, channelCreatedAt));
             }
             return results;
         } catch (Exception e) {
@@ -169,29 +163,6 @@ public class YouTubeApiService {
             log.error("Failed to fetch videos from playlist {}: {}", uploadsPlaylistId, e.getMessage(), e);
             return List.of();
         }
-    }
-
-    private String fetchLatestVideoDate(YouTube youtube, String uploadsPlaylistId) {
-        if (uploadsPlaylistId == null || uploadsPlaylistId.isBlank()) {
-            return null;
-        }
-        try {
-            var response = youtube.playlistItems()
-                    .list(List.of("contentDetails"))
-                    .setPlaylistId(uploadsPlaylistId)
-                    .setMaxResults(1L)
-                    .setKey(apiKey)
-                    .execute();
-            if (response.getItems() != null && !response.getItems().isEmpty()) {
-                var videoPublishedAt = response.getItems().getFirst().getContentDetails().getVideoPublishedAt();
-                if (videoPublishedAt != null) {
-                    return Instant.ofEpochMilli(videoPublishedAt.getValue()).toString().substring(0, 10);
-                }
-            }
-        } catch (Exception e) {
-            log.warn("Failed to fetch latest video date for playlist {}: {}", uploadsPlaylistId, e.getMessage());
-        }
-        return null;
     }
 
     private boolean matchesFinanceKeywords(String channelTags, String description) {

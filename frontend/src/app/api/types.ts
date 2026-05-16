@@ -79,7 +79,6 @@ export const ChannelSearchResultSchema = z.object({
   subscriberCount: z.number().nullable(),
   videoCount: z.number().nullable(),
   channelCreatedAt: z.string().nullable(),
-  latestVideoAt: z.string().nullable(),
 });
 
 export const TickerDataSchema = z.object({

@@ -947,9 +947,6 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     if (result.channelCreatedAt) {
       parts.push('since ' + this.formatShortDate(result.channelCreatedAt));
     }
-    if (result.latestVideoAt) {
-      parts.push('last ' + this.formatShortDate(result.latestVideoAt));
-    }
     return parts.join(' · ');
   }
 
