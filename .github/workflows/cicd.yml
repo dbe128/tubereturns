@@ -1,12 +1,45 @@
-name: Build, push and deploy
+name: CI/CD
 
 on:
   push:
-    branches:
-      - main
+  pull_request:
 
 jobs:
+  test-backend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: temurin
+          cache: gradle
+      - run: ./gradlew build
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm install -g npm@11.5.2
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run build
+
   build-backend:
+    needs: test-backend
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -27,6 +60,8 @@ jobs:
             ghcr.io/dbe128/tubereturns-backend:${{ github.sha }}
 
   build-frontend:
+    needs: test-frontend
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -48,6 +83,7 @@ jobs:
 
   deploy:
     needs: [build-backend, build-frontend]
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: prod
     steps:
