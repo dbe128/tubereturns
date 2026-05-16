@@ -130,16 +130,16 @@ jobs:
             export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
             mkdir -p ~/tubereturns && cd ~/tubereturns
             {
-              printf 'POSTGRES_HOST=%s\n'       "$POSTGRES_HOST"
-              printf 'POSTGRES_USER=%s\n'       "$POSTGRES_USER"
-              printf 'POSTGRES_PASSWORD=%s\n'   "$POSTGRES_PASSWORD"
-              printf 'JWT_SECRET=%s\n'          "$JWT_SECRET"
-              printf 'APP_BASE_URL=%s\n'        "$APP_BASE_URL"
-              printf 'YOUTUBE_API_KEY=%s\n'     "$YOUTUBE_API_KEY"
-              printf 'OPENROUTER_API_KEY=%s\n'  "$OPENROUTER_API_KEY"
-              printf 'MAIL_USERNAME=%s\n'       "$MAIL_USERNAME"
-              printf 'MAIL_PASSWORD=%s\n'       "$MAIL_PASSWORD"
-              printf 'MAIL_FROM=%s\n'           "$MAIL_FROM"
+              printf 'POSTGRES_HOST="%s"\n'       "$POSTGRES_HOST"
+              printf 'POSTGRES_USER="%s"\n'       "$POSTGRES_USER"
+              printf 'POSTGRES_PASSWORD="%s"\n'   "$POSTGRES_PASSWORD"
+              printf 'JWT_SECRET="%s"\n'          "$JWT_SECRET"
+              printf 'APP_BASE_URL="%s"\n'        "$APP_BASE_URL"
+              printf 'YOUTUBE_API_KEY="%s"\n'     "$YOUTUBE_API_KEY"
+              printf 'OPENROUTER_API_KEY="%s"\n'  "$OPENROUTER_API_KEY"
+              printf 'MAIL_USERNAME="%s"\n'       "$MAIL_USERNAME"
+              printf 'MAIL_PASSWORD="%s"\n'       "$MAIL_PASSWORD"
+              printf 'MAIL_FROM="%s"\n'           "$MAIL_FROM"
             } > .env
             chmod 600 .env
             echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
