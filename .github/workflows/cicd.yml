@@ -146,3 +146,26 @@ jobs:
             docker pull ghcr.io/dbe128/tubereturns-backend:latest
             docker pull ghcr.io/dbe128/tubereturns-frontend:latest
             docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
+
+  health-check:
+    needs: deploy
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Wait for backend
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: |
+          echo "Waiting for backend to become healthy..."
+          for i in $(seq 1 18); do
+            if curl -sf "${APP_BASE_URL}/api/admin/health" > /dev/null 2>&1; then
+              echo "Backend is healthy"
+              exit 0
+            fi
+            if [ $i -eq 18 ]; then
+              echo "Health check timed out after 3 minutes"
+              exit 1
+            fi
+            sleep 10
+          done
