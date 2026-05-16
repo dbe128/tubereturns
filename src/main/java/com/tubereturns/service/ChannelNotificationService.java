@@ -6,13 +6,17 @@ import com.tubereturns.model.User;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.VideoRepository;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Slf4j
@@ -45,9 +49,21 @@ public class ChannelNotificationService {
         log.info("Scheduled processing notification for channel {} to {}", channel.getHandle(), user.getEmail());
     }
 
-    @Scheduled(fixedDelay = 120_000)
+    @Value("${tubereturns.pipeline.notification.cron}")
+    private String cron;
+
+    @Getter
+    private volatile Instant lastRanAt = null;
+
+    public Instant getNextRunAt() {
+        ZonedDateTime next = CronExpression.parse(cron).next(ZonedDateTime.now());
+        return next != null ? next.toInstant() : null;
+    }
+
+    @Scheduled(cron = "${tubereturns.pipeline.notification.cron}")
     @Transactional
     public void checkAndSendPendingNotifications() {
+        try {
         List<ChannelProcessingNotification> pending = notificationRepository.findPending();
         if (pending.isEmpty()) {
             return;
@@ -76,6 +92,9 @@ public class ChannelNotificationService {
                 notification.setSentAt(Instant.now());
                 notificationRepository.save(notification);
             }
+        }
+        } finally {
+            lastRanAt = Instant.now();
         }
     }
 }

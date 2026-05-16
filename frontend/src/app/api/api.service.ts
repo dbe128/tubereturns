@@ -16,11 +16,11 @@ import {
   RegisterResponseSchema,
   AuthResponseSchema,
   MessageResponseSchema,
-  PendingNotificationSchema,
+  NotificationsStatusSchema,
   TickerDataSchema,
   UnknownStockSchema,
 } from './types';
-import type { Channel, VideoSummary, Pick, PricePoint, PortfolioPricePoint, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, PendingNotification, TickerData, UnknownStock } from './types';
+import type { Channel, VideoSummary, Pick, PricePoint, PortfolioPricePoint, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -129,9 +129,9 @@ export class ApiService {
     return this.http.delete<unknown>(`/api/channels/${handle}/notify`).pipe(catchError((e) => this.handleError(e)));
   }
 
-  getPendingNotifications(): Observable<PendingNotification[]> {
+  getPendingNotifications(): Observable<NotificationsStatus> {
     return this.validated(
-      z.array(PendingNotificationSchema),
+      NotificationsStatusSchema,
       this.http.get<unknown>('/api/admin/notifications/pending').pipe(catchError((e) => this.handleError(e))),
     );
   }

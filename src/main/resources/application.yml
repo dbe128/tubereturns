@@ -82,6 +82,8 @@ tubereturns:
       threads: 5
     price-refresh:
       cron: "0 0 14,18,22 * * *"
+    notification:
+      cron: "0 */2 * * * *"
 
 logging:
   pattern:

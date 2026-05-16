@@ -191,7 +191,15 @@ export const PendingNotificationSchema = z.object({
   userEmail: z.string(),
   requestedAt: z.string(),
 });
+
+export const NotificationsStatusSchema = z.object({
+  nextRunAt: z.string().nullable(),
+  lastRunAt: z.string().nullable(),
+  items: z.array(PendingNotificationSchema),
+});
+
 export type PendingNotification = z.infer<typeof PendingNotificationSchema>;
+export type NotificationsStatus = z.infer<typeof NotificationsStatusSchema>;
 export type ChannelSearchResult = z.infer<typeof ChannelSearchResultSchema>;
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;

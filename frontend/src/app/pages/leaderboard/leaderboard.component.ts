@@ -8,7 +8,7 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
-import type { Channel, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, PendingNotification, UnknownStock } from '../../api/types';
+import type { Channel, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock } from '../../api/types';
 
 interface UnknownStockRow extends UnknownStock {
   editTicker: string;
@@ -561,14 +561,22 @@ interface UnknownStockRow extends UnknownStock {
 
         <div class="mt-8">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Notifications</h2>
+            <div>
+              <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Notifications</h2>
+              @if (notificationsStatus().lastRunAt) {
+                <p class="text-xs text-gray-400 mt-0.5">Last run: {{ notificationsStatus().lastRunAt | date:'HH:mm:ss, dd MMM' }}</p>
+              }
+              @if (notificationsStatus().nextRunAt) {
+                <p class="text-xs text-gray-400 mt-0.5">Next check: {{ notificationsStatus().nextRunAt | date:'HH:mm:ss, dd MMM' }}</p>
+              }
+            </div>
             <button
               (click)="triggerNotifications()"
               [disabled]="triggeringNotifications()"
               class="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors"
             >Check &amp; Send</button>
           </div>
-          @if (pendingNotifications().length === 0) {
+          @if (notificationsStatus().items.length === 0) {
             <p class="text-xs text-gray-400">No pending notifications.</p>
           } @else {
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -581,7 +589,7 @@ interface UnknownStockRow extends UnknownStock {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  @for (n of pendingNotifications(); track n.channelHandle + n.userEmail) {
+                  @for (n of notificationsStatus().items; track n.channelHandle + n.userEmail) {
                     <tr class="hover:bg-gray-50">
                       <td class="px-4 py-2 font-medium text-gray-800">{{ n.channelName }} <span class="text-gray-400">({{ n.channelHandle }})</span></td>
                       <td class="px-4 py-2 text-gray-600">{{ n.userEmail }}</td>
@@ -751,7 +759,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly pipelineStatus = signal<PipelineStepStatus[]>([]);
   readonly disabledSteps = signal<Set<string>>(new Set());
-  readonly pendingNotifications = signal<PendingNotification[]>([]);
+  readonly notificationsStatus = signal<NotificationsStatus>({ nextRunAt: null, lastRunAt: null, items: [] });
   readonly triggeringNotifications = signal(false);
   readonly unknownStockRows = signal<UnknownStockRow[]>([]);
   readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -889,7 +897,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   loadPendingNotifications(): void {
     this.api.getPendingNotifications().subscribe({
-      next: (notifications) => this.pendingNotifications.set(notifications),
+      next: (status) => this.notificationsStatus.set(status),
       error: () => {},
     });
   }

@@ -62,6 +62,8 @@ public class AdminController {
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
+    public record NotificationsStatusDto(String nextRunAt, String lastRunAt, List<PendingNotificationDto> items) {}
+
     public record TryTickerRequest(String ticker, String currency) {}
 
     @GetMapping("/pipeline/status")
@@ -194,14 +196,20 @@ public class AdminController {
 
     @GetMapping("/notifications/pending")
     @Operation(summary = "Get pending processing notifications")
-    public List<PendingNotificationDto> getPendingNotifications() {
-        return notificationRepository.findPending().stream()
+    public NotificationsStatusDto getPendingNotifications() {
+        java.time.Instant nextRunAt = channelNotificationService.getNextRunAt();
+        java.time.Instant lastRunAt = channelNotificationService.getLastRanAt();
+        List<PendingNotificationDto> items = notificationRepository.findPending().stream()
                 .map(n -> new PendingNotificationDto(
                         n.getChannel().getChannelName(),
                         n.getChannel().getHandle(),
                         n.getUser().getEmail(),
                         n.getRequestedAt().toString()))
                 .toList();
+        return new NotificationsStatusDto(
+                nextRunAt != null ? nextRunAt.toString() : null,
+                lastRunAt != null ? lastRunAt.toString() : null,
+                items);
     }
 
     @PostMapping("/notifications/trigger")
