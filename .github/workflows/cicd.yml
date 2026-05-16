@@ -138,5 +138,5 @@ jobs:
             chmod 600 .env.sh
             source .env.sh
             echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
