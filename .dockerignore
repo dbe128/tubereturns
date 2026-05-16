@@ -1,6 +1,7 @@
 .git
 .gradle
 build
+!build/libs/*.jar
 frontend/node_modules
 frontend/.angular
 frontend/dist
