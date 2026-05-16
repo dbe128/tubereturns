@@ -6,12 +6,5 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="db/changelog/001-initial-schema.sql"/>
-    <include file="db/changelog/002-stock-currency-and-ticker-length.sql"/>
-    <include file="db/changelog/003-exchange-rates.sql"/>
-    <include file="db/changelog/004-stock-reviewed.sql"/>
-    <include file="db/changelog/005-channel-suggestions.sql"/>
-    <include file="db/changelog/006-seed-users.sql"/>
-    <include file="db/changelog/007-rename-processing-status.sql"/>
-    <include file="db/changelog/008-rename-extraction-status-values.sql"/>
 
 </databaseChangeLog>
