@@ -43,7 +43,7 @@ jobs:
   build-backend-image:
     needs: test-backend
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -71,7 +71,7 @@ jobs:
   build-frontend-image:
     needs: test-frontend
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
