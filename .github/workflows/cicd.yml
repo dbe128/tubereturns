@@ -40,7 +40,7 @@ jobs:
       - run: npm run type-check
       - run: npm run build
 
-  build-backend:
+  build-backend-image:
     needs: test-backend
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -62,7 +62,7 @@ jobs:
             ghcr.io/dbe128/tubereturns-backend:latest
             ghcr.io/dbe128/tubereturns-backend:${{ github.sha }}
 
-  build-frontend:
+  build-frontend-image:
     needs: test-frontend
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -85,7 +85,7 @@ jobs:
             ghcr.io/dbe128/tubereturns-frontend:${{ github.sha }}
 
   deploy:
-    needs: [build-backend, build-frontend]
+    needs: [build-backend-image, build-frontend-image]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: prod
@@ -98,7 +98,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          source: docker compose.prod.yml
+          source: docker-compose.prod.yml
           target: ~/tubereturns/
 
       - name: Deploy
@@ -138,5 +138,5 @@ jobs:
             chmod 600 .env.sh
             source .env.sh
             echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
-            docker compose -f docker compose.prod.yml pull
-            docker compose -f docker compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
