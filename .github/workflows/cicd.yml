@@ -98,7 +98,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          source: docker-compose.prod.yml
+          source: docker compose.prod.yml
           target: ~/tubereturns/
 
       - name: Deploy
@@ -138,5 +138,5 @@ jobs:
             chmod 600 .env.sh
             source .env.sh
             echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker compose.prod.yml pull
+            docker compose -f docker compose.prod.yml up -d --remove-orphans
