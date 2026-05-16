@@ -1,7 +1,6 @@
 services:
   backend:
-    platform: linux/amd64
-    build: .
+    image: ghcr.io/dbe128/tubereturns-backend:latest
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:postgresql://${POSTGRES_HOST}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-tubereturns}
@@ -22,8 +21,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
+    image: ghcr.io/dbe128/tubereturns-frontend:latest
     ports:
       - "80:80"
       - "443:443"
