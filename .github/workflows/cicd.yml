@@ -130,20 +130,19 @@ jobs:
             export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
             mkdir -p ~/tubereturns && cd ~/tubereturns
             {
-              printf 'export POSTGRES_HOST=%q\n'      "$POSTGRES_HOST"
-              printf 'export POSTGRES_USER=%q\n'      "$POSTGRES_USER"
-              printf 'export POSTGRES_PASSWORD=%q\n'  "$POSTGRES_PASSWORD"
-              printf 'export JWT_SECRET=%q\n'         "$JWT_SECRET"
-              printf 'export APP_BASE_URL=%q\n'       "$APP_BASE_URL"
-              printf 'export YOUTUBE_API_KEY=%q\n'    "$YOUTUBE_API_KEY"
-              printf 'export OPENROUTER_API_KEY=%q\n' "$OPENROUTER_API_KEY"
-              printf 'export MAIL_USERNAME=%q\n'      "$MAIL_USERNAME"
-              printf 'export MAIL_PASSWORD=%q\n'      "$MAIL_PASSWORD"
-              printf 'export MAIL_FROM=%q\n'          "$MAIL_FROM"
-            } > .env.sh
-            chmod 600 .env.sh
-            source .env.sh
+              printf 'POSTGRES_HOST=%s\n'       "$POSTGRES_HOST"
+              printf 'POSTGRES_USER=%s\n'       "$POSTGRES_USER"
+              printf 'POSTGRES_PASSWORD=%s\n'   "$POSTGRES_PASSWORD"
+              printf 'JWT_SECRET=%s\n'          "$JWT_SECRET"
+              printf 'APP_BASE_URL=%s\n'        "$APP_BASE_URL"
+              printf 'YOUTUBE_API_KEY=%s\n'     "$YOUTUBE_API_KEY"
+              printf 'OPENROUTER_API_KEY=%s\n'  "$OPENROUTER_API_KEY"
+              printf 'MAIL_USERNAME=%s\n'       "$MAIL_USERNAME"
+              printf 'MAIL_PASSWORD=%s\n'       "$MAIL_PASSWORD"
+              printf 'MAIL_FROM=%s\n'           "$MAIL_FROM"
+            } > .env
+            chmod 600 .env
             echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
             docker pull ghcr.io/dbe128/tubereturns-backend:latest
             docker pull ghcr.io/dbe128/tubereturns-frontend:latest
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
