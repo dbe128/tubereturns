@@ -1,4 +1,4 @@
-name: Build and push Docker images
+name: Build, push and deploy
 
 on:
   push:
@@ -45,3 +45,57 @@ jobs:
           tags: |
             ghcr.io/dbe128/tubereturns-frontend:latest
             ghcr.io/dbe128/tubereturns-frontend:${{ github.sha }}
+
+  deploy:
+    needs: [build-backend, build-frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to VM
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: docker-compose.prod.yml
+          target: ~/tubereturns/
+
+      - name: Deploy
+        uses: appleboy/ssh-action@v1
+        env:
+          POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,MAIL_USERNAME,MAIL_PASSWORD,MAIL_FROM,GH_TOKEN
+          script: |
+            mkdir -p ~/tubereturns && cd ~/tubereturns
+            {
+              printf 'export POSTGRES_HOST=%q\n'      "$POSTGRES_HOST"
+              printf 'export POSTGRES_USER=%q\n'      "$POSTGRES_USER"
+              printf 'export POSTGRES_PASSWORD=%q\n'  "$POSTGRES_PASSWORD"
+              printf 'export JWT_SECRET=%q\n'         "$JWT_SECRET"
+              printf 'export APP_BASE_URL=%q\n'       "$APP_BASE_URL"
+              printf 'export YOUTUBE_API_KEY=%q\n'    "$YOUTUBE_API_KEY"
+              printf 'export OPENROUTER_API_KEY=%q\n' "$OPENROUTER_API_KEY"
+              printf 'export MAIL_USERNAME=%q\n'      "$MAIL_USERNAME"
+              printf 'export MAIL_PASSWORD=%q\n'      "$MAIL_PASSWORD"
+              printf 'export MAIL_FROM=%q\n'          "$MAIL_FROM"
+            } > .env.sh
+            chmod 600 .env.sh
+            source .env.sh
+            echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
