@@ -490,7 +490,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly filterPick = signal('');
   readonly showExcluded = signal(false);
   readonly hideNoPicks = signal(true);
-  readonly hideUnprocessed = signal(true);
+  readonly hideUnprocessed = signal(!this.auth.isAdmin);
 
   readonly transcriptPopup = signal<string | null>(null);
   readonly transcriptPopupPos = signal({ top: 0, left: 0, width: 520, maxHeight: 600 });
