@@ -82,7 +82,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,MAIL_USERNAME,MAIL_PASSWORD,MAIL_FROM,GH_TOKEN
           script: |
-            export PATH=$PATH:/usr/local/bin:/usr/bin:/snap/bin
+            export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
             mkdir -p ~/tubereturns && cd ~/tubereturns
             {
               printf 'export POSTGRES_HOST=%q\n'      "$POSTGRES_HOST"
