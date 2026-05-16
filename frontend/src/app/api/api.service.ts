@@ -28,7 +28,7 @@ export class ApiService {
 
   private handleError(err: HttpErrorResponse): Observable<never> {
     if (err.status === 0) {
-      return throwError(() => new Error('Cannot reach the backend. Make sure the server is running on port 8080.'));
+      return throwError(() => new Error('Cannot reach the backend.'));
     }
     if (err.status === 401) {
       const msg = (err.error as Record<string, string> | null)?.['message'];
