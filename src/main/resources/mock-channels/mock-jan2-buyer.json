@@ -1,0 +1,26 @@
+{
+  "handle": "mock-jan2-buyer",
+  "channelName": "Mock Jan 2 Buyer",
+  "description": "Mock channel that bought AMD and Charter Communications on January 2, 2026.",
+  "videos": [
+    {
+      "videoId": "mock-jan2-buyer-001",
+      "title": "My top picks for 2026: AMD and Charter",
+      "publishedAt": "2026-01-02T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "CHTR",
+          "companyName": "Charter Communications, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    }
+  ]
+}

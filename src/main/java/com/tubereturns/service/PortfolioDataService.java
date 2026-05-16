@@ -64,9 +64,8 @@ public class PortfolioDataService {
         return allDates.keySet().stream()
                 .map(date -> {
                     List<Double> returns = tickerPrices.entrySet().stream()
-                            .map(e -> computeTickerReturn(
-                                    date, groupsByTicker.getOrDefault(e.getKey(), List.of()), e.getValue()))
-                            .filter(Objects::nonNull)
+                            .flatMap(e -> computePickReturns(
+                                    date, groupsByTicker.getOrDefault(e.getKey(), List.of()), e.getValue()).stream())
                             .toList();
                     double avg = returns.isEmpty() ? 0 : returns.stream().mapToDouble(Double::doubleValue).average().orElse(0);
                     return new PortfolioPricePointDto(date.toString(), avg, null);
@@ -141,9 +140,8 @@ public class PortfolioDataService {
         return groups;
     }
 
-    private Double computeTickerReturn(LocalDate date, List<PositionGroup> groups, NavigableMap<LocalDate, Double> prices) {
-        double compounded = 1.0;
-        boolean hasContribution = false;
+    private List<Double> computePickReturns(LocalDate date, List<PositionGroup> groups, NavigableMap<LocalDate, Double> prices) {
+        List<Double> results = new ArrayList<>();
         for (PositionGroup group : groups) {
             List<LocalDate> activeBuys = group.buyDates().stream()
                     .filter(b -> !b.isAfter(date))
@@ -157,20 +155,13 @@ public class PortfolioDataService {
                 continue;
             }
             double exitPrice = exitEntry.getValue();
-            OptionalDouble groupReturn = activeBuys.stream()
-                    .mapToDouble(buyDate -> {
-                        Map.Entry<LocalDate, Double> buyEntry = prices.floorEntry(buyDate);
-                        return (buyEntry != null && buyEntry.getValue() != 0)
-                                ? (exitPrice - buyEntry.getValue()) / buyEntry.getValue()
-                                : Double.NaN;
-                    })
-                    .filter(r -> !Double.isNaN(r))
-                    .average();
-            if (groupReturn.isPresent()) {
-                hasContribution = true;
-                compounded *= (1.0 + groupReturn.getAsDouble());
+            for (LocalDate buyDate : activeBuys) {
+                Map.Entry<LocalDate, Double> buyEntry = prices.floorEntry(buyDate);
+                if (buyEntry != null && buyEntry.getValue() != 0) {
+                    results.add((exitPrice - buyEntry.getValue()) / buyEntry.getValue() * 100.0);
+                }
             }
         }
-        return hasContribution ? (compounded - 1.0) * 100.0 : null;
+        return results;
     }
 }

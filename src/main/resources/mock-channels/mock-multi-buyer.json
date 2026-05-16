@@ -1,0 +1,143 @@
+{
+  "handle": "mock-multi-buyer",
+  "channelName": "Mock Multi Buyer",
+  "description": "Mock channel that bought AMD 10 times in January 2026 and Charter Communications in early January 2026.",
+  "videos": [
+    {
+      "videoId": "mock-multi-buyer-001",
+      "title": "My top picks for 2026: AMD and Charter",
+      "publishedAt": "2026-01-02T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        },
+        {
+          "ticker": "CHTR",
+          "companyName": "Charter Communications, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-002",
+      "title": "Adding to my AMD position",
+      "publishedAt": "2026-01-05T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-003",
+      "title": "AMD still a buy",
+      "publishedAt": "2026-01-06T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-004",
+      "title": "AMD update",
+      "publishedAt": "2026-01-07T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-005",
+      "title": "Doubling down on AMD",
+      "publishedAt": "2026-01-08T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-006",
+      "title": "AMD week in review",
+      "publishedAt": "2026-01-09T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-007",
+      "title": "AMD new week buy",
+      "publishedAt": "2026-01-12T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-008",
+      "title": "More AMD",
+      "publishedAt": "2026-01-13T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-009",
+      "title": "AMD mid-January check",
+      "publishedAt": "2026-01-14T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    },
+    {
+      "videoId": "mock-multi-buyer-010",
+      "title": "Final AMD buy of the streak",
+      "publishedAt": "2026-01-15T00:00:00Z",
+      "picks": [
+        {
+          "ticker": "AMD",
+          "companyName": "Advanced Micro Devices, Inc.",
+          "signal": "BUY",
+          "currency": "USD"
+        }
+      ]
+    }
+  ]
+}
