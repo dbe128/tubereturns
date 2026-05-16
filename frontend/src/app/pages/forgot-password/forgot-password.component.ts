@@ -25,7 +25,7 @@ import { ApiService } from '../../api/api.service';
           <form (ngSubmit)="submit()" class="space-y-4">
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
-              <input [(ngModel)]="email" name="email" type="email" required autofocus
+              <input [(ngModel)]="email" name="email" type="email" required autofocus autocomplete="email"
                 class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
 

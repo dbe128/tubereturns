@@ -38,7 +38,7 @@ import { ApiService } from '../../api/api.service';
                 </button>
               </div>
               <input [ngModel]="password" (ngModelChange)="password = $event; validatePassword()" name="password"
-                [type]="showPasswords() ? 'text' : 'password'" required
+                [type]="showPasswords() ? 'text' : 'password'" required autocomplete="new-password"
                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 [class.border-gray-200]="!passwordError()"
                 [class.border-danger-500]="passwordError()" />
@@ -52,7 +52,7 @@ import { ApiService } from '../../api/api.service';
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Confirm password <span class="text-danger-500">*</span></label>
               <input [ngModel]="confirmPassword" (ngModelChange)="confirmPassword = $event; validateConfirm()" name="confirmPassword"
-                [type]="showPasswords() ? 'text' : 'password'" required
+                [type]="showPasswords() ? 'text' : 'password'" required autocomplete="new-password"
                 class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 [class.border-gray-200]="!confirmError()"
                 [class.border-danger-500]="confirmError()" />

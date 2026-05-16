@@ -17,7 +17,7 @@ import { AuthService } from '../../services/auth.service';
         <form (ngSubmit)="submit()" class="space-y-4">
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
-            <input [(ngModel)]="email" name="email" type="email" required
+            <input [(ngModel)]="email" name="email" type="email" required autocomplete="email"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <div>
@@ -25,7 +25,7 @@ import { AuthService } from '../../services/auth.service';
               <label class="text-xs font-medium text-gray-600">Password</label>
               <a routerLink="/forgot-password" class="text-xs text-primary-600 hover:underline">Forgot password?</a>
             </div>
-            <input [(ngModel)]="password" name="password" type="password" required
+            <input [(ngModel)]="password" name="password" type="password" required autocomplete="current-password"
               class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
 
