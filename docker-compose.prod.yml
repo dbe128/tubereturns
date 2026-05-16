@@ -16,6 +16,8 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-noreply@tubereturns.com}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - transcripts_data:/app/transcripts
     restart: unless-stopped
