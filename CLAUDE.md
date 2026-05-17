@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 After completing every task, run: `afplay "/Users/dbe128/IdeaProjects/TubeReturns/mission-accomplished-made-with-Voicemod.mp3"`
 
-Do NOT commit or push changes unless explicitly asked by the user.
+Do NOT commit or push changes to this repo unless explicitly asked by the user.
+
+For the companion monitoring repo at `~/IdeaProjects/tubereturns-monitoring`, commits and pushes may be made autonomously whenever monitoring-related changes are ready.
 
 ---
 
