@@ -318,13 +318,25 @@ public class AiModelService {
         }
     }
 
+    private static final java.util.regex.Pattern FENCED_JSON =
+            java.util.regex.Pattern.compile("```(?:json)?\\s*\\n?([\\s\\S]*?)```");
+
     private String stripJsonFences(String text) {
         if (text == null) {
             return null;
         }
         String t = text.strip();
         if (t.startsWith("```")) {
-            t = t.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("```\\s*$", "").strip();
+            return t.replaceFirst("^```(?:json)?\\s*", "").replaceFirst("```\\s*$", "").strip();
+        }
+        java.util.regex.Matcher m = FENCED_JSON.matcher(t);
+        if (m.find()) {
+            return m.group(1).strip();
+        }
+        int start = t.indexOf('{');
+        int end = t.lastIndexOf('}');
+        if (start != -1 && end > start) {
+            return t.substring(start, end + 1);
         }
         return t;
     }

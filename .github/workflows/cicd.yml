@@ -146,6 +146,7 @@ jobs:
           key: ${{ secrets.VM_SSH_KEY }}
           envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,MAIL_USERNAME,MAIL_PASSWORD,MAIL_FROM,GH_TOKEN
           script: |
+            set -euo pipefail
             export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
             mkdir -p ~/tubereturns && cd ~/tubereturns
             {
@@ -161,6 +162,7 @@ jobs:
               printf 'MAIL_FROM="%s"\n'           "$MAIL_FROM"
             } > .env
             chmod 600 .env
+            docker system prune -f
             echo "$GH_TOKEN" | docker login ghcr.io -u dbe128 --password-stdin
             docker pull ghcr.io/dbe128/tubereturns-backend:latest
             docker pull ghcr.io/dbe128/tubereturns-frontend:latest

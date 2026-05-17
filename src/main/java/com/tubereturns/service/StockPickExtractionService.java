@@ -190,6 +190,7 @@ public class StockPickExtractionService {
             CandidateResult best = null;
             int maxRetries = 5;
             int originalModelIndex = aiModelService.getCurrentModelIndex();
+            int retryCount = 0;
 
             try {
             for (int attempt = 0; attempt <= maxRetries; attempt++) {
@@ -223,6 +224,7 @@ public class StockPickExtractionService {
                     log.warn("Extraction attempt {} for {} has {} unknown ticker(s) [{}] — retrying with next model",
                             attempt + 1, videoUrl, unknownCount, formatUnknownTickers(extracted.dto(), priceCache));
                     aiModelService.advanceModel();
+                    retryCount++;
                 } else {
                     log.warn("All {} extraction attempts exhausted for {} — using best result with {} unknown ticker(s) [{}]",
                             maxRetries + 1, videoUrl, best.unknownCount(), formatUnknownTickers(best.dto(), best.priceCache()));
@@ -230,7 +232,9 @@ public class StockPickExtractionService {
             }
             } finally {
                 aiModelService.setModelIndex(originalModelIndex);
-                log.info("Reset AI model back to index {} after extraction retries for {}", originalModelIndex, videoUrl);
+                if (retryCount > 0) {
+                    log.info("Extraction for {} used {} model retry/retries — reset to model index {}", videoUrl, retryCount, originalModelIndex);
+                }
             }
 
             savePicks(video, best.dto(), priceDate, best.priceCache());
