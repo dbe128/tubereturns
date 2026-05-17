@@ -18,7 +18,8 @@ public class CacheConfig {
         CaffeineCacheManager manager = new CaffeineCacheManager("channelReturns");
         manager.setCaffeine(Caffeine.newBuilder()
                 .expireAfterWrite(1, TimeUnit.DAYS)
-                .maximumSize(500));
+                .maximumSize(500)
+                .recordStats());
         return manager;
     }
 }

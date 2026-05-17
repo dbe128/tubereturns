@@ -19,7 +19,7 @@ jobs:
           java-version: '25'
           distribution: temurin
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build
+      - run: ./gradlew build --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: backend-jar

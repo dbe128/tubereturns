@@ -40,9 +40,6 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT v FROM Video v WHERE v.publishedAt >= :since ORDER BY v.publishedAt DESC")
     List<Video> findVideosPublishedSince(@Param("since") Instant since);
 
-    @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.extractionStatus = 'PENDING' AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
-    List<Video> findVideosReadyForProcessing(@Param("limit") int limit);
-
     @Query("SELECT v FROM Video v JOIN FETCH v.channel WHERE v.transcriptStatus = 'DOWNLOADED' AND v.extractionStatus IN ('PENDING', 'FAILED') AND v.excluded = false ORDER BY v.channel.createdAt ASC, v.publishedAt ASC")
     List<Video> findAllVideosReadyForProcessing();
 

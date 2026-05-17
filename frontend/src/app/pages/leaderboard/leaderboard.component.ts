@@ -186,11 +186,11 @@ interface UnknownStockRow extends UnknownStock {
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-200 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                <th class="px-6 py-4">#</th>
+                <th class="px-4 py-4 w-8">#</th>
+                <th class="px-3 py-4 text-right w-28">{{ timeframe() }} Return</th>
                 <th class="px-6 py-4">Channel</th>
                 <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
-                <th class="px-6 py-4 text-right">{{ timeframe() }} Return</th>
                 @if (auth.isAdmin) {
                   <th class="px-6 py-4">Actions</th>
                 }
@@ -206,7 +206,10 @@ interface UnknownStockRow extends UnknownStock {
               } @else {
                 @for (row of visibleRows(); track row.handle; let i = $index) {
                   <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                    <td class="px-6 py-4 text-gray-300 font-mono text-sm">{{ i + 1 }}</td>
+                    <td class="px-4 py-4 text-gray-300 font-mono text-sm w-8">{{ i + 1 }}</td>
+                    <td class="px-3 py-4 text-right font-mono text-sm font-medium w-28" [ngClass]="returnClass(activeReturn(row))">
+                      {{ formatReturn(activeReturn(row)) }}
+                    </td>
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
                         <a
@@ -233,9 +236,6 @@ interface UnknownStockRow extends UnknownStock {
                     </td>
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
                       {{ row.totalVideos }}
-                    </td>
-                    <td class="px-6 py-4 text-right font-mono text-sm font-medium" [ngClass]="returnClass(activeReturn(row))">
-                      {{ formatReturn(activeReturn(row)) }}
                     </td>
                     @if (auth.isAdmin) {
                     <td class="px-6 py-4">
