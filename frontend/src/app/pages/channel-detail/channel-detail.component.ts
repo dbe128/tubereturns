@@ -572,8 +572,8 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
         this.videos.set(videos);
         this.loading.set(false);
       },
-      error: (err: unknown) => {
-        this.error.set(String(err));
+      error: (_err: unknown) => {
+        this.error.set('A deployment is probably in progress. Please try again shortly.');
         this.loading.set(false);
         this.recovery.startPolling(() => {
           const cid = this.route.snapshot.paramMap.get('channelId');

@@ -838,8 +838,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
         this.rows.set(channels);
         this.loading.set(false);
       },
-      error: (err: unknown) => {
-        this.error.set(String(err));
+      error: (_err: unknown) => {
+        this.error.set('A deployment is probably in progress. Please try again shortly.');
         this.loading.set(false);
         this.recovery.startPolling(() => this.load());
       },

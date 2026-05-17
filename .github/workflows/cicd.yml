@@ -188,3 +188,8 @@ jobs:
             fi
             sleep 10
           done
+
+      - name: Pre-warm caches
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: curl -sf "${APP_BASE_URL}" || true
