@@ -191,13 +191,15 @@ interface UnknownStockRow extends UnknownStock {
                 <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
                 <th class="px-6 py-4 text-right">{{ timeframe() }} Return</th>
-                <th class="px-6 py-4">Actions</th>
+                @if (auth.isAdmin) {
+                  <th class="px-6 py-4">Actions</th>
+                }
               </tr>
             </thead>
             <tbody>
               @if (processedChannels().length === 0) {
                 <tr>
-                  <td colspan="6" class="px-6 py-16 text-center text-gray-400 text-sm">
+                  <td [attr.colspan]="auth.isAdmin ? 6 : 5" class="px-6 py-16 text-center text-gray-400 text-sm">
                     No fully processed channels yet.
                   </td>
                 </tr>
@@ -235,6 +237,7 @@ interface UnknownStockRow extends UnknownStock {
                     <td class="px-6 py-4 text-right font-mono text-sm font-medium" [ngClass]="returnClass(activeReturn(row))">
                       {{ formatReturn(activeReturn(row)) }}
                     </td>
+                    @if (auth.isAdmin) {
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
                         @if (auth.isAdmin) {
@@ -265,11 +268,12 @@ interface UnknownStockRow extends UnknownStock {
                         }
                       </div>
                     </td>
+                    }
                   </tr>
                 }
                 @if (!auth.isAdmin && sortedRows().length > 5) {
                   <tr>
-                    <td colspan="6" class="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
+                    <td [attr.colspan]="auth.isAdmin ? 6 : 5" class="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
                       {{ sortedRows().length - 5 }} more channel{{ sortedRows().length - 5 === 1 ? '' : 's' }} not shown
                     </td>
                   </tr>
@@ -290,7 +294,9 @@ interface UnknownStockRow extends UnknownStock {
                     <th class="px-6 py-4 text-right">Subscribers</th>
                     <th class="px-6 py-4 text-right">Videos</th>
                     <th class="px-6 py-4 text-right">Progress</th>
-                    <th class="px-6 py-4">Actions</th>
+                    @if (auth.isAuthenticated) {
+                      <th class="px-6 py-4">Actions</th>
+                    }
                   </tr>
                 </thead>
                 <tbody>
@@ -315,8 +321,9 @@ interface UnknownStockRow extends UnknownStock {
                       <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
                         {{ row.subscriberCount != null ? formatSubscriberCount(row.subscriberCount) : '—' }}
                       </td>
-                      <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">{{ row.totalVideos }}</td>
+                      <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">{{ row.processedVideos }}/{{ row.totalVideos }}</td>
                       <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">{{ formatProgress(row) }}</td>
+                      @if (auth.isAuthenticated) {
                       <td class="px-6 py-4">
                         <div class="flex items-center gap-2">
                           @if (auth.isAuthenticated) {
@@ -374,6 +381,7 @@ interface UnknownStockRow extends UnknownStock {
                           }
                         </div>
                       </td>
+                      }
                     </tr>
                   }
                 </tbody>
@@ -1280,7 +1288,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   formatProgress(row: Channel): string {
     if (row.totalVideos === 0) { return '–'; }
-    return `${Math.round((row.processedVideos / row.totalVideos) * 100)}%`;
+    return `${((row.processedVideos / row.totalVideos) * 100).toFixed(2)}%`;
   }
 
   returnClass(value: number | null): string {
