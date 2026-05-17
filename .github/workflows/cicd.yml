@@ -189,7 +189,7 @@ jobs:
             sleep 10
           done
 
-  prewarm:
+  pre-warm-cache:
     needs: health-check
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
