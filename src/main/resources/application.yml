@@ -30,6 +30,9 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: false
+    properties:
+      hibernate:
+        generate_statistics: true
 
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
@@ -46,6 +49,9 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+        hikaricp.connections.acquire: true
+        hikaricp.connections.usage: true
+        spring.data.repository.invocations: true
 
 tubereturns:
   youtube:
