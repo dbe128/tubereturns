@@ -189,7 +189,14 @@ jobs:
             sleep 10
           done
 
+  prewarm:
+    needs: health-check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
       - name: Pre-warm caches
         env:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-        run: curl -sf "${APP_BASE_URL}" || true
+        run: curl -sf "${APP_BASE_URL}/api/channels" || true
+

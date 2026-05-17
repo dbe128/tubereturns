@@ -2,7 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-After completing every task, run: `afplay "/Users/dbe128/IdeaProjects/TubeReturns/mission-accomplished-made-with-Voicemod.mp3"`
+After completing every task:
+- If the task involved a `git push`: monitor the deployment with `gh run watch <run-id> --exit-status` in the background, and play `afplay "/Users/dbe128/IdeaProjects/TubeReturns/ready-fight.mp3"` once it completes. Do NOT play any other sound in this case.
+- Otherwise: run `afplay "/Users/dbe128/IdeaProjects/TubeReturns/mission-accomplished-made-with-Voicemod.mp3"`
 
 Do NOT commit or push changes to this repo unless explicitly asked by the user.
 
