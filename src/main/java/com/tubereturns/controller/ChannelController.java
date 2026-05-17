@@ -158,7 +158,10 @@ public class ChannelController {
     private ChannelResponseDto toResponseDto(Channel channel) {
         long totalVideos = videoRepository.countByChannelId(channel.getId());
         long processedVideos = videoRepository.countProcessedByChannelId(channel.getId());
-        PortfolioService.ChannelReturns returns = portfolioService.computeChannelReturns(channel);
+        boolean fullyProcessed = channel.isDiscoveryComplete() && totalVideos > 0 && processedVideos == totalVideos;
+        PortfolioService.ChannelReturns returns = fullyProcessed
+            ? portfolioService.computeChannelReturns(channel)
+            : new PortfolioService.ChannelReturns(null, null, null);
         return new ChannelResponseDto(
             channel.getId(),
             channel.getHandle(),

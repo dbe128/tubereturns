@@ -190,16 +190,15 @@ interface UnknownStockRow extends UnknownStock {
                 <th class="px-6 py-4">Channel</th>
                 <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
-                <th class="px-6 py-4 text-right">Processed</th>
                 <th class="px-6 py-4 text-right">{{ timeframe() }} Return</th>
                 <th class="px-6 py-4">Actions</th>
               </tr>
             </thead>
             <tbody>
-              @if (rows().length === 0) {
+              @if (processedChannels().length === 0) {
                 <tr>
-                  <td colspan="7" class="px-6 py-16 text-center text-gray-400 text-sm">
-                    No channels yet. Add a channel to get started.
+                  <td colspan="6" class="px-6 py-16 text-center text-gray-400 text-sm">
+                    No fully processed channels yet.
                   </td>
                 </tr>
               } @else {
@@ -225,16 +224,6 @@ interface UnknownStockRow extends UnknownStock {
                             {{ row.channelName }}
                           </span>
                         </a>
-                        @if (isNotFullyProcessed(row)) {
-                          <span class="relative group/tip flex-shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                              Processing...
-                            </span>
-                          </span>
-                        }
                       </div>
                     </td>
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
@@ -243,43 +232,11 @@ interface UnknownStockRow extends UnknownStock {
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
                       {{ row.totalVideos }}
                     </td>
-                    <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
-                      {{ row.processedVideos }}
-                    </td>
                     <td class="px-6 py-4 text-right font-mono text-sm font-medium" [ngClass]="returnClass(activeReturn(row))">
                       {{ formatReturn(activeReturn(row)) }}
                     </td>
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
-                        @if (isNotFullyProcessed(row) && auth.isAuthenticated) {
-                          @if (togglingNotificationFor() === row.handle) {
-                            <div class="animate-spin rounded-full h-6 w-6 border-2 border-amber-400 border-t-transparent"></div>
-                          } @else if (myNotifiedHandles().has(row.handle)) {
-                            <button
-                              (click)="toggleNotification(row)"
-                              class="relative group/tip text-amber-400 hover:text-amber-500 transition-colors"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
-                              </svg>
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                                Unsubscribe from notification
-                              </span>
-                            </button>
-                          } @else {
-                            <button
-                              (click)="toggleNotification(row)"
-                              class="relative group/tip text-gray-300 hover:text-amber-400 transition-colors"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                              </svg>
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                                Notify me when done
-                              </span>
-                            </button>
-                          }
-                        }
                         @if (auth.isAdmin) {
                           <button
                             (click)="reprocessChannel(row.handle, row.channelName)"
@@ -312,7 +269,7 @@ interface UnknownStockRow extends UnknownStock {
                 }
                 @if (!auth.isAdmin && sortedRows().length > 5) {
                   <tr>
-                    <td colspan="7" class="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
+                    <td colspan="6" class="px-6 py-3 text-center text-xs text-gray-400 bg-gray-50 border-t border-gray-100">
                       {{ sortedRows().length - 5 }} more channel{{ sortedRows().length - 5 === 1 ? '' : 's' }} not shown
                     </td>
                   </tr>
@@ -321,6 +278,109 @@ interface UnknownStockRow extends UnknownStock {
             </tbody>
           </table>
         </div>
+
+        @if (inProgressChannels().length > 0) {
+          <div class="mt-10">
+            <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Channels being processed</h2>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+              <table class="w-full">
+                <thead>
+                  <tr class="border-b border-gray-200 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <th class="px-6 py-4">Channel</th>
+                    <th class="px-6 py-4 text-right">Subscribers</th>
+                    <th class="px-6 py-4 text-right">Videos</th>
+                    <th class="px-6 py-4 text-right">Progress</th>
+                    <th class="px-6 py-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of inProgressSorted(); track row.handle) {
+                    <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      <td class="px-6 py-4">
+                        <a [routerLink]="['/channel', row.handle]" class="flex items-center gap-3 group">
+                          @if (row.hasThumbnail) {
+                            <img
+                              [src]="'/api/channels/' + row.handle + '/thumbnail'"
+                              [alt]="row.channelName"
+                              class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100"
+                            />
+                          } @else {
+                            <div class="w-9 h-9 rounded-full bg-gray-100 flex-shrink-0"></div>
+                          }
+                          <span class="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                            {{ row.channelName }}
+                          </span>
+                        </a>
+                      </td>
+                      <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
+                        {{ row.subscriberCount != null ? formatSubscriberCount(row.subscriberCount) : '—' }}
+                      </td>
+                      <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">{{ row.totalVideos }}</td>
+                      <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">{{ formatProgress(row) }}</td>
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                          @if (auth.isAuthenticated) {
+                            @if (togglingNotificationFor() === row.handle) {
+                              <div class="animate-spin rounded-full h-6 w-6 border-2 border-amber-400 border-t-transparent"></div>
+                            } @else if (myNotifiedHandles().has(row.handle)) {
+                              <button
+                                (click)="toggleNotification(row)"
+                                class="relative group/tip text-amber-400 hover:text-amber-500 transition-colors"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+                                </svg>
+                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                                  Unsubscribe from notification
+                                </span>
+                              </button>
+                            } @else {
+                              <button
+                                (click)="toggleNotification(row)"
+                                class="relative group/tip text-gray-300 hover:text-amber-400 transition-colors"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                </svg>
+                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                                  Notify me when done
+                                </span>
+                              </button>
+                            }
+                          }
+                          @if (auth.isAdmin) {
+                            <button
+                              (click)="reprocessChannel(row.handle, row.channelName)"
+                              class="relative group/tip text-gray-300 hover:text-amber-400 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                                Re-extract all picks
+                              </span>
+                            </button>
+                            <button
+                              (click)="deleteChannel(row.handle, row.channelName)"
+                              class="relative group/tip text-gray-300 hover:text-danger-500 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                                Delete channel
+                              </span>
+                            </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
       }
 
       @if (!error()) {
@@ -735,15 +795,31 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly timeframe = signal<'1Y' | '3Y' | '5Y'>('3Y');
   readonly leaderboardTimeframes: readonly ('1Y' | '3Y' | '5Y')[] = ['1Y', '3Y', '5Y'];
 
+  readonly processedChannels = computed(() =>
+    this.rows().filter(r => r.discoveryComplete && r.totalVideos > 0 && r.processedVideos === r.totalVideos)
+  );
+
+  readonly inProgressChannels = computed(() =>
+    this.rows().filter(r => !(r.discoveryComplete && r.totalVideos > 0 && r.processedVideos === r.totalVideos))
+  );
+
+  readonly inProgressSorted = computed(() =>
+    [...this.inProgressChannels()].sort((a, b) => {
+      const pctA = a.totalVideos === 0 ? 0 : a.processedVideos / a.totalVideos;
+      const pctB = b.totalVideos === 0 ? 0 : b.processedVideos / b.totalVideos;
+      return pctB - pctA;
+    })
+  );
+
   readonly channelsForChart = computed(() =>
-    this.rows().filter((r) => r.return1y !== null || r.return3y !== null || r.return5y !== null)
+    this.processedChannels().filter((r) => r.return1y !== null || r.return3y !== null || r.return5y !== null)
   );
 
   readonly sortedRows = computed(() => {
     const tf = this.timeframe();
     const getReturn = (row: Channel): number | null =>
       tf === '1Y' ? row.return1y : tf === '3Y' ? row.return3y : row.return5y;
-    return [...this.rows()].sort((a, b) => {
+    return [...this.processedChannels()].sort((a, b) => {
       const ra = getReturn(a);
       const rb = getReturn(b);
       if (ra === null && rb === null) return 0;
@@ -851,12 +927,6 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
       next: (handles) => this.myNotifiedHandles.set(new Set(handles)),
       error: () => {},
     });
-  }
-
-  isNotFullyProcessed(row: Channel): boolean {
-    if (!row.discoveryComplete) { return true; }
-    if (row.processedVideos < row.totalVideos) { return true; }
-    return false;
   }
 
   toggleNotification(row: Channel): void {
@@ -1206,6 +1276,11 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     if (value === null || value === undefined) return '—';
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(2)}%`;
+  }
+
+  formatProgress(row: Channel): string {
+    if (row.totalVideos === 0) { return '–'; }
+    return `${Math.round((row.processedVideos / row.totalVideos) * 100)}%`;
   }
 
   returnClass(value: number | null): string {
