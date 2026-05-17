@@ -138,6 +138,7 @@ public class AiModelService {
             meterRegistry.counter("tubereturns.ai.rate.limits", "model", model);
             meterRegistry.counter("tubereturns.ai.timeouts", "model", model);
             meterRegistry.counter("tubereturns.ai.payment.required", "model", model);
+            meterRegistry.counter("tubereturns.ai.forbidden", "model", model);
             meterRegistry.timer("tubereturns.ai.call", "model", model);
         }
     }
@@ -212,6 +213,17 @@ public class AiModelService {
                 } else {
                     log.error("Rate limited on model {} — all {} models exhausted", model, models.size());
                 }
+            } catch (ForbiddenException e) {
+                meterRegistry.counter("tubereturns.ai.forbidden", "model", model).increment();
+                int nextIdx = (idx + 1) % models.size();
+                currentModelIndex.set(nextIdx);
+                lastKnownModelIndex = nextIdx;
+                attemptsWithoutRemoval++;
+                if (attemptsWithoutRemoval < maxAttempts) {
+                    log.warn("Forbidden (403) on model {} — switching to {}", model, models.get(nextIdx));
+                } else {
+                    log.error("Forbidden (403) on model {} — all {} models exhausted", model, models.size());
+                }
             } catch (TimedOutException e) {
                 meterRegistry.counter("tubereturns.ai.timeouts", "model", model).increment();
                 int nextIdx = (idx + 1) % models.size();
@@ -279,6 +291,10 @@ public class AiModelService {
                 if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
                     throw new RateLimitedException(model);
                 }
+                if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
+                    log.error("OpenRouter returned 403 Forbidden for model {} — will try next model", model);
+                    throw new ForbiddenException(model);
+                }
                 if (e.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
                     log.error("OpenRouter returned 402 Payment Required — insufficient credits");
                     throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
@@ -293,7 +309,7 @@ public class AiModelService {
                     log.error("OpenRouter timed out with model {} — no retries left", model);
                     throw new TimedOutException(model);
                 }
-            } catch (RateLimitedException | PaymentRequiredException | TimedOutException e) {
+            } catch (RateLimitedException | ForbiddenException | PaymentRequiredException | TimedOutException e) {
                 throw e;
             } catch (Exception e) {
                 log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
@@ -316,6 +332,12 @@ public class AiModelService {
     private static final class RateLimitedException extends RuntimeException {
         RateLimitedException(String model) {
             super("Rate limited on model: " + model);
+        }
+    }
+
+    private static final class ForbiddenException extends RuntimeException {
+        ForbiddenException(String model) {
+            super("Forbidden on model: " + model);
         }
     }
 
