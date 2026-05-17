@@ -819,9 +819,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     })
   );
 
-  readonly channelsForChart = computed(() =>
-    this.processedChannels().filter((r) => r.return1y !== null || r.return3y !== null || r.return5y !== null)
-  );
+  readonly channelsForChart = computed(() => this.sortedRows().slice(0, 5));
 
   readonly sortedRows = computed(() => {
     const tf = this.timeframe();
