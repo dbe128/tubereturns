@@ -6,30 +6,16 @@ import com.tubereturns.dto.UnknownStockDto;
 import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.Stock;
 import com.tubereturns.model.StockPrice;
-import com.tubereturns.model.User;
 import com.tubereturns.model.Video;
-import com.tubereturns.repository.ChannelProcessingNotificationRepository;
-import com.tubereturns.repository.ChannelRepository;
-import com.tubereturns.repository.PickRepository;
-import com.tubereturns.repository.StockPriceRepository;
-import com.tubereturns.repository.StockRepository;
-import com.tubereturns.repository.VideoRepository;
-import com.tubereturns.service.AiModelService;
-import com.tubereturns.service.ChannelNotificationService;
-import com.tubereturns.service.PipelineSchedulerService;
-import com.tubereturns.service.PortfolioService;
-import com.tubereturns.service.StockPriceService;
-import com.tubereturns.service.TranscriptDownloadService;
-import com.tubereturns.service.PipelineStatusRegistry;
-import com.tubereturns.service.StockPickExtractionService;
-import com.tubereturns.service.YouTubeDiscoveryService;
+import com.tubereturns.repository.*;
+import com.tubereturns.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -59,6 +45,7 @@ public class AdminController {
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
     private final PortfolioService portfolioService;
+    private final BuildProperties buildProperties;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
@@ -222,7 +209,7 @@ public class AdminController {
     @GetMapping("/health")
     @Operation(summary = "Health check", description = "Check if the application is running")
     public ResponseEntity<Map<String, String>> health() {
-        return ResponseEntity.ok(Map.of("message", "TubeReturns is running"));
+        return ResponseEntity.ok(Map.of("message", "TubeReturns is running", "version", buildProperties.getVersion()));
     }
 
     @GetMapping("/stocks/unknown")

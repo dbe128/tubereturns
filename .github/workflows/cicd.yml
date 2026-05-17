@@ -174,18 +174,22 @@ jobs:
     runs-on: ubuntu-latest
     environment: prod
     steps:
+      - uses: actions/checkout@v4
       - name: Wait for backend
         env:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
         run: |
-          echo "Waiting for backend to become healthy..."
+          EXPECTED=$(grep '^version = ' build.gradle.kts | sed 's/version = "\(.*\)"/\1/')
+          echo "Waiting for backend version $EXPECTED to become healthy..."
           for i in $(seq 1 18); do
-            if curl -sf "${APP_BASE_URL}/api/admin/health" > /dev/null 2>&1; then
-              echo "Backend is healthy"
+            RESPONSE=$(curl -sf "${APP_BASE_URL}/api/admin/health" 2>/dev/null || true)
+            DEPLOYED=$(echo "$RESPONSE" | jq -r '.version // empty' 2>/dev/null || true)
+            if [ "$DEPLOYED" = "$EXPECTED" ]; then
+              echo "Backend is healthy at version $EXPECTED"
               exit 0
             fi
             if [ $i -eq 18 ]; then
-              echo "Health check timed out after 3 minutes"
+              echo "Health check timed out — expected $EXPECTED, got '${DEPLOYED:-no response}'"
               exit 1
             fi
             sleep 10
