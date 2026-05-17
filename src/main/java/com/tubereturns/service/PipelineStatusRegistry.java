@@ -1,5 +1,8 @@
 package com.tubereturns.service;
 
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.stereotype.Component;
 
@@ -10,7 +13,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@RequiredArgsConstructor
 public class PipelineStatusRegistry {
+
+    private final MeterRegistry meterRegistry;
 
     private final Map<String, Instant> lastStartedAt = new ConcurrentHashMap<>();
     private final Map<String, Instant> lastFinishedAt = new ConcurrentHashMap<>();
@@ -26,12 +32,17 @@ public class PipelineStatusRegistry {
         if (limit != null) {
             limits.put(step, limit);
         }
+        Gauge.builder("tubereturns.pipeline.running", running, m -> Boolean.TRUE.equals(m.get(step)) ? 1.0 : 0.0)
+             .tag("step", step).register(meterRegistry);
+        Gauge.builder("tubereturns.pipeline.last.duration.ms", lastRunDurationMs, m -> m.getOrDefault(step, 0L).doubleValue())
+             .tag("step", step).register(meterRegistry);
     }
 
     public void markStarted(String step) {
         lastStartedAt.put(step, Instant.now());
         running.put(step, true);
         fatalErrors.remove(step);
+        meterRegistry.counter("tubereturns.pipeline.runs", "step", step).increment();
     }
 
     public void markFinished(String step, int count) {

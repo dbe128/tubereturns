@@ -2,6 +2,9 @@ package com.tubereturns.service;
 
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.VideoRepository;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +40,7 @@ public class TranscriptDownloadService {
     private final VideoRepository videoRepository;
     private final StockPickExtractionService extractionService;
     private final PipelineStatusRegistry registry;
+    private final MeterRegistry meterRegistry;
 
     @Value("${tubereturns.transcript.ytbsd-path}")
     private String ytbsdPath;
@@ -90,6 +94,12 @@ public class TranscriptDownloadService {
 
     public YtbsdStats getYtbsdStats() {
         return new YtbsdStats(ytbsdTotalRuns.get(), ytbsdSuccessfulRuns.get(), ytbsdFailedRuns.get(), ytbsdLastDurationMs, ytbsdLastBatchSize, ytbsdRunning, ytbsdCurrentBatchSize, ytbsdCurrentPhase, ytbsdCurrentCompleted, ytbsdCurrentTotal, ytbsdCurrentPct);
+    }
+
+    @PostConstruct
+    public void init() {
+        Gauge.builder("tubereturns.transcript.queue.size", this, TranscriptDownloadService::getQueueSize)
+             .register(meterRegistry);
     }
 
     @PreDestroy
@@ -206,6 +216,8 @@ public class TranscriptDownloadService {
                         videoRepository.save(v);
                     }))
                 );
+                meterRegistry.counter("tubereturns.transcript.downloads", "result", "failure")
+                             .increment(videoIds.size());
                 return;
             }
 
@@ -243,6 +255,13 @@ public class TranscriptDownloadService {
             downloadedIds.forEach(extractionService::enqueueForProcessing);
             sessionDownloaded.addAndGet(downloadedIds.size());
             registry.markProgress("transcript", sessionDownloaded.get());
+            meterRegistry.counter("tubereturns.transcript.downloads", "result", "success")
+                         .increment(downloadedIds.size());
+            int noTranscriptOrFailed = videoIds.size() - downloadedIds.size();
+            if (noTranscriptOrFailed > 0) {
+                meterRegistry.counter("tubereturns.transcript.downloads", "result", "skipped")
+                             .increment(noTranscriptOrFailed);
+            }
         } finally {
             ytbsdRunning = false;
             ytbsdCurrentBatchSize = null;

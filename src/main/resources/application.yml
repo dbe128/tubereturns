@@ -42,6 +42,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 tubereturns:
   youtube:

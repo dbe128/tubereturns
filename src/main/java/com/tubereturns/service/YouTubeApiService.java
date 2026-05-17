@@ -10,6 +10,8 @@ import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.YouTubeVideoDto;
+import io.micrometer.core.instrument.MeterRegistry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,7 +28,10 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class YouTubeApiService {
+
+    private final MeterRegistry meterRegistry;
 
     @Value("${tubereturns.youtube.api-key}")
     private String apiKey;
@@ -40,6 +45,7 @@ public class YouTubeApiService {
     public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl, Long subscriberCount) {}
 
     public List<ChannelSearchResultDto> searchChannels(String query, boolean filterByKeywords) {
+        meterRegistry.counter("tubereturns.youtube.api.calls", "method", "searchChannels").increment();
         if (!enabled || apiKey == null || apiKey.isBlank()) {
             return List.of();
         }
@@ -126,12 +132,14 @@ public class YouTubeApiService {
             }
             return results;
         } catch (Exception e) {
+            meterRegistry.counter("tubereturns.youtube.api.errors", "method", "searchChannels").increment();
             log.error("Failed to search channels for '{}': {}", query, e.getMessage(), e);
             return List.of();
         }
     }
 
     public ChannelInfo resolveChannelInfo(String channelUrl) {
+        meterRegistry.counter("tubereturns.youtube.api.calls", "method", "resolveChannelInfo").increment();
         if (!enabled || channelUrl == null || channelUrl.isBlank()) {
             return null;
         }
@@ -141,12 +149,14 @@ public class YouTubeApiService {
         try {
             return resolveUploadsPlaylistId(buildClient(), channelUrl);
         } catch (Exception e) {
+            meterRegistry.counter("tubereturns.youtube.api.errors", "method", "resolveChannelInfo").increment();
             log.error("Failed to resolve channel info for {}: {}", channelUrl, e.getMessage(), e);
             return null;
         }
     }
 
     public List<YouTubeVideoDto> getVideosFromPlaylist(String uploadsPlaylistId, Instant since) {
+        meterRegistry.counter("tubereturns.youtube.api.calls", "method", "getVideosFromPlaylist").increment();
         if (!enabled || uploadsPlaylistId == null || uploadsPlaylistId.isBlank()) {
             return List.of();
         }
@@ -160,6 +170,7 @@ public class YouTubeApiService {
                     .sorted(Comparator.comparing(YouTubeVideoDto::publishedAt))
                     .toList();
         } catch (Exception e) {
+            meterRegistry.counter("tubereturns.youtube.api.errors", "method", "getVideosFromPlaylist").increment();
             log.error("Failed to fetch videos from playlist {}: {}", uploadsPlaylistId, e.getMessage(), e);
             return List.of();
         }

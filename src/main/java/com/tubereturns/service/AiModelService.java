@@ -2,6 +2,7 @@ package com.tubereturns.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -105,6 +106,7 @@ public class AiModelService {
 
     private RestClient restClient;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
 
     @PostConstruct
     public void loadModels() {
@@ -131,6 +133,12 @@ public class AiModelService {
         } else {
             log.warn("Models file not found at {} — using default model", modelsFilePath);
             models = List.of("openrouter/owl-alpha");
+        }
+        for (String model : models) {
+            meterRegistry.counter("tubereturns.ai.rate.limits", "model", model);
+            meterRegistry.counter("tubereturns.ai.timeouts", "model", model);
+            meterRegistry.counter("tubereturns.ai.payment.required", "model", model);
+            meterRegistry.timer("tubereturns.ai.call", "model", model);
         }
     }
 
@@ -194,6 +202,7 @@ public class AiModelService {
             try {
                 return callWithModel(model, videoId, videoTitle, transcriptText);
             } catch (RateLimitedException e) {
+                meterRegistry.counter("tubereturns.ai.rate.limits", "model", model).increment();
                 int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
                 lastKnownModelIndex = nextIdx;
@@ -204,6 +213,7 @@ public class AiModelService {
                     log.error("Rate limited on model {} — all {} models exhausted", model, models.size());
                 }
             } catch (TimedOutException e) {
+                meterRegistry.counter("tubereturns.ai.timeouts", "model", model).increment();
                 int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
                 lastKnownModelIndex = nextIdx;
@@ -214,6 +224,7 @@ public class AiModelService {
                     log.error("Timed out on model {} — all {} models exhausted", model, models.size());
                 }
             } catch (PaymentRequiredException e) {
+                meterRegistry.counter("tubereturns.ai.payment.required", "model", model).increment();
                 models.remove(idx);
                 if (models.isEmpty()) {
                     log.error("Payment required on model {} — no more models available", model);
@@ -259,6 +270,8 @@ public class AiModelService {
                 JsonNode root = objectMapper.readTree(response);
                 String actualModel = root.path("model").asText(model);
                 log.info("OpenRouter used model: {} — call took {}ms", actualModel, lastCallDurationMs);
+                meterRegistry.timer("tubereturns.ai.call", "model", actualModel)
+                              .record(java.time.Duration.ofMillis(lastCallDurationMs));
                 String text = root.path("choices").get(0).path("message").path("content").asText();
                 return new ExtractionResult(stripJsonFences(text), actualModel);
 

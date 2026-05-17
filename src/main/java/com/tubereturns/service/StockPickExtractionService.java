@@ -2,6 +2,8 @@ package com.tubereturns.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tubereturns.dto.StockPickExtractionDto;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Stock;
 import com.tubereturns.model.StockPrice;
@@ -48,6 +50,7 @@ public class StockPickExtractionService {
     private final PipelineStatusRegistry registry;
     private final ExchangeRateService exchangeRateService;
     private final PortfolioService portfolioService;
+    private final MeterRegistry meterRegistry;
 
     @Value("${tubereturns.pipeline.extraction.threads}")
     private int threadCount;
@@ -78,6 +81,13 @@ public class StockPickExtractionService {
             return t;
         });
         log.info("Extraction thread pool initialized with {} thread(s)", threadCount);
+        Gauge.builder("tubereturns.extraction.queue.size", this, StockPickExtractionService::getQueueSize)
+             .register(meterRegistry);
+        Gauge.builder("tubereturns.extraction.active.workers", this, StockPickExtractionService::getActiveWorkers)
+             .register(meterRegistry);
+        meterRegistry.counter("tubereturns.extraction.videos", "result", "success");
+        meterRegistry.counter("tubereturns.extraction.videos", "result", "failure");
+        meterRegistry.counter("tubereturns.extraction.picks");
     }
 
     @PreDestroy
@@ -234,11 +244,13 @@ public class StockPickExtractionService {
             }
             videoRepository.save(video);
             advanceLastProcessedAt(video);
+            meterRegistry.counter("tubereturns.extraction.videos", "result", "success").increment();
             return true;
         } catch (Exception e) {
             log.error("Failed to extract stock picks from video {}: {}", videoUrl, e.getMessage(), e);
             video.setExtractionStatus(Video.ExtractionStatus.FAILED);
             videoRepository.save(video);
+            meterRegistry.counter("tubereturns.extraction.videos", "result", "failure").increment();
             return false;
         }
     }
@@ -300,6 +312,7 @@ public class StockPickExtractionService {
                     .collect(java.util.stream.Collectors.joining(", "));
             log.info("Extracted {} pick(s) from {} — [{}]",
                     savedPicks.size(), "https://youtu.be/" + video.getVideoId(), picksSummary);
+            meterRegistry.counter("tubereturns.extraction.picks").increment(savedPicks.size());
         }
 
         return savedPicks;
