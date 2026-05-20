@@ -41,7 +41,7 @@ import { AuthService } from '../../services/auth.service';
 
         <p class="text-center text-xs text-gray-400 mt-6">
           Don't have an account?
-          <a routerLink="/register" class="text-primary-600 font-medium hover:underline">Register</a>
+          <a routerLink="/signup" class="text-primary-600 font-medium hover:underline">Sign up</a>
         </p>
       </div>
     </div>

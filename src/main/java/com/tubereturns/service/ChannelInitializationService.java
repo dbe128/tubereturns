@@ -33,11 +33,6 @@ public class ChannelInitializationService {
         }
 
         for (ChannelConfig.ChannelDefinition channelDef : channelConfig.getChannels()) {
-            if (!channelDef.isEnabled()) {
-                log.info("Skipping disabled channel: {}", channelDef.getChannelName());
-                continue;
-            }
-
             try {
                 Channel existingChannel = channelRepository.findByHandle(channelDef.getHandle()).orElse(null);
 

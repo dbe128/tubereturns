@@ -43,6 +43,7 @@ public class PipelineSchedulerService {
     private final StockPickExtractionService extractionService;
     private final StockPriceRefreshService priceRefreshService;
     private final ExchangeRateService exchangeRateService;
+    private final PickPerformanceService pickPerformanceService;
     private final PipelineStatusRegistry registry;
     private final VideoRepository videoRepository;
 
@@ -119,6 +120,7 @@ public class PipelineSchedulerService {
         runStep("price-refresh", () -> {
             int prices = priceRefreshService.refreshAllPrices();
             exchangeRateService.refreshRecentRates();
+            pickPerformanceService.refreshLockedReturns();
             return prices;
         });
     }
@@ -128,6 +130,7 @@ public class PipelineSchedulerService {
         runStep("price-refresh", () -> {
             int prices = priceRefreshService.refreshAllPrices();
             exchangeRateService.refreshRecentRates();
+            pickPerformanceService.refreshLockedReturns();
             return prices;
         });
     }

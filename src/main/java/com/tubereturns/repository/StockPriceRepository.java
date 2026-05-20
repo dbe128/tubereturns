@@ -2,6 +2,9 @@ package com.tubereturns.repository;
 
 import com.tubereturns.model.StockPrice;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,7 +14,12 @@ import java.util.List;
 @Repository
 public interface StockPriceRepository extends JpaRepository<StockPrice, Long> {
 
-    boolean existsByStockIdAndPriceDate(Long stockId, LocalDate priceDate);
+    @Modifying
+    @Transactional
+    @Query(value = "INSERT INTO stock_prices (stock_id, price_date, close_price, created_at) VALUES (:stockId, :priceDate, :closePrice, NOW()) ON CONFLICT DO NOTHING", nativeQuery = true)
+    void upsert(@Param("stockId") Long stockId, @Param("priceDate") LocalDate priceDate, @Param("closePrice") double closePrice);
+
+    java.util.Optional<StockPrice> findFirstByStockIdOrderByPriceDateAsc(Long stockId);
 
     List<StockPrice> findByStockIdAndPriceDateBetweenOrderByPriceDateAsc(Long stockId, LocalDate from, LocalDate to);
 

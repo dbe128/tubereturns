@@ -35,6 +35,24 @@ public class Pick {
     @Column(length = 10, nullable = false)
     private Signal signal;
 
+    @Column(name = "return_1m")
+    private Double return1m;
+
+    @Column(name = "return_1y")
+    private Double return1y;
+
+    @Column(name = "return_3y")
+    private Double return3y;
+
+    @Column(name = "alpha_1m")
+    private Double alpha1m;
+
+    @Column(name = "alpha_1y")
+    private Double alpha1y;
+
+    @Column(name = "alpha_3y")
+    private Double alpha3y;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -61,6 +79,6 @@ public class Pick {
     }
 
     public enum Signal {
-        BUY, SELL
+        BUY
     }
 }

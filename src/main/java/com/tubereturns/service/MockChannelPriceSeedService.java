@@ -32,6 +32,8 @@ public class MockChannelPriceSeedService {
 
     private CompletableFuture<Void> initTask;
 
+    public CompletableFuture<Void> getInitTask() { return initTask; }
+
     @PostConstruct
     void init() {
         initTask = startupCoordinator.register();
@@ -68,14 +70,10 @@ public class MockChannelPriceSeedService {
 
             Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(ticker, from.minusDays(7), LocalDate.now());
 
-            int inserted = 0;
             for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
-                if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
-                    stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
-                    inserted++;
-                }
+                stockPriceRepository.upsert(stock.getId(), entry.getKey(), entry.getValue());
             }
-            log.info("Price seed for {} complete — {} new price points inserted", ticker, inserted);
+            log.info("Price seed for {} complete — {} price points upserted", ticker, prices.size());
         } catch (Exception e) {
             log.error("Failed to seed prices for {}: {}", ticker, e.getMessage(), e);
         }

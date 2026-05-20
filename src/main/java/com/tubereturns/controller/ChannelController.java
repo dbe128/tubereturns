@@ -2,9 +2,9 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.dto.ChannelSearchResultDto;
+import com.tubereturns.dto.PickPerformanceDto;
 import com.tubereturns.dto.VideoSummaryDto;
 import com.tubereturns.model.Channel;
-import com.tubereturns.model.Pick;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.ChannelRepository;
@@ -12,8 +12,8 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.ChannelNotificationService;
+import com.tubereturns.service.PickPerformanceService;
 import com.tubereturns.service.PipelineSchedulerService;
-import com.tubereturns.service.PortfolioService;
 import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -45,7 +45,7 @@ public class ChannelController {
     private final YouTubeDiscoveryService discoveryService;
     private final YouTubeApiService youTubeApiService;
     private final PipelineSchedulerService scheduler;
-    private final PortfolioService portfolioService;
+    private final PickPerformanceService pickPerformanceService;
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -84,6 +84,14 @@ public class ChannelController {
         }
         List<Video> videos = videoRepository.findByChannelIdOrderByPublishedAtDesc(channelOpt.get().getId());
         return ResponseEntity.ok(videos.stream().map(this::toVideoSummaryDto).toList());
+    }
+
+    @GetMapping("/{handle}/picks")
+    @Operation(summary = "Get per-pick performance for a channel")
+    public ResponseEntity<List<PickPerformanceDto>> getChannelPicks(@PathVariable String handle) {
+        return channelRepository.findByHandle(handle)
+                .map(c -> ResponseEntity.ok(pickPerformanceService.computeForChannel(c.getId())))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/my-notifications")
@@ -158,10 +166,7 @@ public class ChannelController {
     private ChannelResponseDto toResponseDto(Channel channel) {
         long totalVideos = videoRepository.countByChannelId(channel.getId());
         long processedVideos = videoRepository.countProcessedByChannelId(channel.getId());
-        boolean fullyProcessed = channel.isDiscoveryComplete() && totalVideos > 0 && processedVideos == totalVideos;
-        PortfolioService.ChannelReturns returns = fullyProcessed
-            ? portfolioService.computeChannelReturns(channel)
-            : new PortfolioService.ChannelReturns(null, null, null);
+        PickPerformanceService.ChannelScoreResult score = pickPerformanceService.computeScoreForChannel(channel.getId());
         return new ChannelResponseDto(
             channel.getId(),
             channel.getHandle(),
@@ -174,19 +179,14 @@ public class ChannelController {
             channel.isDiscoveryComplete(),
             totalVideos,
             processedVideos,
-            returns.return1y(),
-            returns.return3y(),
-            returns.return5y()
+            score.score1m(), score.eligible1m(), score.unresolved1m(),
+            score.score1y(), score.eligible1y(), score.unresolved1y(),
+            score.score3y(), score.eligible3y(), score.unresolved3y()
         );
     }
 
     private VideoSummaryDto toVideoSummaryDto(Video video) {
         List<String> buyPicks = video.getPicks() == null ? List.of() : video.getPicks().stream()
-                .filter(p -> p.getSignal() == Pick.Signal.BUY)
-                .map(p -> p.getStock().getTickerSymbol())
-                .distinct().sorted().toList();
-        List<String> sellPicks = video.getPicks() == null ? List.of() : video.getPicks().stream()
-                .filter(p -> p.getSignal() == Pick.Signal.SELL)
                 .map(p -> p.getStock().getTickerSymbol())
                 .distinct().sorted().toList();
         return new VideoSummaryDto(
@@ -198,7 +198,6 @@ public class ChannelController {
             video.getExtractionStatus().name(),
             video.getExtractionModel(),
             buyPicks,
-            sellPicks,
             video.getTranscriptStatus() == Video.TranscriptStatus.DOWNLOADED ? video.getTranscriptText() : null,
             video.isExcluded(),
             video.getExclusionReason()

@@ -31,7 +31,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
-    @PostMapping("/register")
+    @PostMapping("/signup")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDto request) {
         try {
             userService.registerUser(request);

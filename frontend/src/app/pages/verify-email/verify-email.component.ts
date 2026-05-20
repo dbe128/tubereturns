@@ -27,9 +27,9 @@ import { ApiService } from '../../api/api.service';
           <div class="text-4xl mb-4 text-danger-500">✗</div>
           <h1 class="text-xl font-bold text-gray-900 mb-2">Verification failed</h1>
           <p class="text-sm text-gray-500 mb-6">{{ error() }}</p>
-          <a routerLink="/register"
+          <a routerLink="/signup"
             class="block w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors">
-            Register again
+            Sign up again
           </a>
         }
       </div>

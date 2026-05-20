@@ -1,12 +1,12 @@
 {
   "handle": "mock-amd-buyer",
   "channelName": "Mock AMD Buyer",
-  "description": "Mock channel that bought AMD 13 years ago.",
+  "description": "Mock channel that bought AMD in December 2022.",
   "videos": [
     {
       "videoId": "mock-amd-buyer-001",
       "title": "Why I'm buying AMD",
-      "publishedAt": "2013-05-14T00:00:00Z",
+      "publishedAt": "2022-12-30T00:00:00Z",
       "picks": [
         {
           "ticker": "AMD",

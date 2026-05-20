@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/channel-suggestions/my").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/channel-suggestions/*/notify").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/channel-suggestions/*").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/channels/search").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/channels/search").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/channels/*/add").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/channels/my-notifications").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/channels/*/notify").authenticated()

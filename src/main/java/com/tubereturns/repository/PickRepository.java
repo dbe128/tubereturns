@@ -15,21 +15,8 @@ import java.util.List;
 @Repository
 public interface PickRepository extends JpaRepository<Pick, Long> {
 
-    List<Pick> findByStock_TickerSymbolOrderByCreatedAtDesc(String tickerSymbol);
-
-    List<Pick> findByVideoIdOrderByCreatedAtDesc(Long videoId);
-
     @Transactional
     void deleteByVideoId(Long videoId);
-
-    @Query("SELECT p FROM Pick p WHERE p.video.channel.handle = :handle ORDER BY p.createdAt DESC")
-    List<Pick> findByHandleOrderByCreatedAtDesc(@Param("handle") String handle);
-
-    @Query("SELECT p FROM Pick p WHERE p.createdAt >= :since ORDER BY p.createdAt DESC")
-    List<Pick> findPicksSince(@Param("since") Instant since);
-
-    @Query("SELECT DISTINCT p.stock.tickerSymbol FROM Pick p ORDER BY p.stock.tickerSymbol")
-    List<String> findDistinctTickerSymbols();
 
     @Query("SELECT COUNT(p) FROM Pick p WHERE p.video.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
@@ -42,24 +29,28 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     @Query("UPDATE Pick p SET p.stock = :newStock WHERE p.stock = :oldStock")
     int relinkPicks(@Param("oldStock") Stock oldStock, @Param("newStock") Stock newStock);
 
-    @Query("SELECT DISTINCT p.stock.tickerSymbol FROM Pick p WHERE p.video.channel.id = :channelId AND p.signal = :signal AND p.video.excluded = false ORDER BY p.stock.tickerSymbol")
-    List<String> findDistinctTickersByChannelIdAndSignal(@Param("channelId") Long channelId, @Param("signal") Pick.Signal signal);
-
-    @Query("SELECT p FROM Pick p WHERE p.signal = :signal ORDER BY p.createdAt DESC")
-    List<Pick> findBySignalOrderByCreatedAtDesc(@Param("signal") Pick.Signal signal);
-
-    @Query("SELECT p FROM Pick p JOIN FETCH p.video JOIN FETCH p.stock WHERE p.video.channel.id = :channelId AND p.signal = 'BUY' AND p.video.excluded = false ORDER BY p.video.publishedAt ASC")
-    List<Pick> findBuyPicksByChannelId(@Param("channelId") Long channelId);
-
-    @Query("SELECT p FROM Pick p JOIN FETCH p.video JOIN FETCH p.stock WHERE p.video.channel.id = :channelId AND p.signal = 'SELL' AND p.video.excluded = false ORDER BY p.video.publishedAt ASC")
-    List<Pick> findSellPicksByChannelId(@Param("channelId") Long channelId);
+    @Query("SELECT p FROM Pick p JOIN FETCH p.video JOIN FETCH p.stock WHERE p.video.channel.id = :channelId AND p.video.excluded = false ORDER BY p.video.publishedAt ASC")
+    List<Pick> findPicksByChannelId(@Param("channelId") Long channelId);
 
     @Query("SELECT DISTINCT p.video.channel.id FROM Pick p WHERE p.stock.id = :stockId")
     List<Long> findDistinctChannelIdsByStockId(@Param("stockId") Long stockId);
 
-    @Query("SELECT COUNT(p) FROM Pick p WHERE p.video.id = :videoId")
-    long countByVideoEntityId(@Param("videoId") Long videoId);
+    @Query("""
+        SELECT p FROM Pick p
+        JOIN FETCH p.video v
+        JOIN FETCH p.stock s
+        WHERE s.unknown = false
+          AND v.excluded = false
+          AND (
+            (p.return1m IS NULL AND v.publishedAt < :cutoff1m)
+            OR (p.return1y IS NULL AND v.publishedAt < :cutoff1y)
+            OR (p.return3y IS NULL AND v.publishedAt < :cutoff3y)
+          )
+        """)
+    List<Pick> findPicksNeedingReturnComputation(
+        @Param("cutoff1m") Instant cutoff1m,
+        @Param("cutoff1y") Instant cutoff1y,
+        @Param("cutoff3y") Instant cutoff3y
+    );
 
-    @Query("SELECT DISTINCT p.video.channel.id FROM Pick p WHERE UPPER(p.stock.currency) = UPPER(:currency)")
-    List<Long> findDistinctChannelIdsByCurrency(@Param("currency") String currency);
 }

@@ -12,9 +12,15 @@ export const ChannelSchema = z.object({
   discoveryComplete: z.boolean(),
   totalVideos: z.number(),
   processedVideos: z.number(),
-  return1y: z.number().nullable(),
-  return3y: z.number().nullable(),
-  return5y: z.number().nullable(),
+  score1m: z.number().nullable(),
+  eligible1m: z.number(),
+  unresolved1m: z.number(),
+  score1y: z.number().nullable(),
+  eligible1y: z.number(),
+  unresolved1y: z.number(),
+  score3y: z.number().nullable(),
+  eligible3y: z.number(),
+  unresolved3y: z.number(),
 });
 
 export const VideoSummarySchema = z.object({
@@ -26,48 +32,24 @@ export const VideoSummarySchema = z.object({
   extractionStatus: z.enum(['PENDING', 'EXTRACTING', 'EXTRACTED', 'FAILED']),
   extractionModel: z.string().nullable(),
   buyPicks: z.array(z.string()),
-  sellPicks: z.array(z.string()),
   transcriptText: z.string().nullable(),
   excluded: z.boolean(),
   exclusionReason: z.string().nullable(),
 });
 
-export const PerformanceSchema = z.object({
-  id: z.number(),
-  startPrice: z.number().nullable(),
-  currentPrice: z.number().nullable(),
-  return1d: z.number().nullable(),
-  return7d: z.number().nullable(),
-  return30d: z.number().nullable(),
-  return90d: z.number().nullable(),
-  return1y: z.number().nullable(),
-  returnYtd: z.number().nullable(),
-  lastUpdated: z.string().nullable(),
-});
-
-export const PickSchema = z.object({
-  id: z.number(),
+export const PickPerformanceSchema = z.object({
   tickerSymbol: z.string(),
   companyName: z.string().nullable(),
-  signal: z.enum(['BUY', 'SELL']),
-  confidenceScore: z.number().nullable(),
-  extractionTimestamp: z.string(),
   videoId: z.string(),
-  videoTitle: z.string().nullable(),
-  handle: z.string(),
-  channelName: z.string().nullable(),
-  performance: PerformanceSchema.nullable(),
-});
-
-export const PricePointSchema = z.object({
-  date: z.string(),
-  close: z.number(),
-});
-
-export const PortfolioPricePointSchema = z.object({
-  date: z.string(),
-  changePercent: z.number(),
-  close: z.number().nullable(),
+  videoTitle: z.string(),
+  videoPublishedAt: z.string(),
+  unknown: z.boolean(),
+  return1m: z.number().nullable(),
+  return1y: z.number().nullable(),
+  return3y: z.number().nullable(),
+  alpha1m: z.number().nullable(),
+  alpha1y: z.number().nullable(),
+  alpha3y: z.number().nullable(),
 });
 
 export const ChannelSearchResultSchema = z.object({
@@ -129,11 +111,7 @@ export const PipelineStepStatusSchema = z.object({
 
 export type Channel = z.infer<typeof ChannelSchema>;
 export type VideoSummary = z.infer<typeof VideoSummarySchema>;
-export type Performance = z.infer<typeof PerformanceSchema>;
-export type Pick = z.infer<typeof PickSchema>;
-export type PricePoint = z.infer<typeof PricePointSchema>;
-export type PortfolioPricePoint = z.infer<typeof PortfolioPricePointSchema>;
-export type YtbsdStats = z.infer<typeof YtbsdStatsSchema>;
+export type PickPerformance = z.infer<typeof PickPerformanceSchema>;
 export const RegisterResponseSchema = z.object({
   message: z.string(),
 });
@@ -197,7 +175,6 @@ export const NotificationsStatusSchema = z.object({
   items: z.array(PendingNotificationSchema),
 });
 
-export type PendingNotification = z.infer<typeof PendingNotificationSchema>;
 export type NotificationsStatus = z.infer<typeof NotificationsStatusSchema>;
 export type ChannelSearchResult = z.infer<typeof ChannelSearchResultSchema>;
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;

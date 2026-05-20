@@ -1,14 +1,12 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { z } from 'zod';
 import {
   ChannelSchema,
   VideoSummarySchema,
-  PickSchema,
-  PricePointSchema,
-  PortfolioPricePointSchema,
+  PickPerformanceSchema,
   PipelineStepStatusSchema,
   ChannelSearchResultSchema,
   ChannelSuggestionSchema,
@@ -20,11 +18,12 @@ import {
   TickerDataSchema,
   UnknownStockSchema,
 } from './types';
-import type { Channel, VideoSummary, Pick, PricePoint, PortfolioPricePoint, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock } from './types';
+import type { Channel, VideoSummary, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  readonly suggestionRefresh$ = new Subject<void>();
 
   private handleError(err: HttpErrorResponse): Observable<never> {
     if (err.status === 0) {
@@ -81,18 +80,10 @@ export class ApiService {
     );
   }
 
-  getPicksForChannel(handle: string): Observable<Pick[]> {
+  getChannelPicks(handle: string): Observable<PickPerformance[]> {
     return this.validated(
-      z.array(PickSchema),
-      this.http.get<unknown>(`/api/picks/channel/${handle}`).pipe(catchError((e) => this.handleError(e))),
-    );
-  }
-
-  getRecentPicks(days = 30): Observable<Pick[]> {
-    const params = new HttpParams().set('days', days.toString());
-    return this.validated(
-      z.array(PickSchema),
-      this.http.get<unknown>('/api/picks', { params }).pipe(catchError((e) => this.handleError(e))),
+      z.array(PickPerformanceSchema),
+      this.http.get<unknown>(`/api/channels/${handle}/picks`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 
@@ -245,22 +236,6 @@ export class ApiService {
     );
   }
 
-  getStockPrices(ticker: string, from: string, to: string): Observable<PricePoint[]> {
-    const params = new HttpParams().set('from', from).set('to', to);
-    return this.validated(
-      z.array(PricePointSchema),
-      this.http.get<unknown>(`/api/stocks/${ticker}/prices`, { params }).pipe(catchError((e) => this.handleError(e))),
-    );
-  }
-
-  getPortfolioPrices(channelId: string, from?: string): Observable<PortfolioPricePoint[]> {
-    const params = from ? new HttpParams().set('from', from) : new HttpParams();
-    return this.validated(
-      z.array(PortfolioPricePointSchema),
-      this.http.get<unknown>(`/api/portfolios/${channelId}/prices`, { params }).pipe(catchError((e) => this.handleError(e))),
-    );
-  }
-
   getVersion(): Observable<string> {
     return this.http.get<{ version: string }>('/api/version').pipe(
       map((r) => r.version),
@@ -275,7 +250,7 @@ export class ApiService {
   register(firstName: string, email: string, password: string): Observable<RegisterResponse> {
     return this.validated(
       RegisterResponseSchema,
-      this.http.post<unknown>('/api/auth/register', { firstName, email, password }).pipe(catchError((e) => this.handleError(e))),
+      this.http.post<unknown>('/api/auth/signup', { firstName, email, password }).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

@@ -19,8 +19,6 @@ public class StockPriceRefreshService {
 
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
-    private final PortfolioService portfolioService;
-
     public int refreshAllPrices() {
         List<Stock> stocks = stockRepository.findAll();
         if (stocks.isEmpty()) {
@@ -48,17 +46,11 @@ public class StockPriceRefreshService {
                     stock.setUnknown(false);
                     stockRepository.save(stock);
                 }
-                int inserted = 0;
                 for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
-                    if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
-                        stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
-                        inserted++;
-                    }
+                    stockPriceRepository.upsert(stock.getId(), entry.getKey(), entry.getValue());
                 }
-                if (inserted > 0) {
-                    log.info("Price refresh: {} new price point(s) for {}", inserted, stock.getTickerSymbol());
-                }
-                totalInserted += inserted;
+                log.info("Price refresh: upserted {} price point(s) for {}", prices.size(), stock.getTickerSymbol());
+                totalInserted += prices.size();
             } catch (Exception e) {
                 if (!stock.isUnknown()) {
                     stock.setUnknown(true);
@@ -69,9 +61,6 @@ public class StockPriceRefreshService {
         }
 
         log.info("Price refresh complete — {} new price point(s) across {} stock(s)", totalInserted, stocks.size());
-        if (totalInserted > 0) {
-            portfolioService.evictAllChannelReturns();
-        }
         return totalInserted;
     }
 }

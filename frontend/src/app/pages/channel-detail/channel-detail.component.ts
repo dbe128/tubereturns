@@ -13,9 +13,10 @@ import { forkJoin } from 'rxjs';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
-import type { Channel, VideoSummary } from '../../api/types';
+import type { Channel, VideoSummary, PickPerformance } from '../../api/types';
 
 type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'extractionStatus';
+type PickSortKey = 'date' | 'company' | 'ticker' | '1m' | '1y' | '3y';
 type SortDir = 'asc' | 'desc';
 
 const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
@@ -96,23 +97,33 @@ interface IndexedVideo {
             }
             <div class="flex-1 min-w-0">
               <h1 class="text-xl font-bold text-gray-900">{{ channel()!.channelName }}</h1>
-              <a
-                [href]="'https://www.youtube.com/@' + channel()!.handle"
-                target="_blank"
-                rel="noreferrer"
-                class="text-primary-600 hover:text-primary-700 text-xs mt-0.5 inline-block"
-              >youtube.com/@{{ channel()!.handle }} ↗</a>
+              <span class="text-gray-400 text-xs mt-0.5 inline-block">youtube.com/@{{ channel()!.handle }}</span>
             </div>
             <div class="flex items-center gap-6 flex-shrink-0">
               <div class="flex gap-8 text-sm text-gray-400">
                 <div class="text-center">
+                  <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score1m)">{{ formatPickReturn(channel()!.score1m) }}</div>
+                  <div class="text-xs uppercase tracking-wide">1M Alpha</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score1y)">{{ formatPickReturn(channel()!.score1y) }}</div>
+                  <div class="text-xs uppercase tracking-wide">1Y Alpha</div>
+                </div>
+                <div class="text-center">
+                  <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score3y)">{{ formatPickReturn(channel()!.score3y) }}</div>
+                  <div class="text-xs uppercase tracking-wide">3Y Alpha</div>
+                </div>
+                <div class="w-px bg-gray-200 self-stretch mx-2"></div>
+                <div class="text-center">
                   <div class="text-2xl font-bold text-gray-800">{{ channel()?.totalVideos ?? '—' }}</div>
                   <div class="text-xs uppercase tracking-wide">Videos</div>
                 </div>
-                <div class="text-center">
-                  <div class="text-2xl font-bold text-primary-600">{{ channel()?.processedVideos ?? '—' }}</div>
-                  <div class="text-xs uppercase tracking-wide">Processed</div>
-                </div>
+                @if (auth.isAdmin) {
+                  <div class="text-center">
+                    <div class="text-2xl font-bold text-primary-600">{{ channel()?.processedVideos ?? '—' }}</div>
+                    <div class="text-xs uppercase tracking-wide">Processed</div>
+                  </div>
+                }
               </div>
               @if (auth.isAdmin) {
                 <button
@@ -127,6 +138,28 @@ interface IndexedVideo {
           </div>
         </div>
 
+        <div class="flex border-b border-gray-200 mb-4">
+          @if (auth.isAdmin) {
+          <button
+            (click)="switchTab('videos')"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+            [class.border-primary-600]="activeTab() === 'videos'"
+            [class.text-primary-600]="activeTab() === 'videos'"
+            [class.border-transparent]="activeTab() !== 'videos'"
+            [class.text-gray-500]="activeTab() !== 'videos'"
+          >Videos</button>
+          }
+          <button
+            (click)="switchTab('picks')"
+            class="px-6 py-3 text-sm font-medium border-b-2 transition-colors -mb-px"
+            [class.border-primary-600]="activeTab() === 'picks'"
+            [class.text-primary-600]="activeTab() === 'picks'"
+            [class.border-transparent]="activeTab() !== 'picks'"
+            [class.text-gray-500]="activeTab() !== 'picks'"
+          >Picks</button>
+        </div>
+
+        @if (activeTab() === 'videos' && auth.isAdmin) {
         <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4 mb-4">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
@@ -239,7 +272,6 @@ interface IndexedVideo {
                   class="px-4 py-3 w-12 cursor-pointer select-none hover:text-primary-600 transition-colors"
                   (click)="toggleSort('index')"
                 >#<span class="ml-1" [class.text-primary-500]="sortKey() === 'index'" [class.text-gray-300]="sortKey() !== 'index'">{{ sortKey() === 'index' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
-                <th class="px-4 py-3 w-44"></th>
                 <th class="px-4 py-3">Video</th>
                 <th
                   class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
@@ -261,7 +293,6 @@ interface IndexedVideo {
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
                 }
                 <th class="px-4 py-3 w-28 text-primary-600 whitespace-nowrap">▲ Buy</th>
-                <th class="px-4 py-3 w-28 text-danger-500 whitespace-nowrap">▼ Sell</th>
                 @if (auth.isAdmin) {
                 <th class="px-4 py-3 w-32 whitespace-nowrap">Excl. Reason</th>
                 <th class="px-4 py-3 w-24">Actions</th>
@@ -271,7 +302,7 @@ interface IndexedVideo {
             <tbody>
               @if (sorted().length === 0) {
                 <tr>
-                  <td [attr.colspan]="auth.isAdmin ? 12 : 7" class="px-4 py-12 text-center text-gray-400">
+                  <td [attr.colspan]="auth.isAdmin ? 11 : 6" class="px-4 py-12 text-center text-gray-400">
                     No videos match the current filters.
                   </td>
                 </tr>
@@ -279,27 +310,9 @@ interface IndexedVideo {
                 @for (item of sorted(); track item.v.videoId) {
                   <tr class="border-b border-gray-100" [class.hover:bg-gray-50]="!item.v.excluded" [class.bg-amber-50]="item.v.excluded" [class.hover:bg-amber-100]="item.v.excluded">
                     <td class="px-4 py-3 text-gray-400 font-mono">{{ item.originalIndex }}</td>
-                    <td class="px-4 py-3">
-                      <a
-                        [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        <img
-                          [src]="'https://img.youtube.com/vi/' + item.v.videoId + '/mqdefault.jpg'"
-                          alt=""
-                          class="w-40 rounded object-cover aspect-video"
-                        />
-                      </a>
-                    </td>
                     <td class="px-4 py-3 max-w-0">
                       <div class="relative group/title flex items-center gap-1.5">
-                        <a
-                          [href]="'https://www.youtube.com/watch?v=' + item.v.videoId"
-                          target="_blank"
-                          rel="noreferrer"
-                          class="text-gray-900 hover:text-primary-600 block truncate"
-                        >{{ item.v.title }}</a>
+                        <span class="text-gray-900 block truncate">{{ item.v.title }}</span>
                         <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
                         @if (item.v.transcriptStatus === 'PENDING' || item.v.transcriptStatus === 'DOWNLOADING' || (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTED')) {
                           <span class="relative group/tip flex-shrink-0">
@@ -343,31 +356,22 @@ interface IndexedVideo {
                       }
                     </td>
                     }
-                    <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-primary-600]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
-                      @if (visiblePicks(item.v.buyPicks).length > 0) {
-                        @for (ticker of visiblePicks(item.v.buyPicks); track ticker; let last = $last) {
+                    <td class="px-4 py-3 font-mono font-medium text-sm">
+                      @if (item.v.buyPicks.length > 0) {
+                        @for (ticker of item.v.buyPicks; track ticker; let last = $last) {
+                          @if (!unknownTickers().has(ticker) || auth.isAdmin) {
                           <span class="inline-block whitespace-nowrap">
-                            <span class="relative group/tk inline-block">{{ ticker }}
-                              @if (tickerMap()[ticker]) {
-                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                              }
-                            </span>@if (auth.isAdmin && unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
+                            @if (unknownTickers().has(ticker)) {
+                              <span class="relative group/tk inline-block text-gray-400 italic">{{ ticker }}<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">Unresolved ticker</span></span><span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>
+                            } @else {
+                              <span class="relative group/tk inline-block" [class.text-primary-600]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">{{ ticker }}
+                                @if (tickerMap()[ticker]) {
+                                  <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                                }
+                              </span>
+                            }@if (!last) {, }
                           </span>
-                        }
-                      } @else {
-                        <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
-                      }
-                    </td>
-                    <td class="px-4 py-3 font-mono font-medium text-sm" [class.text-danger-500]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">
-                      @if (visiblePicks(item.v.sellPicks).length > 0) {
-                        @for (ticker of visiblePicks(item.v.sellPicks); track ticker; let last = $last) {
-                          <span class="inline-block whitespace-nowrap">
-                            <span class="relative group/tk inline-block">{{ ticker }}
-                              @if (tickerMap()[ticker]) {
-                                <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
-                              }
-                            </span>@if (auth.isAdmin && unknownTickers().has(ticker)) {<span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>}@if (!last) {, }
-                          </span>
+                          }
                         }
                       } @else {
                         <span class="font-normal" [class.text-gray-200]="!item.v.excluded" [class.text-gray-300]="item.v.excluded">—</span>
@@ -441,6 +445,113 @@ interface IndexedVideo {
             </tbody>
           </table>
         </div>
+        }
+
+        @if (activeTab() === 'picks') {
+        @if (!picksLoading() && !picksError() && picks().length > 0) {
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-3 mb-4 flex items-center gap-4">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-gray-500">Ticker</label>
+            <select
+              [ngModel]="pickTickerFilter()"
+              (ngModelChange)="pickTickerFilter.set($event)"
+              class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+            >
+              <option value="">All tickers</option>
+              @for (ticker of allPickTickers(); track ticker) {
+                <option [value]="ticker">{{ ticker }}</option>
+              }
+            </select>
+          </div>
+          @if (pickTickerFilter()) {
+            <div class="flex items-end pb-1">
+              <button (click)="pickTickerFilter.set('')" class="text-xs text-primary-600 hover:text-primary-800 font-medium">Clear</button>
+            </div>
+            <span class="text-xs text-gray-400 self-end pb-1.5">{{ filteredAndSortedPicks().length }} picks</span>
+          }
+        </div>
+        }
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          @if (picksLoading()) {
+            <div class="flex justify-center py-12">
+              <div class="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
+            </div>
+          } @else if (picksError()) {
+            <div class="p-6 text-sm text-danger-500">{{ picksError() }}</div>
+          } @else if (picks().length === 0) {
+            <div class="p-12 text-center text-gray-400 text-sm">No picks extracted yet.</div>
+          } @else {
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-gray-50 border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
+                  <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('date')">Date<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'date'" [class.text-gray-300]="pickSortKey() !== 'date'">{{ pickSortKey() === 'date' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  <th class="px-4 py-3 cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('company')">Company<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'company'" [class.text-gray-300]="pickSortKey() !== 'company'">{{ pickSortKey() === 'company' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('ticker')">Ticker<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'ticker'" [class.text-gray-300]="pickSortKey() !== 'ticker'">{{ pickSortKey() === 'ticker' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('1m')">
+                    <span class="inline-flex items-center gap-1 justify-end">1M Alpha
+                      <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
+                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 month from the video date.</span>
+                      </span>
+                      <span class="ml-1" [class.text-primary-500]="pickSortKey() === '1m'" [class.text-gray-300]="pickSortKey() !== '1m'">{{ pickSortKey() === '1m' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                    </span>
+                  </th>
+                  <th class="px-4 py-3 w-32 text-right cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('1y')">
+                    <span class="inline-flex items-center gap-1 justify-end">1Y Alpha
+                      <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
+                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 year from the video date.</span>
+                      </span>
+                      <span class="ml-1" [class.text-primary-500]="pickSortKey() === '1y'" [class.text-gray-300]="pickSortKey() !== '1y'">{{ pickSortKey() === '1y' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                    </span>
+                  </th>
+                  <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('3y')">
+                    <span class="inline-flex items-center gap-1 justify-end">3Y Alpha
+                      <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
+                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 3 years from the video date.</span>
+                      </span>
+                      <span class="ml-1" [class.text-primary-500]="pickSortKey() === '3y'" [class.text-gray-300]="pickSortKey() !== '3y'">{{ pickSortKey() === '3y' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (pick of filteredAndSortedPicks(); track pick.videoId + pick.tickerSymbol) {
+                  @if (!pick.unknown || auth.isAdmin) {
+                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
+                      {{ pick.videoPublishedAt | date: 'shortDate' }}
+                    </td>
+                    <td class="px-4 py-3 max-w-0">
+                      <span class="text-gray-900 block truncate">{{ pick.companyName ?? '—' }}</span>
+                    </td>
+                    <td class="px-4 py-3 font-mono font-medium">
+                      <span class="inline-flex items-center gap-0.5 text-gray-800">{{ pick.tickerSymbol }}
+                        @if (pick.unknown) {
+                          <span class="relative group/unk inline-block text-yellow-500 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unresolved ticker — excluded from returns</span></span>
+                        }
+                      </span>
+                    </td>
+                    @for (col of pickTimeColumns; track col) {
+                      <td class="px-4 py-3 text-right font-mono text-xs whitespace-nowrap" [ngClass]="pickReturnClass(alphaForColumn(pick, col))">
+                        {{ formatPickReturn(alphaForColumn(pick, col)) }}
+                        @if (alphaForColumn(pick, col) !== null) {
+                          <span class="relative group/spy inline-block ml-1 cursor-default not-italic text-base leading-none"
+                                [class]="alphaForColumn(pick, col)! > 0 ? 'text-primary-600' : 'text-danger-500'">
+                            {{ alphaForColumn(pick, col)! > 0 ? '↑' : '↓' }}
+                            <span class="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/spy:opacity-100 transition-opacity z-50">
+                              Pick: {{ formatPickReturn(pickReturnForColumn(pick, col)) }} · S&P 500: {{ formatPickReturn(spyReturnForColumn(pick, col)) }}
+                            </span>
+                          </span>
+                        }
+                      </td>
+                    }
+                  </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+        }
       </div>
 
       @if (transcriptPopup()) {
@@ -472,6 +583,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly recovery = inject(BackendRecoveryService);
 
+  readonly pickTimeColumns: ReadonlyArray<'1m' | '1y' | '3y'> = ['1m', '1y', '3y'];
   readonly tickerMap = signal<Record<string, string>>({});
   readonly unknownTickers = signal<ReadonlySet<string>>(new Set());
   readonly channel = signal<Channel | null>(null);
@@ -495,13 +607,51 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly transcriptPopup = signal<string | null>(null);
   readonly transcriptPopupPos = signal({ top: 0, left: 0, width: 520, maxHeight: 600 });
 
+  readonly activeTab = signal<'videos' | 'picks'>('picks');
+  readonly picks = signal<PickPerformance[]>([]);
+  readonly picksLoading = signal(false);
+  readonly picksError = signal<string | null>(null);
+  readonly pickTickerFilter = signal('');
+  readonly pickSortKey = signal<PickSortKey>('date');
+  readonly pickSortDir = signal<SortDir>('asc');
+
   readonly allTickers = computed(() => {
     const tickers = new Set<string>();
-    this.videos().forEach((v) => {
-      v.buyPicks.forEach((t) => tickers.add(t));
-      v.sellPicks.forEach((t) => tickers.add(t));
-    });
+    this.videos().forEach((v) => v.buyPicks.forEach((t) => tickers.add(t)));
     return Array.from(tickers).sort();
+  });
+
+  readonly allPickTickers = computed(() => {
+    const tickers = new Set<string>();
+    this.picks().filter(p => !p.unknown || this.auth.isAdmin).forEach(p => tickers.add(p.tickerSymbol));
+    return Array.from(tickers).sort();
+  });
+
+  readonly filteredAndSortedPicks = computed(() => {
+    const filter = this.pickTickerFilter();
+    let list = filter ? this.picks().filter(p => p.tickerSymbol === filter) : this.picks();
+    const key = this.pickSortKey();
+    const dir = this.pickSortDir();
+    list = [...list].sort((a, b) => {
+      let cmp = 0;
+      if (key === 'date') {
+        cmp = new Date(a.videoPublishedAt).getTime() - new Date(b.videoPublishedAt).getTime();
+      } else if (key === 'company') {
+        cmp = (a.companyName ?? '').localeCompare(b.companyName ?? '');
+      } else if (key === 'ticker') {
+        cmp = a.tickerSymbol.localeCompare(b.tickerSymbol);
+      } else {
+        const colKey = key as '1m' | '1y' | '3y';
+        const aVal = this.alphaForColumn(a, colKey);
+        const bVal = this.alphaForColumn(b, colKey);
+        if (aVal == null && bVal == null) { return 0; }
+        if (aVal == null) { return 1; }
+        if (bVal == null) { return -1; }
+        cmp = aVal - bVal;
+      }
+      return dir === 'asc' ? cmp : -cmp;
+    });
+    return list;
   });
 
   readonly filtered = computed(() =>
@@ -512,11 +662,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
         v.transcriptStatus === 'DOWNLOADING' ||
         (v.transcriptStatus === 'DOWNLOADED' && v.extractionStatus !== 'EXTRACTED')
       )) return false;
-      if (this.hideNoPicks() && v.extractionStatus === 'EXTRACTED' && v.buyPicks.length === 0 && v.sellPicks.length === 0) return false;
+      if (this.hideNoPicks() && v.extractionStatus === 'EXTRACTED' && v.buyPicks.length === 0) return false;
       if (this.filterTranscript() && v.transcriptStatus !== this.filterTranscript()) return false;
       if (this.filterProcessing() && v.extractionStatus !== this.filterProcessing()) return false;
-      if (this.filterPick() && !v.buyPicks.includes(this.filterPick()) && !v.sellPicks.includes(this.filterPick())) return false;
-      return true;
+      return !(this.filterPick() && !v.buyPicks.includes(this.filterPick()));
+
     }),
   );
 
@@ -551,6 +701,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     const channelId = this.route.snapshot.paramMap.get('channelId');
     if (channelId) {
       this.loadData(channelId);
+      this.loadPicks();
     }
   }
 
@@ -588,12 +739,69 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     if (cid) this.loadData(cid);
   }
 
+  switchTab(tab: 'videos' | 'picks'): void {
+    this.activeTab.set(tab);
+    if (tab === 'picks' && this.picks().length === 0 && !this.picksLoading()) {
+      this.loadPicks();
+    }
+  }
+
+  loadPicks(): void {
+    const handle = this.route.snapshot.paramMap.get('channelId');
+    if (!handle) return;
+    this.picksLoading.set(true);
+    this.picksError.set(null);
+    this.api.getChannelPicks(handle).subscribe({
+      next: (data) => { this.picks.set(data); this.picksLoading.set(false); },
+      error: () => { this.picksError.set('Failed to load picks.'); this.picksLoading.set(false); },
+    });
+  }
+
+  formatPickReturn(value: number | null | undefined): string {
+    if (value == null) return '—';
+    const sign = value >= 0 ? '+' : '';
+    return `${sign}${value.toFixed(1)}%`;
+  }
+
+  pickReturnClass(value: number | null | undefined): string {
+    if (value == null) return 'text-gray-300';
+    return value >= 0 ? 'text-primary-600' : 'text-danger-500';
+  }
+
+  pickReturnForColumn(pick: PickPerformance, col: '1m' | '1y' | '3y'): number | null {
+    if (col === '1m') { return pick.return1m; }
+    if (col === '1y') { return pick.return1y; }
+    return pick.return3y;
+  }
+
+  alphaForColumn(pick: PickPerformance, col: '1m' | '1y' | '3y'): number | null {
+    if (col === '1m') { return pick.alpha1m; }
+    if (col === '1y') { return pick.alpha1y; }
+    return pick.alpha3y;
+  }
+
+  spyReturnForColumn(pick: PickPerformance, col: '1m' | '1y' | '3y'): number | null {
+    const ret = this.pickReturnForColumn(pick, col);
+    const alpha = this.alphaForColumn(pick, col);
+    if (ret == null || alpha == null) { return null; }
+    return ret - alpha;
+  }
+
   toggleSort(key: SortKey): void {
     if (this.sortKey() === key) {
       this.sortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       this.sortKey.set(key);
       this.sortDir.set('asc');
+    }
+  }
+
+  togglePickSort(key: PickSortKey): void {
+    if (this.pickSortKey() === key) {
+      this.pickSortDir.update((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      this.pickSortKey.set(key);
+      this.pickSortDir.set('asc');
     }
   }
 
@@ -675,13 +883,6 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
 
   closeTranscript(): void {
     this.transcriptPopup.set(null);
-  }
-
-  visiblePicks(tickers: string[]): string[] {
-    if (this.auth.isAdmin) {
-      return tickers;
-    }
-    return tickers.filter(t => !this.unknownTickers().has(t));
   }
 
   transcriptLabel(status: VideoSummary['transcriptStatus']): string {

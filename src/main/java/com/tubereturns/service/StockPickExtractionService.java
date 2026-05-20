@@ -49,7 +49,7 @@ public class StockPickExtractionService {
     private final AiModelService aiModelService;
     private final PipelineStatusRegistry registry;
     private final ExchangeRateService exchangeRateService;
-    private final PortfolioService portfolioService;
+    private final PickPerformanceService pickPerformanceService;
     private final MeterRegistry meterRegistry;
 
     @Value("${tubereturns.pipeline.extraction.threads}")
@@ -240,7 +240,6 @@ public class StockPickExtractionService {
             savePicks(video, best.dto(), priceDate, best.priceCache());
             video.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
             video.setExtractionModel(best.model());
-            portfolioService.evictChannelReturns(video.getChannel().getId());
             if (best.dto().externalPositions()) {
                 log.info("Video {} contains only external positions — auto-excluding", videoUrl);
                 video.setExcluded(true);
@@ -281,33 +280,27 @@ public class StockPickExtractionService {
         List<Pick> savedPicks = new ArrayList<>();
 
         for (StockPickExtractionDto.PickExtractionDto pickDto : extraction.extractions()) {
-            try {
-                Pick.Signal signal = Pick.Signal.valueOf(pickDto.signal().toUpperCase());
-
-                String upperTicker = pickDto.tickerSymbol().toUpperCase();
-                boolean isNewStock = stockRepository.findByTickerSymbol(upperTicker).isEmpty();
-                Stock stock = stockRepository.findByTickerSymbol(upperTicker)
-                        .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName(), pickDto.currency())));
-                if (pickDto.currency() != null && stock.getCurrency() == null) {
-                    stock.setCurrency(pickDto.currency().toUpperCase());
-                    stockRepository.save(stock);
-                }
-                if (isNewStock && pickDto.currency() != null && !"USD".equalsIgnoreCase(pickDto.currency())) {
-                    exchangeRateService.ensureCurrencyHistoricalRates(pickDto.currency());
-                }
-
-                savedPicks.add(pickRepository.save(new Pick(video, stock, signal)));
-
-                if (priceCache.containsKey(upperTicker) && !priceCache.get(upperTicker).isEmpty()) {
-                    applyPriceCache(stock, priceCache.get(upperTicker));
-                } else {
-                    fetchAndSaveStockPrice(stock, priceDate);
-                }
-
-            } catch (IllegalArgumentException e) {
-                log.warn("Invalid signal value '{}' for ticker {} in video {}",
-                           pickDto.signal(), pickDto.tickerSymbol(), "https://youtu.be/" + video.getVideoId());
+            String upperTicker = pickDto.tickerSymbol().toUpperCase();
+            boolean isNewStock = stockRepository.findByTickerSymbol(upperTicker).isEmpty();
+            Stock stock = stockRepository.findByTickerSymbol(upperTicker)
+                    .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName(), pickDto.currency())));
+            if (pickDto.currency() != null && stock.getCurrency() == null) {
+                stock.setCurrency(pickDto.currency().toUpperCase());
+                stockRepository.save(stock);
             }
+            if (isNewStock && pickDto.currency() != null && !"USD".equalsIgnoreCase(pickDto.currency())) {
+                exchangeRateService.ensureCurrencyHistoricalRates(pickDto.currency());
+            }
+
+            Pick savedPick = pickRepository.save(new Pick(video, stock, Pick.Signal.BUY));
+            savedPicks.add(savedPick);
+
+            if (priceCache.containsKey(upperTicker) && !priceCache.get(upperTicker).isEmpty()) {
+                applyPriceCache(stock, priceCache.get(upperTicker));
+            } else {
+                fetchAndSaveStockPrice(stock, priceDate);
+            }
+            pickPerformanceService.computeAndSaveReturns(savedPick);
         }
 
         if (!savedPicks.isEmpty()) {
@@ -344,6 +337,22 @@ public class StockPickExtractionService {
                 if (existing.get().isUnknown()) {
                     unknownCount++;
                     priceCache.put(ticker, Map.of());
+                } else {
+                    LocalDate needed = priceDate.minusDays(7);
+                    stockPriceRepository.findFirstByStockIdOrderByPriceDateAsc(existing.get().getId())
+                            .map(sp -> sp.getPriceDate())
+                            .filter(oldest -> oldest.isAfter(needed))
+                            .ifPresent(oldest -> {
+                                try {
+                                    Map<LocalDate, Double> backfill = StockPriceService.fetchHistoricalClosePrices(ticker, needed, oldest.minusDays(1));
+                                    backfill.forEach((d, p) -> stockPriceRepository.upsert(existing.get().getId(), d, p));
+                                    if (!backfill.isEmpty()) {
+                                        log.info("Backfilled {} price point(s) for {} from {}", backfill.size(), ticker, needed);
+                                    }
+                                } catch (Exception e) {
+                                    log.warn("Price backfill failed for {} from {}: {}", ticker, needed, e.getMessage());
+                                }
+                            });
                 }
             } else {
                 try {
@@ -383,16 +392,10 @@ public class StockPickExtractionService {
             stock.setUnknown(false);
             stockRepository.save(stock);
         }
-        int inserted = 0;
         for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
-            if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
-                stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
-                inserted++;
-            }
+            stockPriceRepository.upsert(stock.getId(), entry.getKey(), entry.getValue());
         }
-        if (inserted > 0) {
-            log.info("Saved {} price point(s) for {}", inserted, stock.getTickerSymbol());
-        }
+        log.info("Upserted {} price point(s) for {}", prices.size(), stock.getTickerSymbol());
     }
 
     private void fetchAndSaveStockPrice(Stock stock, LocalDate priceDate) {
@@ -430,14 +433,10 @@ public class StockPickExtractionService {
                 stock.setUnknown(false);
                 stockRepository.save(stock);
             }
-            int inserted = 0;
             for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
-                if (!stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), entry.getKey())) {
-                    stockPriceRepository.save(new StockPrice(stock, entry.getKey(), entry.getValue()));
-                    inserted++;
-                }
+                stockPriceRepository.upsert(stock.getId(), entry.getKey(), entry.getValue());
             }
-            log.info("Saved {} price point(s) for {} from {} to today", inserted, stock.getTickerSymbol(), priceDate.minusDays(7));
+            log.info("Upserted {} price point(s) for {} from {} to today", prices.size(), stock.getTickerSymbol(), priceDate.minusDays(7));
         } catch (Exception e) {
             if (!stock.isUnknown()) {
                 stock.setUnknown(true);

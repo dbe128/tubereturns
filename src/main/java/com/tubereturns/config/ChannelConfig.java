@@ -21,6 +21,5 @@ public class ChannelConfig {
         private String handle;
         private String channelName;
         private String description;
-        private boolean enabled = true;
     }
 }

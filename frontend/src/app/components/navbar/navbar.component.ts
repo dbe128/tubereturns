@@ -1,19 +1,107 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { Subject, Subscription, of } from 'rxjs';
+import { debounceTime, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../api/api.service';
+import type { Channel, ChannelSearchResult } from '../../api/types';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, FormsModule],
   template: `
+    @if (toast()) {
+      <div class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
+           [class]="toast()!.type === 'success' ? 'bg-green-600' : 'bg-red-600'">
+        {{ toast()!.message }}
+      </div>
+    }
+    @if (showAuthDialog()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" (click)="showAuthDialog.set(false)">
+        <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" (click)="$event.stopPropagation()">
+          <p class="text-gray-800 font-semibold mb-1">Sign in required</p>
+          <p class="text-sm text-gray-500 mb-5">You need to be logged in to perform this action.</p>
+          <div class="flex gap-3 justify-end">
+            <a routerLink="/signup" (click)="showAuthDialog.set(false)"
+               class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+              Sign up
+            </a>
+            <a routerLink="/login" (click)="showAuthDialog.set(false)"
+               class="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors">
+              Sign in
+            </a>
+          </div>
+        </div>
+      </div>
+    }
     <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div class="px-6 h-[3.33rem] flex items-center justify-between">
-        <a routerLink="/" class="flex items-center gap-2">
-          <img src="logo.png" alt="TubeReturns" class="h-36 rounded" />
-          <span class="text-xs text-gray-500 font-mono">v{{ version() }}</span>
-        </a>
+        <div class="flex items-center gap-4">
+          <a routerLink="/" class="flex items-center gap-2">
+            <img src="logo.png" alt="TubeReturns" class="h-36 rounded" />
+            <span class="text-xs text-gray-500 font-mono">v{{ version() }}</span>
+          </a>
+
+          <div class="relative w-96">
+            <div class="flex items-center border border-gray-200 rounded-lg px-3 py-1.5 gap-2 bg-white focus-within:ring-2 focus-within:ring-primary-500">
+              @if (searching()) {
+                <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin flex-shrink-0"></div>
+              } @else {
+                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+                </svg>
+              }
+              <input
+                [ngModel]="searchQuery()"
+                (ngModelChange)="onSearchChange($event)"
+                (blur)="hideSearch()"
+                placeholder="Stock-picking YouTube channel…"
+                class="w-full text-sm focus:outline-none bg-transparent"
+              />
+            </div>
+            @if (ytResults().length > 0) {
+              <ul class="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden">
+                @for (result of ytResults(); track result.handle) {
+                  @let inDb = isInDb(result.handle);
+                  <li>
+                    <button
+                      (mousedown)="handleSelect(result)"
+                      [disabled]="addingHandle() === result.handle"
+                      class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 transition-colors text-left disabled:opacity-60"
+                    >
+                      @if (result.thumbnailUrl) {
+                        <img [src]="result.thumbnailUrl" [alt]="result.channelName"
+                             referrerpolicy="no-referrer"
+                             (error)="$any($event.target).style.display='none'"
+                             class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
+                      } @else {
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0"></div>
+                      }
+                      <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-gray-800 truncate">{{ result.channelName }}</p>
+                        <p class="text-xs text-gray-400">&#64;{{ result.handle }}</p>
+                      </div>
+                      @if (addingHandle() === result.handle) {
+                        <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin flex-shrink-0"></div>
+                      } @else if (inDb) {
+                        <span class="text-xs text-green-600 font-semibold flex-shrink-0">View</span>
+                      } @else if (auth.isAdmin) {
+                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
+                      } @else if (auth.isAuthenticated) {
+                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
+                      } @else {
+                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
+                      }
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+
         <div class="flex items-center gap-3">
           @if (auth.isAuthenticated) {
             <span class="text-sm text-gray-500">Welcome, {{ auth.user()?.firstName }}</span>
@@ -26,9 +114,9 @@ import { ApiService } from '../../api/api.service';
               class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
               Sign in
             </a>
-            <a routerLink="/register"
+            <a routerLink="/signup"
               class="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors">
-              Register
+              Sign up
             </a>
           }
         </div>
@@ -36,15 +124,115 @@ import { ApiService } from '../../api/api.service';
     </header>
   `,
 })
-export class NavbarComponent implements OnInit {
+export class NavbarComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
 
   readonly version = signal('…');
+  private readonly channels = signal<Channel[]>([]);
+  readonly searchQuery = signal('');
+  readonly ytResults = signal<ChannelSearchResult[]>([]);
+  readonly searching = signal(false);
+  readonly addingHandle = signal<string | null>(null);
+  readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
+  readonly showAuthDialog = signal(false);
+  private toastTimer?: ReturnType<typeof setTimeout>;
+
+  private readonly searchSubject = new Subject<string>();
+  private searchSub?: Subscription;
+
+  readonly dbHandles = computed(() => new Set(this.channels().map(c => c.handle)));
 
   ngOnInit(): void {
     this.api.getVersion().subscribe((v) => this.version.set(v));
+    this.api.getChannels().subscribe((channels) => this.channels.set(channels));
+    this.searchSub = this.searchSubject.pipe(
+      debounceTime(400),
+      switchMap((q) => q.trim().length >= 2
+        ? this.api.searchChannels(q, true).pipe(catchError(() => of<ChannelSearchResult[]>([])))
+        : of<ChannelSearchResult[]>([])),
+    ).subscribe((results) => {
+      this.ytResults.set(results);
+      this.searching.set(false);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.searchSub?.unsubscribe();
+    clearTimeout(this.toastTimer);
+  }
+
+  isInDb(handle: string): boolean {
+    return this.dbHandles().has(handle);
+  }
+
+  onSearchChange(q: string): void {
+    this.searchQuery.set(q);
+    if (q.trim().length >= 2) {
+      this.searching.set(true);
+    } else {
+      this.ytResults.set([]);
+      this.searching.set(false);
+    }
+    this.searchSubject.next(q);
+  }
+
+  handleSelect(result: ChannelSearchResult): void {
+    if (this.isInDb(result.handle)) {
+      this.searchQuery.set('');
+      this.ytResults.set([]);
+      this.router.navigate(['/channel', result.handle]);
+      return;
+    }
+    if (!this.auth.isAuthenticated) {
+      this.showAuthDialog.set(true);
+      return;
+    }
+    this.addingHandle.set(result.handle);
+    if (this.auth.isAdmin) {
+      this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, false).subscribe({
+        next: () => {
+          this.addingHandle.set(null);
+          this.searchQuery.set('');
+          this.ytResults.set([]);
+          this.api.getChannels().subscribe((channels) => this.channels.set(channels));
+          this.showToast(`${result.channelName} added successfully.`, 'success');
+          this.router.navigate(['/channel', result.handle]);
+        },
+        error: () => {
+          this.addingHandle.set(null);
+          this.showToast(`Failed to add ${result.channelName}.`, 'error');
+        },
+      });
+    } else {
+      this.api.suggestChannel(result.handle, result.channelName, result.channelUrl ?? '', result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, false).subscribe({
+        next: (resp) => {
+          this.addingHandle.set(null);
+          this.searchQuery.set('');
+          this.ytResults.set([]);
+          this.api.suggestionRefresh$.next();
+          this.showToast(`${result.channelName}: ${resp.message}`, 'success');
+        },
+        error: () => {
+          this.addingHandle.set(null);
+          this.showToast(`Failed to suggest ${result.channelName}.`, 'error');
+        },
+      });
+    }
+  }
+
+  hideSearch(): void {
+    setTimeout(() => {
+      this.searchQuery.set('');
+      this.ytResults.set([]);
+    }, 150);
+  }
+
+  private showToast(message: string, type: 'success' | 'error'): void {
+    clearTimeout(this.toastTimer);
+    this.toast.set({ message, type });
+    this.toastTimer = setTimeout(() => this.toast.set(null), 6000);
   }
 
   logout(): void {

@@ -1,14 +1,13 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { interval, of, Subject, Subscription } from 'rxjs';
-import { catchError, debounceTime, switchMap } from 'rxjs/operators';
+import { interval, Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
-import { SpyChartComponent } from '../../components/spy-chart/spy-chart.component';
-import type { Channel, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock } from '../../api/types';
+import type { Channel, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock } from '../../api/types';
 
 interface UnknownStockRow extends UnknownStock {
   editTicker: string;
@@ -19,7 +18,7 @@ interface UnknownStockRow extends UnknownStock {
 @Component({
   selector: 'app-leaderboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, SpyChartComponent],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     @if (toast()) {
       <div class="fixed top-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
@@ -45,26 +44,6 @@ interface UnknownStockRow extends UnknownStock {
         </div>
       </div>
     }
-    @if (showAuthModal()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" (click)="showAuthModal.set(false)">
-        <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4 relative" (click)="$event.stopPropagation()">
-          <button (click)="showAuthModal.set(false)"
-                  class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
-          <h2 class="text-base font-semibold text-gray-800 mb-2">Sign up to suggest channels</h2>
-          <p class="text-sm text-gray-500 mb-6">TubeReturns is free to join. Create an account to suggest channels for analysis.</p>
-          <div class="flex flex-col gap-3">
-            <a routerLink="/register" (click)="setReturnToSuggest()"
-               class="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold text-center hover:bg-gray-700 transition-colors">
-              Create free account
-            </a>
-            <a routerLink="/login" (click)="setReturnToSuggest()"
-               class="w-full py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-semibold text-center hover:bg-gray-50 transition-colors">
-              Sign in
-            </a>
-          </div>
-        </div>
-      </div>
-    }
     <div class="max-w-screen-2xl mx-auto px-6 py-10">
       <div class="mb-8">
         <p class="text-gray-500 text-sm">Finance YouTubers ranked by historical stock pick performance</p>
@@ -83,111 +62,40 @@ interface UnknownStockRow extends UnknownStock {
       }
 
       @if (!loading() && !error()) {
-        @if (!showAddForm() && !showSuggestForm()) {
-          <div class="mb-4 flex justify-end">
-            @if (auth.isAdmin) {
-              <button
-                (click)="openAddForm()"
-                class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
-              >+ Add Channel</button>
-            } @else {
-              <button
-                (click)="openSuggestOrAuth()"
-                class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors"
-              >Suggest a channel</button>
-            }
-          </div>
-        }
-
-        @if ((auth.isAdmin && showAddForm()) || (auth.isAuthenticated && !auth.isAdmin && showSuggestForm())) {
-          <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4 w-full mb-4">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="text-sm font-semibold text-gray-700">{{ auth.isAdmin ? 'Add stock picking channel' : 'Suggest a stock picking channel' }}</h3>
-              <button (click)="handleCancelForm()" class="text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none">&times;</button>
-            </div>
-            <input
-              [(ngModel)]="searchQuery"
-              (input)="onSearchInput()"
-              #searchInput
-              placeholder="Search YouTube channels…"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-            <div class="flex items-center gap-4 mt-2">
-              <label class="flex items-center gap-2 text-xs text-gray-500 select-none cursor-pointer w-fit">
-                <input type="checkbox" [(ngModel)]="filterByKeywords" (change)="onSearchInput()" class="accent-primary-600" />
-                Filter by finance keywords
-              </label>
-              <label class="flex items-center gap-2 text-xs text-gray-500 select-none cursor-pointer w-fit">
-                <input type="checkbox" [(ngModel)]="notifyOnComplete" class="accent-primary-600" />
-                Notify me when processed
-              </label>
-            </div>
-            @if (searching()) {
-              <div class="flex justify-center py-6">
-                <div class="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
-              </div>
-            } @else if (searchResults().length > 0) {
-              <ul class="mt-2 divide-y divide-gray-100">
-                @for (result of searchResults(); track result.handle) {
-                  <li>
-                    <button
-                      (click)="handleChannelSelect(result)"
-                      [disabled]="addingChannelId() !== null"
-                      class="w-full flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 text-left"
-                    >
-                      @if (result.thumbnailUrl) {
-                        <img [src]="result.thumbnailUrl" [alt]="result.channelName"
-                          referrerpolicy="no-referrer"
-                          (error)="$any($event.target).style.display='none'"
-                          class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-100" />
-                      } @else {
-                        <div class="w-9 h-9 rounded-full bg-gray-100 flex-shrink-0"></div>
-                      }
-                      <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-gray-800 truncate">{{ result.channelName }}</p>
-                        <p class="text-xs text-gray-400 truncate">{{ result.channelUrl }}</p>
-                        @let stats = formatSearchResultStats(result);
-                        @if (stats) {
-                          <p class="text-xs text-gray-500 truncate mt-0.5">{{ stats }}</p>
-                        }
-                      </div>
-                      @if (addingChannelId() === result.handle) {
-                        <div class="animate-spin rounded-full h-4 w-4 border-2 border-primary-500 border-t-transparent flex-shrink-0"></div>
-                      } @else {
-                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">{{ auth.isAdmin ? 'Add' : 'Suggest' }}</span>
-                      }
-                    </button>
-                  </li>
-                }
-              </ul>
-            }
-            @if (addError()) {
-              <p class="text-xs text-danger-500 mt-2">{{ addError() }}</p>
-            }
-          </div>
-        }
-
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div class="flex items-center justify-between px-6 py-3 border-b border-gray-100">
-            <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ranked by return</span>
-            <div class="flex gap-1">
-              @for (tf of leaderboardTimeframes; track tf) {
-                <button
-                  (click)="timeframe.set(tf)"
-                  class="px-3 py-1 text-xs rounded-lg font-semibold transition-colors"
-                  [class.bg-primary-600]="timeframe() === tf"
-                  [class.text-white]="timeframe() === tf"
-                  [class.bg-gray-100]="timeframe() !== tf"
-                  [class.text-gray-500]="timeframe() !== tf"
-                >{{ tf }}</button>
-              }
+          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <span class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Top 5 Ranked by alpha</span>
+            <div class="flex items-center gap-1 p-1 bg-gray-100 rounded-lg">
+              <button (click)="selectedTimeframe.set('1m')"
+                      class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
+                      [class]="selectedTimeframe() === '1m' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-700'">
+                1M
+              </button>
+              <button (click)="selectedTimeframe.set('1y')"
+                      class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
+                      [class]="selectedTimeframe() === '1y' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-700'">
+                1Y
+              </button>
+              <button (click)="selectedTimeframe.set('3y')"
+                      class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
+                      [class]="selectedTimeframe() === '3y' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-700'">
+                3Y
+              </button>
             </div>
           </div>
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-200 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 <th class="px-4 py-4 w-8">#</th>
-                <th class="px-3 py-4 text-right w-28">{{ timeframe() }} Return</th>
+                <th class="px-3 py-4 text-right w-28">
+                  <span class="inline-flex items-center gap-1 justify-end">{{ timeframeLabel() }} Alpha
+                    <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal">ⓘ
+                      <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-56 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
+                        Average excess return vs. S&amp;P 500 over the selected timeframe. Based on explicit BUY picks, equally weighted.
+                      </span>
+                    </span>
+                  </span>
+                </th>
                 <th class="px-6 py-4">Channel</th>
                 <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
@@ -207,8 +115,13 @@ interface UnknownStockRow extends UnknownStock {
                 @for (row of visibleRows(); track row.handle; let i = $index) {
                   <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                     <td class="px-4 py-4 text-gray-300 font-mono text-sm w-8">{{ i + 1 }}</td>
-                    <td class="px-3 py-4 text-right font-mono text-sm font-medium w-28" [ngClass]="returnClass(activeReturn(row))">
-                      {{ formatReturn(activeReturn(row)) }}
+                    <td class="px-3 py-4 text-right font-mono text-sm w-28"
+                        [title]="scoreForRow(row) !== null ? (eligibleForRow(row) + ' picks, ' + unresolvedForRow(row) + ' unresolved') : ''">
+                      @if (scoreForRow(row) !== null) {
+                        <span [class]="scoreForRow(row)! >= 0 ? 'text-green-600' : 'text-red-500'">{{ formatScore(scoreForRow(row)!) }}</span>
+                      } @else {
+                        <span class="text-gray-300">—</span>
+                      }
                     </td>
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
@@ -283,7 +196,7 @@ interface UnknownStockRow extends UnknownStock {
           </table>
         </div>
 
-        @if (inProgressChannels().length > 0) {
+        @if (auth.isAdmin && inProgressChannels().length > 0) {
           <div class="mt-10">
             <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">Channels being processed</h2>
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -392,8 +305,6 @@ interface UnknownStockRow extends UnknownStock {
       }
 
       @if (!error()) {
-        <app-spy-chart (refresh)="load()" [leaderboardTimeframe]="timeframe()" [channels]="channelsForChart()" />
-
         @if (auth.isAuthenticated && !auth.isAdmin && myChannelSuggestions().length > 0) {
           <div class="mt-10">
             <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">My Channel Suggestions</h2>
@@ -455,7 +366,7 @@ interface UnknownStockRow extends UnknownStock {
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                               </svg>
                               <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                                Notify me when added
+                                Notify me when added and processed
                               </span>
                             </button>
                           }
@@ -799,9 +710,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly recovery = inject(BackendRecoveryService);
 
+
   readonly rows = signal<Channel[]>([]);
-  readonly timeframe = signal<'1Y' | '3Y' | '5Y'>('3Y');
-  readonly leaderboardTimeframes: readonly ('1Y' | '3Y' | '5Y')[] = ['1Y', '3Y', '5Y'];
 
   readonly processedChannels = computed(() =>
     this.rows().filter(r => r.discoveryComplete && r.totalVideos > 0 && r.processedVideos === r.totalVideos)
@@ -819,19 +729,18 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     })
   );
 
-  readonly channelsForChart = computed(() => this.sortedRows().slice(0, 5));
+  readonly selectedTimeframe = signal<'1m' | '1y' | '3y'>('1y');
 
   readonly sortedRows = computed(() => {
-    const tf = this.timeframe();
-    const getReturn = (row: Channel): number | null =>
-      tf === '1Y' ? row.return1y : tf === '3Y' ? row.return3y : row.return5y;
+    const tf = this.selectedTimeframe();
+    const scoreKey = tf === '1m' ? 'score1m' : tf === '1y' ? 'score1y' : 'score3y';
     return [...this.processedChannels()].sort((a, b) => {
-      const ra = getReturn(a);
-      const rb = getReturn(b);
-      if (ra === null && rb === null) return 0;
-      if (ra === null) return 1;
-      if (rb === null) return -1;
-      return rb - ra;
+      const aScore = a[scoreKey];
+      const bScore = b[scoreKey];
+      if (aScore === null && bScore === null) { return 0; }
+      if (aScore === null) { return 1; }
+      if (bScore === null) { return -1; }
+      return bScore - aScore;
     });
   });
 
@@ -849,25 +758,13 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly confirmDialog = signal<{ message: string; destructive: boolean; onConfirm: () => void } | null>(null);
   readonly myNotifiedHandles = signal<Set<string>>(new Set());
   readonly togglingNotificationFor = signal<string | null>(null);
-  readonly showAddForm = signal(false);
-  readonly showSuggestForm = signal(false);
-  readonly showAuthModal = signal(false);
   readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
   readonly myChannelSuggestions = signal<MyChannelSuggestion[]>([]);
   readonly togglingNotifyFor = signal<string | null>(null);
-  @ViewChild('searchInput') private searchInputRef?: ElementRef<HTMLInputElement>;
-  readonly searchResults = signal<ChannelSearchResult[]>([]);
-  readonly searching = signal(false);
-  readonly addingChannelId = signal<string | null>(null);
-  readonly addError = signal<string | null>(null);
-  searchQuery = '';
-  filterByKeywords = true;
-  notifyOnComplete = true;
-  private readonly searchSubject = new Subject<string>();
-  private searchSub?: Subscription;
 
   private statusPollSub?: Subscription;
   private fastPollSub?: Subscription;
+  private suggestionRefreshSub?: Subscription;
 
   ngOnInit(): void {
     this.load();
@@ -876,10 +773,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     }
     if (this.auth.isAuthenticated && !this.auth.isAdmin) {
       this.loadMyChannelSuggestions();
-    }
-    if (this.auth.isAuthenticated && !this.auth.isAdmin && localStorage.getItem('pendingAction') === 'suggest') {
-      localStorage.removeItem('pendingAction');
-      setTimeout(() => this.openSuggestForm(), 0);
+      this.suggestionRefreshSub = this.api.suggestionRefresh$.subscribe(() => this.loadMyChannelSuggestions());
     }
     if (this.auth.isAdmin) {
       this.loadPipelineStatus();
@@ -893,20 +787,13 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
         this.loadPendingChannelSuggestions();
       });
     }
-    this.searchSub = this.searchSubject.pipe(
-      debounceTime(400),
-      switchMap((q) => q.trim().length >= 2 ? this.api.searchChannels(q, this.filterByKeywords).pipe(catchError(() => of<ChannelSearchResult[]>([]))) : of<ChannelSearchResult[]>([])),
-    ).subscribe((results) => {
-      this.searchResults.set(results);
-      this.searching.set(false);
-    });
   }
 
   ngOnDestroy(): void {
     this.recovery.stopPolling();
     this.statusPollSub?.unsubscribe();
     this.fastPollSub?.unsubscribe();
-    this.searchSub?.unsubscribe();
+    this.suggestionRefreshSub?.unsubscribe();
     clearTimeout(this.toastTimer);
   }
 
@@ -997,126 +884,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  openAddForm(): void {
-    this.showAddForm.set(true);
-    setTimeout(() => this.searchInputRef?.nativeElement.focus(), 0);
-  }
-
-  onSearchInput(): void {
-    const q = this.searchQuery.trim();
-    if (q.length >= 2) {
-      this.searching.set(true);
-    } else {
-      this.searchResults.set([]);
-    }
-    this.searchSubject.next(q);
-  }
-
-  formatSearchResultStats(result: ChannelSearchResult): string {
-    const parts: string[] = [];
-    if (result.subscriberCount != null) {
-      parts.push(this.formatSubscriberCount(result.subscriberCount) + ' subs');
-    }
-    if (result.videoCount != null) {
-      parts.push(result.videoCount.toLocaleString() + ' videos');
-    }
-    if (result.channelCreatedAt) {
-      parts.push('since ' + this.formatShortDate(result.channelCreatedAt));
-    }
-    return parts.join(' · ');
-  }
-
   formatSubscriberCount(count: number): string {
     if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
     if (count >= 1_000) return `${Math.round(count / 1_000)}K`;
     return count.toLocaleString();
-  }
-
-  private formatShortDate(dateStr: string): string {
-    return new Date(dateStr + 'T12:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
-  }
-
-  selectChannel(result: ChannelSearchResult): void {
-    this.addingChannelId.set(result.handle);
-    this.addError.set(null);
-    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, this.notifyOnComplete).subscribe({
-      next: () => {
-        this.addingChannelId.set(null);
-        this.cancelAddChannel();
-        this.load();
-      },
-      error: (err: unknown) => {
-        this.addingChannelId.set(null);
-        this.addError.set(String(err));
-      },
-    });
-  }
-
-  cancelAddChannel(): void {
-    this.showAddForm.set(false);
-    this.searchQuery = '';
-    this.searchResults.set([]);
-    this.searching.set(false);
-    this.addError.set(null);
-  }
-
-  openSuggestForm(): void {
-    this.showSuggestForm.set(true);
-    setTimeout(() => this.searchInputRef?.nativeElement.focus(), 0);
-  }
-
-  cancelSuggestForm(): void {
-    this.showSuggestForm.set(false);
-    this.searchQuery = '';
-    this.searchResults.set([]);
-    this.searching.set(false);
-    this.addError.set(null);
-  }
-
-  openSuggestOrAuth(): void {
-    if (this.auth.isAuthenticated) {
-      this.openSuggestForm();
-    } else {
-      this.showAuthModal.set(true);
-    }
-  }
-
-  setReturnToSuggest(): void {
-    localStorage.setItem('pendingAction', 'suggest');
-    this.showAuthModal.set(false);
-  }
-
-  handleCancelForm(): void {
-    if (this.auth.isAdmin) {
-      this.cancelAddChannel();
-    } else {
-      this.cancelSuggestForm();
-    }
-  }
-
-  handleChannelSelect(result: ChannelSearchResult): void {
-    if (this.auth.isAdmin) {
-      this.selectChannel(result);
-    } else {
-      this.submitSuggestion(result);
-    }
-  }
-
-  submitSuggestion(result: ChannelSearchResult): void {
-    this.addingChannelId.set(result.handle);
-    this.addError.set(null);
-    this.api.suggestChannel(result.handle, result.channelName, result.channelUrl ?? '', result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, this.notifyOnComplete).subscribe({
-      next: (resp) => {
-        this.addingChannelId.set(null);
-        this.cancelSuggestForm();
-        this.loadMyChannelSuggestions();
-        this.showToast(resp.message, 'success');
-      },
-      error: (err: unknown) => {
-        this.addingChannelId.set(null);
-        this.showToast(String(err), 'error');
-      },
-    });
   }
 
   loadPendingChannelSuggestions(): void {
@@ -1273,25 +1044,35 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     );
   }
 
-  activeReturn(row: Channel): number | null {
-    const tf = this.timeframe();
-    return tf === '1Y' ? row.return1y : tf === '3Y' ? row.return3y : row.return5y;
+  scoreForRow(row: Channel): number | null {
+    const tf = this.selectedTimeframe();
+    return tf === '1m' ? row.score1m : tf === '1y' ? row.score1y : row.score3y;
   }
 
-  formatReturn(value: number | null): string {
-    if (value === null || value === undefined) return '—';
-    const sign = value >= 0 ? '+' : '';
-    return `${sign}${value.toFixed(2)}%`;
+  eligibleForRow(row: Channel): number {
+    const tf = this.selectedTimeframe();
+    return tf === '1m' ? row.eligible1m : tf === '1y' ? row.eligible1y : row.eligible3y;
+  }
+
+  unresolvedForRow(row: Channel): number {
+    const tf = this.selectedTimeframe();
+    return tf === '1m' ? row.unresolved1m : tf === '1y' ? row.unresolved1y : row.unresolved3y;
+  }
+
+  timeframeLabel(): string {
+    const tf = this.selectedTimeframe();
+    return tf === '1m' ? '1M' : tf === '1y' ? '1Y' : '3Y';
+  }
+
+
+
+  formatScore(score: number): string {
+    return (score >= 0 ? '+' : '') + score.toFixed(1) + '%';
   }
 
   formatProgress(row: Channel): string {
     if (row.totalVideos === 0) { return '–'; }
     return `${((row.processedVideos / row.totalVideos) * 100).toFixed(2)}%`;
-  }
-
-  returnClass(value: number | null): string {
-    if (value === null || value === undefined) return 'text-gray-300';
-    return value >= 0 ? 'text-primary-600' : 'text-danger-500';
   }
 
   stepDuration(step: PipelineStepStatus): string | null {

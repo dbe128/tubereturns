@@ -11,7 +11,7 @@ export const routes: Routes = [
   { path: '', component: LeaderboardComponent },
   { path: 'channel/:channelId', component: ChannelDetailComponent },
   { path: 'login', component: LoginComponent },
-  { path: 'register', component: RegisterComponent },
+  { path: 'signup', component: RegisterComponent },
   { path: 'verify-email', component: VerifyEmailComponent },
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },

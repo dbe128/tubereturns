@@ -4,12 +4,10 @@ import com.tubereturns.model.Currency;
 import com.tubereturns.model.ExchangeRate;
 import com.tubereturns.repository.CurrencyRepository;
 import com.tubereturns.repository.ExchangeRateRepository;
-import com.tubereturns.repository.PickRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.cache.CacheManager;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -33,8 +31,6 @@ public class ExchangeRateService {
 
     private final CurrencyRepository currencyRepository;
     private final ExchangeRateRepository exchangeRateRepository;
-    private final PickRepository pickRepository;
-    private final CacheManager cacheManager;
     private final StartupCoordinator startupCoordinator;
 
     private CompletableFuture<Void> initTask;
@@ -52,7 +48,7 @@ public class ExchangeRateService {
                 log.info("Currencies already present in DB — skipping initial exchange rate seed");
                 return;
             }
-            log.info("Seeding {} popular currencies with 10yr historical exchange rates", SEED_CURRENCIES.size());
+            log.info("Seeding {} popular currencies with 20yr historical exchange rates", SEED_CURRENCIES.size());
             for (String code : SEED_CURRENCIES) {
                 ensureCurrencyHistoricalRates(code);
             }
@@ -74,16 +70,7 @@ public class ExchangeRateService {
             return;
         }
 
-        int inserted = fetchAndSaveRates(currency, LocalDate.now().minusYears(10), LocalDate.now());
-        if (inserted > 0) {
-            List<Long> affected = pickRepository.findDistinctChannelIdsByCurrency(upperCode);
-            if (!affected.isEmpty()) {
-                var cache = cacheManager.getCache("channelReturns");
-                if (cache != null) {
-                    affected.forEach(id -> cache.evict(id));
-                }
-            }
-        }
+        fetchAndSaveRates(currency, LocalDate.now().minusYears(20), LocalDate.now());
     }
 
     public int refreshRecentRates() {
@@ -98,12 +85,6 @@ public class ExchangeRateService {
             total += fetchAndSaveRates(currency, from, to);
         }
         log.info("Exchange rate refresh complete — {} new rate points inserted", total);
-        if (total > 0) {
-            var cache = cacheManager.getCache("channelReturns");
-            if (cache != null) {
-                cache.clear();
-            }
-        }
         return total;
     }
 

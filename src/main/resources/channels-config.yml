@@ -1,5 +1,3 @@
 channels:
-  - handle: "valuationinvesting"
-    channelName: "Valuation Investing"
-    description: "Value investing content focusing on fundamental analysis and undervalued stocks"
-    enabled: true
+  - handle: sharpinvesting5180
+    channelName: Sharp Investing

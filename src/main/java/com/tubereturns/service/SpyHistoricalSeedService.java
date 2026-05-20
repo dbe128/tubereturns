@@ -30,6 +30,8 @@ public class SpyHistoricalSeedService {
 
     private CompletableFuture<Void> initTask;
 
+    public CompletableFuture<Void> getInitTask() { return initTask; }
+
     @PostConstruct
     void init() {
         initTask = startupCoordinator.register();
@@ -60,12 +62,8 @@ public class SpyHistoricalSeedService {
         }
     }
 
-    @Transactional
     public int insertIfAbsent(Stock stock, LocalDate date, double closePrice) {
-        if (stockPriceRepository.existsByStockIdAndPriceDate(stock.getId(), date)) {
-            return 0;
-        }
-        stockPriceRepository.save(new StockPrice(stock, date, closePrice));
+        stockPriceRepository.upsert(stock.getId(), date, closePrice);
         return 1;
     }
 }
