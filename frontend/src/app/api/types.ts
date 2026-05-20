@@ -175,8 +175,14 @@ export const NotificationsStatusSchema = z.object({
   items: z.array(PendingNotificationSchema),
 });
 
+export const ChannelRelevanceSchema = z.object({
+  score: z.number(),
+  passed: z.boolean(),
+});
+
 export type NotificationsStatus = z.infer<typeof NotificationsStatusSchema>;
 export type ChannelSearchResult = z.infer<typeof ChannelSearchResultSchema>;
+export type ChannelRelevance = z.infer<typeof ChannelRelevanceSchema>;
 export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
 export type MessageResponse = z.infer<typeof MessageResponseSchema>;

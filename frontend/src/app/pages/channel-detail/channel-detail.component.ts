@@ -96,7 +96,18 @@ interface IndexedVideo {
               />
             }
             <div class="flex-1 min-w-0">
-              <h1 class="text-xl font-bold text-gray-900">{{ channel()!.channelName }}</h1>
+              <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+                {{ channel()!.channelName }}
+                @if (!channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
+                  <span class="relative group/tip flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">Processing</span>
+                  </span>
+                }
+              </h1>
               <span class="text-gray-400 text-xs mt-0.5 inline-block">youtube.com/@{{ channel()!.handle }}</span>
             </div>
             <div class="flex items-center gap-6 flex-shrink-0">
@@ -115,25 +126,23 @@ interface IndexedVideo {
                 </div>
                 <div class="w-px bg-gray-200 self-stretch mx-2"></div>
                 <div class="text-center">
-                  <div class="text-2xl font-bold text-gray-800">{{ channel()?.totalVideos ?? '—' }}</div>
+                  <div class="text-2xl font-bold text-gray-800">{{ channel()!.totalVideos === 0 ? '?' : channel()!.totalVideos }}</div>
                   <div class="text-xs uppercase tracking-wide">Videos</div>
                 </div>
-                @if (auth.isAdmin) {
+                @if (auth.isAdmin || !channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
                   <div class="text-center">
                     <div class="text-2xl font-bold text-primary-600">{{ channel()?.processedVideos ?? '—' }}</div>
                     <div class="text-xs uppercase tracking-wide">Processed</div>
                   </div>
                 }
               </div>
-              @if (auth.isAdmin) {
-                <button
-                  (click)="refresh()"
-                  [disabled]="loading()"
-                  title="Refresh"
-                  class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors"
-                  [class.animate-spin]="loading()"
-                >↺</button>
-              }
+              <button
+                (click)="refresh()"
+                [disabled]="loading()"
+                title="Refresh"
+                class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                [class.animate-spin]="loading()"
+              >↺</button>
             </div>
           </div>
         </div>

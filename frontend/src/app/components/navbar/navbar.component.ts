@@ -12,10 +12,15 @@ import type { Channel, ChannelSearchResult } from '../../api/types';
   standalone: true,
   imports: [RouterLink, FormsModule],
   template: `
-    @if (toast()) {
-      <div class="fixed top-4 right-4 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
-           [class]="toast()!.type === 'success' ? 'bg-green-600' : 'bg-red-600'">
-        {{ toast()!.message }}
+    @if (toasts().length > 0) {
+      <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+        @for (t of toasts(); track t.id) {
+          <div class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
+               [class]="t.type === 'success' ? 'bg-green-600' : t.type === 'info' ? 'bg-blue-600' : 'bg-red-600'">
+            <span class="flex-1">{{ t.message }}</span>
+            <button (click)="dismissToast(t.id)" class="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity leading-none">&times;</button>
+          </div>
+        }
       </div>
     }
     @if (showAuthDialog()) {
@@ -135,9 +140,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
   readonly ytResults = signal<ChannelSearchResult[]>([]);
   readonly searching = signal(false);
   readonly addingHandle = signal<string | null>(null);
-  readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
+  readonly toasts = signal<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
   readonly showAuthDialog = signal(false);
-  private toastTimer?: ReturnType<typeof setTimeout>;
+  private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
+  private toastCounter = 0;
 
   private readonly searchSubject = new Subject<string>();
   private searchSub?: Subscription;
@@ -149,9 +155,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.api.getChannels().subscribe((channels) => this.channels.set(channels));
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
-      switchMap((q) => q.trim().length >= 2
-        ? this.api.searchChannels(q, true).pipe(catchError(() => of<ChannelSearchResult[]>([])))
-        : of<ChannelSearchResult[]>([])),
+      switchMap((q) => {
+        if (q.trim().length < 2) { return of<ChannelSearchResult[]>([]); }
+        const local = this.searchLocally(q);
+        if (local.length > 0) { return of(local); }
+        return this.api.searchChannels(q, true).pipe(catchError(() => of<ChannelSearchResult[]>([])));
+      }),
     ).subscribe((results) => {
       this.ytResults.set(results);
       this.searching.set(false);
@@ -160,7 +169,24 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.searchSub?.unsubscribe();
-    clearTimeout(this.toastTimer);
+    this.toastTimers.forEach(t => clearTimeout(t));
+  }
+
+  private searchLocally(q: string): ChannelSearchResult[] {
+    const lower = q.toLowerCase();
+    return this.channels()
+      .filter(c => c.handle.toLowerCase().includes(lower) || c.channelName.toLowerCase().includes(lower))
+      .slice(0, 5)
+      .map(c => ({
+        handle: c.handle,
+        channelName: c.channelName,
+        channelUrl: `https://www.youtube.com/@${c.handle}`,
+        thumbnailUrl: c.hasThumbnail ? `/api/channels/${c.handle}/thumbnail` : null,
+        description: c.description,
+        subscriberCount: c.subscriberCount,
+        videoCount: c.totalVideos,
+        channelCreatedAt: null,
+      }));
   }
 
   isInDb(handle: string): boolean {
@@ -191,35 +217,43 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
     this.addingHandle.set(result.handle);
     if (this.auth.isAdmin) {
-      this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, false).subscribe({
-        next: () => {
-          this.addingHandle.set(null);
-          this.searchQuery.set('');
-          this.ytResults.set([]);
-          this.api.getChannels().subscribe((channels) => this.channels.set(channels));
-          this.showToast(`${result.channelName} added successfully.`, 'success');
-          this.router.navigate(['/channel', result.handle]);
-        },
-        error: () => {
-          this.addingHandle.set(null);
-          this.showToast(`Failed to add ${result.channelName}.`, 'error');
-        },
-      });
-    } else {
-      this.api.suggestChannel(result.handle, result.channelName, result.channelUrl ?? '', result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, false).subscribe({
-        next: (resp) => {
-          this.addingHandle.set(null);
-          this.searchQuery.set('');
-          this.ytResults.set([]);
-          this.api.suggestionRefresh$.next();
-          this.showToast(`${result.channelName}: ${resp.message}`, 'success');
-        },
-        error: () => {
-          this.addingHandle.set(null);
-          this.showToast(`Failed to suggest ${result.channelName}.`, 'error');
-        },
-      });
+      this.proceedWithAdd(result, 'ADMIN');
+      return;
     }
+    const eligibilityToastId = this.showToast(`Checking eligibility of the suggested "${result.channelName}" channel as a stock-picking channel. This might take a while, please wait…`, 'info');
+    this.api.assessChannelRelevance(result.handle, result.channelName).subscribe({
+      next: (relevance) => {
+        this.dismissToast(eligibilityToastId);
+        if (!relevance.passed) {
+          this.addingHandle.set(null);
+          this.showToast(`${result.channelName} does not appear to be a stock-picking channel (score: ${relevance.score}/10). Only channels strictly focused on individual stock picks are accepted — crypto, ETF, bond, general finance, and news channels do not qualify.`, 'error');
+          return;
+        }
+        this.proceedWithAdd(result);
+      },
+      error: () => {
+        this.dismissToast(eligibilityToastId);
+        this.addingHandle.set(null);
+        this.showToast(`Could not verify eligibility for ${result.channelName}. Please try again.`, 'error');
+      },
+    });
+  }
+
+  private proceedWithAdd(result: ChannelSearchResult, approvalSource: string = 'AUTO'): void {
+    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, false, approvalSource).subscribe({
+      next: () => {
+        this.addingHandle.set(null);
+        this.searchQuery.set('');
+        this.ytResults.set([]);
+        this.api.getChannels().subscribe((channels) => this.channels.set(channels));
+        this.showToast(`${result.channelName} has been added and is now being tracked.`, 'success');
+        this.router.navigate(['/channel', result.handle]);
+      },
+      error: () => {
+        this.addingHandle.set(null);
+        this.showToast(`Failed to add ${result.channelName}.`, 'error');
+      },
+    });
   }
 
   hideSearch(): void {
@@ -229,10 +263,19 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }, 150);
   }
 
-  private showToast(message: string, type: 'success' | 'error'): void {
-    clearTimeout(this.toastTimer);
-    this.toast.set({ message, type });
-    this.toastTimer = setTimeout(() => this.toast.set(null), 6000);
+  private showToast(message: string, type: 'success' | 'error' | 'info'): number {
+    const id = ++this.toastCounter;
+    this.toasts.update(ts => [...ts, { id, message, type }]);
+    if (type !== 'info') {
+      this.toastTimers.set(id, setTimeout(() => this.dismissToast(id), 6000));
+    }
+    return id;
+  }
+
+  protected dismissToast(id: number): void {
+    clearTimeout(this.toastTimers.get(id));
+    this.toastTimers.delete(id);
+    this.toasts.update(ts => ts.filter(t => t.id !== id));
   }
 
   logout(): void {

@@ -61,6 +61,9 @@ public class Channel {
     @Column(name = "discovery_complete", nullable = false)
     private boolean discoveryComplete = false;
 
+    @Column(name = "approval_source", length = 20)
+    private String approvalSource;
+
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Video> videos;
 

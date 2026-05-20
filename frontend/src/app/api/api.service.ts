@@ -17,8 +17,9 @@ import {
   NotificationsStatusSchema,
   TickerDataSchema,
   UnknownStockSchema,
+  ChannelRelevanceSchema,
 } from './types';
-import type { Channel, VideoSummary, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock } from './types';
+import type { Channel, VideoSummary, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, ChannelRelevance } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -170,13 +171,14 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/channels/${handle}/reprocess`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
-  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean): Observable<unknown> {
+  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean, approvalSource: string = 'ADMIN'): Observable<unknown> {
     let params = new HttpParams()
       .set('channelName', channelName)
       .set('channelUrl', channelUrl)
       .set('thumbnailUrl', thumbnailUrl)
       .set('description', description)
-      .set('notifyOnComplete', notifyOnComplete);
+      .set('notifyOnComplete', notifyOnComplete)
+      .set('approvalSource', approvalSource);
     if (subscriberCount != null) {
       params = params.set('subscriberCount', subscriberCount);
     }
@@ -233,6 +235,13 @@ export class ApiService {
     return this.validated(
       z.array(ChannelSearchResultSchema),
       this.http.get<unknown>('/api/channels/search', { params: new HttpParams().set('q', q).set('filterByKeywords', filterByKeywords) }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  assessChannelRelevance(handle: string, channelName: string): Observable<ChannelRelevance> {
+    return this.validated(
+      ChannelRelevanceSchema,
+      this.http.get<unknown>('/api/channels/assess-relevance', { params: new HttpParams().set('handle', handle).set('channelName', channelName) }).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

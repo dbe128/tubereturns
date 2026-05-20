@@ -89,6 +89,9 @@ public class AiModelService {
     @Value("${tubereturns.ai.timeout-retries}")
     private int timeoutRetries;
 
+    @Value("${tubereturns.channel.relevance-max-retries}")
+    private int channelRelevanceMaxRetries;
+
     private List<String> models;
     private final ThreadLocal<Integer> currentModelIndex = ThreadLocal.withInitial(() -> 0);
     private volatile int lastKnownModelIndex = 0;
@@ -145,6 +148,59 @@ public class AiModelService {
                 ? lastModel0AttemptAt.plusSeconds(modelResetMinutes * 60L)
                 : null;
         return new AiModelStatus(idx, model, resetAt, lastCallDurationMs);
+    }
+
+    public int scoreChannelRelevance(String channelName, List<String> videoTitles) {
+        String titlesText = java.util.stream.IntStream.range(0, videoTitles.size())
+                .mapToObj(i -> (i + 1) + ". " + videoTitles.get(i))
+                .collect(Collectors.joining("\n"));
+
+        String prompt = """
+                You are a channel classifier. Based on the following YouTube channel video titles, \
+                rate on a scale from 0 to 10 how likely this channel focuses on individual stock picking \
+                (buying specific individual company stocks).
+
+                Channel: %s
+                Video titles:
+                %s
+
+                Important: the stocks discussed should be individual equities available on Yahoo Finance (e.g. NYSE, NASDAQ, LSE, XETRA). \
+                Channels focused exclusively on crypto, ETFs, bonds, or assets not listed on Yahoo Finance should score lower.
+
+                Respond with a single integer from 0 to 10. No other text, no explanation.
+                """.formatted(channelName, titlesText);
+
+        log.info("Scoring relevance for channel '{}' with {} titles: {}", channelName, videoTitles.size(), videoTitles);
+        List<String> available = (models != null && !models.isEmpty()) ? models : List.of("openrouter/owl-alpha");
+        int maxAttempts = Math.min(channelRelevanceMaxRetries, available.size());
+        int startIdx = lastKnownModelIndex % available.size();
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            String model = available.get((startIdx + attempt) % available.size());
+            Map<String, Object> body = Map.of(
+                "model", model,
+                "messages", List.of(Map.of("role", "user", "content", prompt))
+            );
+            try {
+                String response = restClient.post()
+                        .uri("https://openrouter.ai/api/v1/chat/completions")
+                        .header("Authorization", "Bearer " + apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
+                JsonNode root = objectMapper.readTree(response);
+                String text = root.path("choices").get(0).path("message").path("content").asText().strip();
+                String digits = text.replaceAll("[^0-9]", "");
+                return digits.isEmpty() ? 5 : Math.min(Integer.parseInt(digits.substring(0, 1)), 10);
+            } catch (Exception e) {
+                log.warn("Relevance check failed with model {} (attempt {}/{}): {}", model, attempt + 1, maxAttempts, e.getMessage());
+                int nextIdx = ((startIdx + attempt + 1) % available.size());
+                lastKnownModelIndex = nextIdx;
+                currentModelIndex.set(nextIdx);
+            }
+        }
+        log.error("All {} relevance check attempts failed for channel {}", maxAttempts, channelName);
+        return 5;
     }
 
     public ExtractionResult extractStockPicks(String videoId, String videoTitle, String transcriptText) {

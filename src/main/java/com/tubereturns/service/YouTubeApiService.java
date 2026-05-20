@@ -138,6 +138,37 @@ public class YouTubeApiService {
         }
     }
 
+    public List<String> getRecentVideoTitles(String handle, int maxResults) {
+        meterRegistry.counter("tubereturns.youtube.api.calls", "method", "getRecentVideoTitles").increment();
+        if (!enabled || apiKey == null || apiKey.isBlank()) {
+            return List.of();
+        }
+        try {
+            YouTube youtube = buildClient();
+            ChannelInfo info = resolveUploadsPlaylistId(youtube, "https://www.youtube.com/@" + handle);
+            if (info == null || info.uploadsPlaylistId() == null) {
+                return List.of();
+            }
+            PlaylistItemListResponse response = youtube.playlistItems()
+                    .list(List.of("snippet"))
+                    .setPlaylistId(info.uploadsPlaylistId())
+                    .setMaxResults((long) Math.min(maxResults, 50))
+                    .setKey(apiKey)
+                    .execute();
+            if (response.getItems() == null) {
+                return List.of();
+            }
+            return response.getItems().stream()
+                    .map(item -> item.getSnippet().getTitle())
+                    .filter(t -> t != null && !t.isBlank())
+                    .toList();
+        } catch (Exception e) {
+            meterRegistry.counter("tubereturns.youtube.api.errors", "method", "getRecentVideoTitles").increment();
+            log.error("Failed to fetch video titles for @{}: {}", handle, e.getMessage(), e);
+            return List.of();
+        }
+    }
+
     public ChannelInfo resolveChannelInfo(String channelUrl) {
         meterRegistry.counter("tubereturns.youtube.api.calls", "method", "resolveChannelInfo").increment();
         if (!enabled || channelUrl == null || channelUrl.isBlank()) {

@@ -12,6 +12,7 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.ChannelNotificationService;
+import com.tubereturns.service.ChannelRelevanceService;
 import com.tubereturns.service.PickPerformanceService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.YouTubeApiService;
@@ -46,6 +47,7 @@ public class ChannelController {
     private final YouTubeApiService youTubeApiService;
     private final PipelineSchedulerService scheduler;
     private final PickPerformanceService pickPerformanceService;
+    private final ChannelRelevanceService channelRelevanceService;
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -143,6 +145,15 @@ public class ChannelController {
         return youTubeApiService.searchChannels(q, filterByKeywords);
     }
 
+    @GetMapping("/assess-relevance")
+    @Operation(summary = "Assess whether a YouTube channel is a stock-picking channel")
+    public ResponseEntity<Map<String, Object>> assessRelevance(
+            @RequestParam String handle,
+            @RequestParam String channelName) {
+        ChannelRelevanceService.RelevanceResult result = channelRelevanceService.assess(channelName, handle);
+        return ResponseEntity.ok(Map.of("score", result.score(), "passed", result.passed()));
+    }
+
     @PostMapping("/{handle}/add")
     @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring, or undelete a previously removed one")
     public ResponseEntity<Map<String, String>> addChannel(
@@ -152,9 +163,12 @@ public class ChannelController {
             @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
             @RequestParam(required = false, defaultValue = "") String description,
             @RequestParam(required = false) Long subscriberCount,
-            @RequestParam(defaultValue = "true") boolean notifyOnComplete,
+            @RequestParam(defaultValue = "false") boolean notifyOnComplete,
+            @RequestParam(required = false, defaultValue = "ADMIN") String approvalSource,
             Authentication authentication) {
         var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount);
+        channel.setApprovalSource(approvalSource);
+        channelRepository.save(channel);
         if (notifyOnComplete && authentication != null) {
             userRepository.findByEmail(authentication.getName())
                     .ifPresent(user -> channelNotificationService.scheduleNotification(channel, user));
