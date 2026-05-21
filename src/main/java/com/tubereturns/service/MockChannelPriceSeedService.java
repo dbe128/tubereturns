@@ -1,7 +1,6 @@
 package com.tubereturns.service;
 
 import com.tubereturns.model.Stock;
-import com.tubereturns.model.StockPrice;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import jakarta.annotation.PostConstruct;

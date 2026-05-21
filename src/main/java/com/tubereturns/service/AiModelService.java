@@ -282,6 +282,16 @@ public class AiModelService {
                 } else {
                     log.error("Timed out on model {} — all {} models exhausted", model, models.size());
                 }
+            } catch (BadResponseException e) {
+                int nextIdx = (idx + 1) % models.size();
+                currentModelIndex.set(nextIdx);
+                lastKnownModelIndex = nextIdx;
+                attemptsWithoutRemoval++;
+                if (attemptsWithoutRemoval < maxAttempts) {
+                    log.warn("Bad response from model {} — switching to {}", model, models.get(nextIdx));
+                } else {
+                    log.error("Bad response from model {} — all {} models exhausted", model, models.size());
+                }
             } catch (PaymentRequiredException e) {
                 meterRegistry.counter("tubereturns.ai.payment.required", "model", model).increment();
                 models.remove(idx);
@@ -326,12 +336,31 @@ public class AiModelService {
                     .body(String.class);
                 lastCallDurationMs = Duration.between(callStart, Instant.now()).toMillis();
 
-                JsonNode root = objectMapper.readTree(response);
+                if (response == null) {
+                    log.warn("OpenRouter returned null response with model {}", model);
+                    throw new BadResponseException(model);
+                }
+                JsonNode root;
+                try {
+                    root = objectMapper.readTree(response);
+                } catch (Exception e) {
+                    log.warn("OpenRouter returned unparseable response with model {}: {}", model, response.strip());
+                    throw new BadResponseException(model);
+                }
                 String actualModel = root.path("model").asText(model);
                 log.info("OpenRouter used model: {} — call took {}ms", actualModel, lastCallDurationMs);
                 meterRegistry.timer("tubereturns.ai.call", "model", actualModel)
                               .record(java.time.Duration.ofMillis(lastCallDurationMs));
-                String text = root.path("choices").get(0).path("message").path("content").asText();
+                JsonNode choiceNode = root.path("choices").get(0);
+                if (choiceNode == null || choiceNode.isMissingNode()) {
+                    log.warn("OpenRouter returned no choices with model {}: {}", model, response.strip());
+                    throw new BadResponseException(model);
+                }
+                String text = choiceNode.path("message").path("content").asText();
+                if (text.isBlank()) {
+                    log.warn("OpenRouter returned blank content with model {}: {}", model, response.strip());
+                    throw new BadResponseException(model);
+                }
                 return new ExtractionResult(stripJsonFences(text), actualModel);
 
             } catch (HttpClientErrorException e) {
@@ -346,6 +375,10 @@ public class AiModelService {
                     log.error("OpenRouter returned 402 Payment Required — insufficient credits");
                     throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
                 }
+                if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                    log.warn("OpenRouter returned 404 for model {} — provider routing issue, will try next model", model);
+                    throw new ForbiddenException(model);
+                }
                 log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
                 throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
             } catch (ResourceAccessException e) {
@@ -356,7 +389,7 @@ public class AiModelService {
                     log.error("OpenRouter timed out with model {} — no retries left", model);
                     throw new TimedOutException(model);
                 }
-            } catch (RateLimitedException | ForbiddenException | PaymentRequiredException | TimedOutException e) {
+            } catch (RateLimitedException | ForbiddenException | PaymentRequiredException | TimedOutException | BadResponseException e) {
                 throw e;
             } catch (Exception e) {
                 log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
@@ -403,6 +436,12 @@ public class AiModelService {
     private static final class TimedOutException extends RuntimeException {
         TimedOutException(String model) {
             super("Timed out on model: " + model);
+        }
+    }
+
+    private static final class BadResponseException extends RuntimeException {
+        BadResponseException(String model) {
+            super("Bad response from model: " + model);
         }
     }
 }

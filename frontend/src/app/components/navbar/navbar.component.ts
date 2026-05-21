@@ -5,7 +5,8 @@ import { Subject, Subscription, of } from 'rxjs';
 import { debounceTime, switchMap, catchError } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { ApiService } from '../../api/api.service';
-import type { Channel, ChannelSearchResult } from '../../api/types';
+import { ChannelStoreService } from '../../services/channel-store.service';
+import type { ChannelSearchResult } from '../../api/types';
 
 @Component({
   selector: 'app-navbar',
@@ -112,9 +113,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly api = inject(ApiService);
+  private readonly channelStore = inject(ChannelStoreService);
 
   readonly version = signal('…');
-  private readonly channels = signal<Channel[]>([]);
   readonly searchQuery = signal('');
   readonly ytResults = signal<ChannelSearchResult[]>([]);
   readonly searching = signal(false);
@@ -145,7 +146,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     });
   }
 
-  readonly dbHandles = computed(() => new Set(this.channels().map(c => c.handle)));
+  readonly dbHandles = computed(() => new Set(this.channelStore.channels().map(c => c.handle)));
 
   ngOnInit(): void {
     const stored = localStorage.getItem('pendingAddChannel');
@@ -154,7 +155,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
       catch { localStorage.removeItem('pendingAddChannel'); }
     }
     this.api.getVersion().subscribe((v) => this.version.set(v));
-    this.api.getChannels().subscribe((channels) => this.channels.set(channels));
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
       switchMap((q) => {
@@ -176,7 +176,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private searchLocally(q: string): ChannelSearchResult[] {
     const lower = q.toLowerCase();
-    return this.channels()
+    return this.channelStore.channels()
       .filter(c => c.handle.toLowerCase().includes(lower) || c.channelName.toLowerCase().includes(lower))
       .slice(0, 5)
       .map(c => ({
@@ -255,7 +255,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.addingHandle.set(null);
         this.searchQuery.set('');
         this.ytResults.set([]);
-        this.api.getChannels().subscribe((channels) => this.channels.set(channels));
+        this.channelStore.load();
         this.showToast(`${result.channelName} has been added and is now being tracked.`, 'success');
         this.router.navigate(['/channel', result.handle]);
       },

@@ -6,7 +6,6 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Stock;
-import com.tubereturns.model.StockPrice;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;

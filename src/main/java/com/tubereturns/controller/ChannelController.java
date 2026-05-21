@@ -29,6 +29,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,7 +64,22 @@ public class ChannelController {
     @Operation(summary = "Get all channels")
     public ResponseEntity<List<ChannelResponseDto>> getAllChannels() {
         List<Channel> channels = channelRepository.findAll();
-        return ResponseEntity.ok(channels.stream().map(this::toResponseDto).toList());
+
+        Map<Long, Long> totalByChannel = new HashMap<>();
+        videoRepository.countAllGroupedByChannelId().forEach(row -> totalByChannel.put((Long) row[0], (Long) row[1]));
+
+        Map<Long, Long> processedByChannel = new HashMap<>();
+        videoRepository.countProcessedGroupedByChannelId().forEach(row -> processedByChannel.put((Long) row[0], (Long) row[1]));
+
+        Map<Long, PickPerformanceService.ChannelScoreResult> scoresByChannel =
+                pickPerformanceService.computeScoresForAllChannels(pickRepository.findAllPicksForScoring());
+
+        return ResponseEntity.ok(channels.stream()
+                .map(c -> toResponseDto(c,
+                        totalByChannel.getOrDefault(c.getId(), 0L),
+                        processedByChannel.getOrDefault(c.getId(), 0L),
+                        scoresByChannel.getOrDefault(c.getId(), PickPerformanceService.ChannelScoreResult.empty())))
+                .toList());
     }
 
     @GetMapping("/{handle}")
@@ -199,6 +215,10 @@ public class ChannelController {
         long totalVideos = videoRepository.countByChannelId(channel.getId());
         long processedVideos = videoRepository.countProcessedByChannelId(channel.getId());
         PickPerformanceService.ChannelScoreResult score = pickPerformanceService.computeScoreForChannel(channel.getId());
+        return toResponseDto(channel, totalVideos, processedVideos, score);
+    }
+
+    private ChannelResponseDto toResponseDto(Channel channel, long totalVideos, long processedVideos, PickPerformanceService.ChannelScoreResult score) {
         return new ChannelResponseDto(
             channel.getId(),
             channel.getHandle(),

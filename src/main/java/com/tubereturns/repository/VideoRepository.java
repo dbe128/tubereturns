@@ -56,6 +56,12 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
     @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
 
+    @Query("SELECT v.channel.id, COUNT(v) FROM Video v GROUP BY v.channel.id")
+    List<Object[]> countAllGroupedByChannelId();
+
+    @Query("SELECT v.channel.id, COUNT(v) FROM Video v WHERE v.extractionStatus = 'EXTRACTED' GROUP BY v.channel.id")
+    List<Object[]> countProcessedGroupedByChannelId();
+
     @Query("SELECT COUNT(v) FROM Video v WHERE v.channel.id = :channelId AND v.extractionStatus = :status")
     long countByChannelIdAndExtractionStatus(@Param("channelId") Long channelId, @Param("status") Video.ExtractionStatus status);
 

@@ -106,9 +106,9 @@ public class YouTubeApiService {
                 String thumbnailUrl = null;
                 if (item.getSnippet().getThumbnails() != null) {
                     var t = item.getSnippet().getThumbnails();
-                    if (t.getHigh() != null) thumbnailUrl = t.getHigh().getUrl();
-                    else if (t.getMedium() != null) thumbnailUrl = t.getMedium().getUrl();
-                    else if (t.getDefault() != null) thumbnailUrl = t.getDefault().getUrl();
+                    if (t.getHigh() != null) { thumbnailUrl = t.getHigh().getUrl(); }
+                    else if (t.getMedium() != null) { thumbnailUrl = t.getMedium().getUrl(); }
+                    else if (t.getDefault() != null) { thumbnailUrl = t.getDefault().getUrl(); }
                 }
 
                 if (detail == null || detail.getSnippet() == null) continue;

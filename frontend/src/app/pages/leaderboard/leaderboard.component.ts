@@ -7,6 +7,7 @@ import { switchMap } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
+import { ChannelStoreService } from '../../services/channel-store.service';
 import type { Channel, ChannelSuggestion, MyChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock } from '../../api/types';
 
 interface UnknownStockRow extends UnknownStock {
@@ -729,6 +730,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   readonly auth = inject(AuthService);
   private readonly recovery = inject(BackendRecoveryService);
+  private readonly channelStore = inject(ChannelStoreService);
 
 
   readonly rows = signal<Channel[]>([]);
@@ -827,6 +829,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     this.api.getChannels().subscribe({
       next: (channels) => {
         this.rows.set(channels);
+        this.channelStore.channels.set(channels);
         this.loading.set(false);
       },
       error: (_err: unknown) => {

@@ -12,10 +12,12 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -156,7 +158,18 @@ public class PickPerformanceService {
     }
 
     public ChannelScoreResult computeScoreForChannel(Long channelId) {
-        List<Pick> picks = pickRepository.findPicksByChannelId(channelId);
+        return computeScoreFromPicks(pickRepository.findPicksByChannelId(channelId));
+    }
+
+    public Map<Long, ChannelScoreResult> computeScoresForAllChannels(List<Pick> allPicks) {
+        Map<Long, List<Pick>> byChannel = allPicks.stream()
+                .collect(Collectors.groupingBy(p -> p.getVideo().getChannel().getId()));
+        Map<Long, ChannelScoreResult> results = new HashMap<>();
+        byChannel.forEach((channelId, picks) -> results.put(channelId, computeScoreFromPicks(picks)));
+        return results;
+    }
+
+    private ChannelScoreResult computeScoreFromPicks(List<Pick> picks) {
         LocalDate today = LocalDate.now();
         double alphaSum1m = 0, alphaSum1y = 0, alphaSum3y = 0;
         int eligible1m = 0, eligible1y = 0, eligible3y = 0;
@@ -187,7 +200,11 @@ public class PickPerformanceService {
             Double score1m, int eligible1m, int unresolved1m,
             Double score1y, int eligible1y, int unresolved1y,
             Double score3y, int eligible3y, int unresolved3y
-    ) {}
+    ) {
+        public static ChannelScoreResult empty() {
+            return new ChannelScoreResult(null, 0, 0, null, 0, 0, null, 0, 0);
+        }
+    }
 
     private PickPerformanceDto unknown(Pick pick) {
         return new PickPerformanceDto(

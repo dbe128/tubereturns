@@ -5,7 +5,6 @@ import com.tubereturns.dto.PipelineStepStatusDto;
 import com.tubereturns.dto.UnknownStockDto;
 import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.Stock;
-import com.tubereturns.model.StockPrice;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.ChannelRepository;
