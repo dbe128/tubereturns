@@ -170,7 +170,7 @@ public class AiModelService {
                 Respond with a single integer from 0 to 10. No other text, no explanation.
                 """.formatted(channelName, titlesText);
 
-        log.info("Scoring relevance for channel '{}' with {} titles: {}", channelName, videoTitles.size(), videoTitles);
+        log.info("Scoring relevance for channel '{}' with {} titles", channelName, videoTitles.size());
         List<String> available = (models != null && !models.isEmpty()) ? models : List.of("openrouter/owl-alpha");
         int maxAttempts = Math.min(channelRelevanceMaxRetries, available.size());
         int startIdx = lastKnownModelIndex % available.size();

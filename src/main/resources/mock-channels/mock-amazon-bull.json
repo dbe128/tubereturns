@@ -1,0 +1,13 @@
+{
+  "handle": "mock-amazon-bull",
+  "channelName": "Mock Amazon Bull",
+  "description": "Mock channel that bought Amazon in 2021.",
+  "videos": [
+    {
+      "videoId": "mock-amazon-bull-001",
+      "title": "Amazon is still undervalued — here's why I'm buying",
+      "publishedAt": "2021-08-05T00:00:00Z",
+      "picks": [{ "ticker": "AMZN", "companyName": "Amazon.com, Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

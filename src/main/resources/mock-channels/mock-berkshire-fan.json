@@ -1,0 +1,13 @@
+{
+  "handle": "mock-berkshire-fan",
+  "channelName": "Mock Berkshire Fan",
+  "description": "Mock channel that bought Berkshire Hathaway in 2024.",
+  "videos": [
+    {
+      "videoId": "mock-berkshire-fan-001",
+      "title": "Berkshire Hathaway: Buffett's best bet",
+      "publishedAt": "2024-07-08T00:00:00Z",
+      "picks": [{ "ticker": "BRK-B", "companyName": "Berkshire Hathaway Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

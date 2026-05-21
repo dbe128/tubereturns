@@ -36,7 +36,7 @@ export class AuthService {
 
   private loadFromStorage(): AuthUser | null {
     const token = localStorage.getItem(this.TOKEN_KEY);
-    if (!token) return null;
+    if (!token) { return null; }
     return this.decodeToken(token);
   }
 

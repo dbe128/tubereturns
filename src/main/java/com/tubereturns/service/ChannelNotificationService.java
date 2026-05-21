@@ -64,35 +64,35 @@ public class ChannelNotificationService {
     @Transactional
     public void checkAndSendPendingNotifications() {
         try {
-        List<ChannelProcessingNotification> pending = notificationRepository.findPending();
-        if (pending.isEmpty()) {
-            return;
-        }
-        log.info("Checking {} pending notification(s)", pending.size());
-        for (ChannelProcessingNotification notification : pending) {
-            Channel channel = notification.getChannel();
-            if (!channel.isDiscoveryComplete()) {
-                log.info("Skipping notification for {} → discovery not complete", channel.getHandle());
-                continue;
+            List<ChannelProcessingNotification> pending = notificationRepository.findPending();
+            if (pending.isEmpty()) {
+                return;
             }
-            long pendingTranscripts = videoRepository.countByChannelIdAndTranscriptStatusIn(channel.getId(), INCOMPLETE_TRANSCRIPT_STATUSES);
-            if (pendingTranscripts > 0) {
-                log.info("Skipping notification for {} → {} transcript(s) still pending", channel.getHandle(), pendingTranscripts);
-                continue;
+            log.info("Checking {} pending notification(s)", pending.size());
+            for (ChannelProcessingNotification notification : pending) {
+                Channel channel = notification.getChannel();
+                if (!channel.isDiscoveryComplete()) {
+                    log.info("Skipping notification for {} → discovery not complete", channel.getHandle());
+                    continue;
+                }
+                long pendingTranscripts = videoRepository.countByChannelIdAndTranscriptStatusIn(channel.getId(), INCOMPLETE_TRANSCRIPT_STATUSES);
+                if (pendingTranscripts > 0) {
+                    log.info("Skipping notification for {} → {} transcript(s) still pending", channel.getHandle(), pendingTranscripts);
+                    continue;
+                }
+                long pendingExtractions = videoRepository.countByChannelIdAndExtractionStatusIn(channel.getId(), INCOMPLETE_EXTRACTION_STATUSES);
+                if (pendingExtractions > 0) {
+                    log.info("Skipping notification for {} → {} extraction(s) still pending", channel.getHandle(), pendingExtractions);
+                    continue;
+                }
+                log.info("Sending processing-complete notification for channel {} to {}", channel.getHandle(), notification.getUser().getEmail());
+                boolean sent = emailService.sendChannelProcessedEmail(
+                        notification.getUser().getEmail(), channel.getChannelName(), channel.getHandle());
+                if (sent) {
+                    notification.setSentAt(Instant.now());
+                    notificationRepository.save(notification);
+                }
             }
-            long pendingExtractions = videoRepository.countByChannelIdAndExtractionStatusIn(channel.getId(), INCOMPLETE_EXTRACTION_STATUSES);
-            if (pendingExtractions > 0) {
-                log.info("Skipping notification for {} → {} extraction(s) still pending", channel.getHandle(), pendingExtractions);
-                continue;
-            }
-            log.info("Sending processing-complete notification for channel {} to {}", channel.getHandle(), notification.getUser().getEmail());
-            boolean sent = emailService.sendChannelProcessedEmail(
-                    notification.getUser().getEmail(), channel.getChannelName(), channel.getHandle());
-            if (sent) {
-                notification.setSentAt(Instant.now());
-                notificationRepository.save(notification);
-            }
-        }
         } finally {
             lastRanAt = Instant.now();
         }

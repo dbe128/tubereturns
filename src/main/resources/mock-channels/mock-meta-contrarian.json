@@ -1,0 +1,13 @@
+{
+  "handle": "mock-meta-contrarian",
+  "channelName": "Mock Meta Contrarian",
+  "description": "Mock channel that bought Meta at the 2022 lows.",
+  "videos": [
+    {
+      "videoId": "mock-meta-contrarian-001",
+      "title": "Everyone hates Meta — that's why I'm buying",
+      "publishedAt": "2022-11-10T00:00:00Z",
+      "picks": [{ "ticker": "META", "companyName": "Meta Platforms, Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "handle": "mock-apple-bull",
+  "channelName": "Mock Apple Bull",
+  "description": "Mock channel that bought Apple in 2019.",
+  "videos": [
+    {
+      "videoId": "mock-apple-bull-001",
+      "title": "Why I'm buying Apple right now",
+      "publishedAt": "2019-06-15T00:00:00Z",
+      "picks": [{ "ticker": "AAPL", "companyName": "Apple Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

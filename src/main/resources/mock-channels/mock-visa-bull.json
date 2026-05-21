@@ -1,0 +1,13 @@
+{
+  "handle": "mock-visa-bull",
+  "channelName": "Mock Visa Bull",
+  "description": "Mock channel that bought Visa in 2023.",
+  "videos": [
+    {
+      "videoId": "mock-visa-bull-001",
+      "title": "Visa: the ultimate payments compounder",
+      "publishedAt": "2023-10-15T00:00:00Z",
+      "picks": [{ "ticker": "V", "companyName": "Visa Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

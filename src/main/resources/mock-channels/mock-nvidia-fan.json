@@ -1,0 +1,13 @@
+{
+  "handle": "mock-nvidia-fan",
+  "channelName": "Mock Nvidia Fan",
+  "description": "Mock channel that bought Nvidia in 2020.",
+  "videos": [
+    {
+      "videoId": "mock-nvidia-fan-001",
+      "title": "Nvidia is the future — buying today",
+      "publishedAt": "2020-09-10T00:00:00Z",
+      "picks": [{ "ticker": "NVDA", "companyName": "NVIDIA Corporation", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

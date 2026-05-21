@@ -1,0 +1,13 @@
+{
+  "handle": "mock-msft-investor",
+  "channelName": "Mock MSFT Investor",
+  "description": "Mock channel that bought Microsoft in 2021.",
+  "videos": [
+    {
+      "videoId": "mock-msft-investor-001",
+      "title": "Microsoft: the ultimate long-term hold",
+      "publishedAt": "2021-02-14T00:00:00Z",
+      "picks": [{ "ticker": "MSFT", "companyName": "Microsoft Corporation", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

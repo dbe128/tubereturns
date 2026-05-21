@@ -1,0 +1,13 @@
+{
+  "handle": "mock-jpm-investor",
+  "channelName": "Mock JPM Investor",
+  "description": "Mock channel that bought JPMorgan Chase in 2023.",
+  "videos": [
+    {
+      "videoId": "mock-jpm-investor-001",
+      "title": "JPMorgan Chase: the best bank stock to own",
+      "publishedAt": "2023-04-22T00:00:00Z",
+      "picks": [{ "ticker": "JPM", "companyName": "JPMorgan Chase & Co.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

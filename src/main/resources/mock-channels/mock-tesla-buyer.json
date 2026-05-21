@@ -1,0 +1,13 @@
+{
+  "handle": "mock-tesla-buyer",
+  "channelName": "Mock Tesla Buyer",
+  "description": "Mock channel that bought Tesla in 2020.",
+  "videos": [
+    {
+      "videoId": "mock-tesla-buyer-001",
+      "title": "Buying Tesla at the crash — my conviction pick",
+      "publishedAt": "2020-03-20T00:00:00Z",
+      "picks": [{ "ticker": "TSLA", "companyName": "Tesla, Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

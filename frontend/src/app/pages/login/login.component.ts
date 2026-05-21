@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -12,7 +12,7 @@ import { AuthService } from '../../services/auth.service';
   template: `
     <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
-        <h1 class="text-xl font-bold text-gray-900 mb-6">Sign in</h1>
+        <h1 class="text-xl font-bold text-gray-900 mb-6">{{ heading }}</h1>
 
         <form (ngSubmit)="submit()" class="space-y-4">
           <div>
@@ -41,7 +41,7 @@ import { AuthService } from '../../services/auth.service';
 
         <p class="text-center text-xs text-gray-400 mt-6">
           Don't have an account?
-          <a routerLink="/signup" class="text-primary-600 font-medium hover:underline">Sign up</a>
+          <a [routerLink]="['/signup']" [queryParams]="returnUrl ? { returnUrl } : {}" class="text-primary-600 font-medium hover:underline">Sign up</a>
         </p>
       </div>
     </div>
@@ -51,11 +51,22 @@ export class LoginComponent {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   email = '';
   password = '';
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
+
+  get returnUrl(): string {
+    return this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+  }
+
+  get heading(): string {
+    if (this.returnUrl) return 'Log in to access this feature. You will be redirected afterwards';
+    if (localStorage.getItem('pendingAddChannel')) return 'Log in to suggest a channel';
+    return 'Sign in';
+  }
 
   submit(): void {
     this.loading.set(true);
@@ -63,7 +74,9 @@ export class LoginComponent {
     this.api.login(this.email, this.password).subscribe({
       next: (res) => {
         this.auth.setToken(res.token);
-        this.router.navigate(['/']);
+        const target = this.returnUrl || localStorage.getItem('pendingReturnUrl') || '/';
+        localStorage.removeItem('pendingReturnUrl');
+        this.router.navigateByUrl(target);
       },
       error: (err: unknown) => {
         this.error.set(String(err));

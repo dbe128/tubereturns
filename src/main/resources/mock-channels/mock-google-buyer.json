@@ -1,0 +1,13 @@
+{
+  "handle": "mock-google-buyer",
+  "channelName": "Mock Google Buyer",
+  "description": "Mock channel that bought Alphabet in 2022.",
+  "videos": [
+    {
+      "videoId": "mock-google-buyer-001",
+      "title": "Alphabet is my top pick for 2022",
+      "publishedAt": "2022-01-20T00:00:00Z",
+      "picks": [{ "ticker": "GOOGL", "companyName": "Alphabet Inc.", "signal": "BUY", "currency": "USD" }]
+    }
+  ]
+}

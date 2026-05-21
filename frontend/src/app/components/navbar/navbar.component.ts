@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, effect, untracked } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription, of } from 'rxjs';
@@ -23,24 +23,7 @@ import type { Channel, ChannelSearchResult } from '../../api/types';
         }
       </div>
     }
-    @if (showAuthDialog()) {
-      <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" (click)="showAuthDialog.set(false)">
-        <div class="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" (click)="$event.stopPropagation()">
-          <p class="text-gray-800 font-semibold mb-1">Sign in required</p>
-          <p class="text-sm text-gray-500 mb-5">You need to be logged in to perform this action.</p>
-          <div class="flex gap-3 justify-end">
-            <a routerLink="/signup" (click)="showAuthDialog.set(false)"
-               class="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              Sign up
-            </a>
-            <a routerLink="/login" (click)="showAuthDialog.set(false)"
-               class="px-4 py-2 text-sm bg-gray-900 text-white rounded-lg hover:bg-gray-700 transition-colors">
-              Sign in
-            </a>
-          </div>
-        </div>
-      </div>
-    }
+
     <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div class="px-6 h-[3.33rem] flex items-center justify-between">
         <div class="flex items-center gap-4">
@@ -137,16 +120,39 @@ export class NavbarComponent implements OnInit, OnDestroy {
   readonly searching = signal(false);
   readonly addingHandle = signal<string | null>(null);
   readonly toasts = signal<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
-  readonly showAuthDialog = signal(false);
+  private readonly pendingAdd = signal<ChannelSearchResult | null>(null);
   private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private toastCounter = 0;
 
   private readonly searchSubject = new Subject<string>();
   private searchSub?: Subscription;
 
+  constructor() {
+    effect(() => {
+      const user = this.auth.user();
+      const pending = this.pendingAdd();
+      if (!user || !pending) { return; }
+      untracked(() => {
+        this.pendingAdd.set(null);
+        localStorage.removeItem('pendingAddChannel');
+        this.addingHandle.set(pending.handle);
+        if (user.role === 'ADMIN') {
+          this.proceedWithAdd(pending, 'ADMIN');
+        } else {
+          this.runEligibilityAndAdd(pending);
+        }
+      });
+    });
+  }
+
   readonly dbHandles = computed(() => new Set(this.channels().map(c => c.handle)));
 
   ngOnInit(): void {
+    const stored = localStorage.getItem('pendingAddChannel');
+    if (stored) {
+      try { this.pendingAdd.set(JSON.parse(stored) as ChannelSearchResult); }
+      catch { localStorage.removeItem('pendingAddChannel'); }
+    }
     this.api.getVersion().subscribe((v) => this.version.set(v));
     this.api.getChannels().subscribe((channels) => this.channels.set(channels));
     this.searchSub = this.searchSubject.pipe(
@@ -208,7 +214,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
       return;
     }
     if (!this.auth.isAuthenticated) {
-      this.showAuthDialog.set(true);
+      this.pendingAdd.set(result);
+      localStorage.setItem('pendingAddChannel', JSON.stringify(result));
+      this.searchQuery.set('');
+      this.ytResults.set([]);
+      this.router.navigate(['/login']);
       return;
     }
     this.addingHandle.set(result.handle);
@@ -216,6 +226,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.proceedWithAdd(result, 'ADMIN');
       return;
     }
+    this.runEligibilityAndAdd(result);
+  }
+
+  private runEligibilityAndAdd(result: ChannelSearchResult): void {
     const eligibilityToastId = this.showToast(`Checking eligibility of the suggested "${result.channelName}" channel as a stock-picking channel. This might take a while, please wait…`, 'info');
     this.api.assessChannelRelevance(result.handle, result.channelName).subscribe({
       next: (relevance) => {

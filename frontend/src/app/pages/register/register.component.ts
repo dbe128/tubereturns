@@ -1,7 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../api/api.service';
 
 @Component({
@@ -16,7 +16,8 @@ import { ApiService } from '../../api/api.service';
             <div class="text-3xl mb-3">✉</div>
             <h1 class="text-xl font-bold text-gray-900 mb-2">Check your email</h1>
             <p class="text-sm text-gray-500">We sent a verification link to <strong>{{ email }}</strong>. Click it to activate your account.</p>
-            <a routerLink="/login" class="block mt-6 text-sm text-primary-600 font-medium hover:underline">Back to sign in</a>
+            <p class="text-xs text-gray-400 mt-2">It may take a few minutes to arrive. Can't find it? Check your <strong>spam or junk folder</strong>.</p>
+            <a [routerLink]="['/login']" [queryParams]="returnUrl ? { returnUrl } : {}" class="block mt-6 text-sm text-primary-600 font-medium hover:underline">Back to sign in</a>
           </div>
         } @else {
 
@@ -92,15 +93,26 @@ import { ApiService } from '../../api/api.service';
 
         <p class="text-center text-xs text-gray-400 mt-6">
           Already have an account?
-          <a routerLink="/login" class="text-primary-600 font-medium hover:underline">Sign in</a>
+          <a [routerLink]="['/login']" [queryParams]="returnUrl ? { returnUrl } : {}" class="text-primary-600 font-medium hover:underline">Sign in</a>
         </p>
         }
       </div>
     </div>
   `,
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   private readonly api = inject(ApiService);
+  private readonly route = inject(ActivatedRoute);
+
+  get returnUrl(): string {
+    return this.route.snapshot.queryParamMap.get('returnUrl') ?? '';
+  }
+
+  ngOnInit(): void {
+    if (this.returnUrl) {
+      localStorage.setItem('pendingReturnUrl', this.returnUrl);
+    }
+  }
 
   firstName = '';
   email = '';
