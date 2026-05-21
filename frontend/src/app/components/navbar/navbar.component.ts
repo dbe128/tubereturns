@@ -92,10 +92,6 @@ import type { Channel, ChannelSearchResult } from '../../api/types';
                         <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin flex-shrink-0"></div>
                       } @else if (inDb) {
                         <span class="text-xs text-green-600 font-semibold flex-shrink-0">View</span>
-                      } @else if (auth.isAdmin) {
-                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
-                      } @else if (auth.isAuthenticated) {
-                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
                       } @else {
                         <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
                       }

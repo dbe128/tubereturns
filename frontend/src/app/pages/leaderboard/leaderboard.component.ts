@@ -90,7 +90,7 @@ interface UnknownStockRow extends UnknownStock {
                 <th class="px-3 py-4 text-right w-28">
                   <span class="inline-flex items-center gap-1 justify-end">{{ timeframeLabel() }} Alpha
                     <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal">ⓘ
-                      <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-56 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
+                      <span class="pointer-events-none absolute top-full left-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-56 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
                         Average excess return vs. S&amp;P 500 over the selected timeframe. Based on explicit BUY picks, equally weighted.
                       </span>
                     </span>
@@ -153,20 +153,17 @@ interface UnknownStockRow extends UnknownStock {
                     @if (auth.isAdmin) {
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
-                        @if (auth.isAdmin) {
-                          <button
-                            (click)="reprocessChannel(row.handle, row.channelName)"
-                            class="relative group/tip text-gray-300 hover:text-amber-400 transition-colors"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
-                              Re-extract all picks
-                            </span>
-                          </button>
-                        }
-                        @if (auth.isAdmin) {
+                        <button
+                          (click)="reprocessChannel(row.handle, row.channelName)"
+                          class="relative group/tip text-gray-300 hover:text-amber-400 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                            Re-extract all picks
+                          </span>
+                        </button>
                         <button
                           (click)="deleteChannel(row.handle, row.channelName)"
                           class="relative group/tip text-gray-300 hover:text-danger-500 transition-colors"
@@ -178,7 +175,6 @@ interface UnknownStockRow extends UnknownStock {
                             Delete channel
                           </span>
                         </button>
-                        }
                       </div>
                     </td>
                     }
@@ -195,6 +191,30 @@ interface UnknownStockRow extends UnknownStock {
             </tbody>
           </table>
         </div>
+
+        @if (auth.isAdmin) {
+          <div class="mt-6 flex items-center gap-3">
+            <input
+              [ngModel]="adminAddInput()"
+              (ngModelChange)="adminAddInput.set($event)"
+              (keydown.enter)="addAdminChannel()"
+              placeholder="Handle or YouTube URL — e.g. @EverythingMoney"
+              class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            <button
+              (click)="addAdminChannel()"
+              [disabled]="adminAdding() || !adminAddInput().trim()"
+              class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors whitespace-nowrap flex items-center gap-2"
+            >
+              @if (adminAdding()) {
+                <span class="inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
+                Adding…
+              } @else {
+                Add Channel
+              }
+            </button>
+          </div>
+        }
 
         @if (auth.isAdmin && inProgressChannels().length > 0) {
           <div class="mt-10">
@@ -761,6 +781,8 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
   readonly myChannelSuggestions = signal<MyChannelSuggestion[]>([]);
   readonly togglingNotifyFor = signal<string | null>(null);
+  readonly adminAddInput = signal('');
+  readonly adminAdding = signal(false);
 
   private statusPollSub?: Subscription;
   private fastPollSub?: Subscription;
@@ -943,6 +965,45 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
         error: () => this.showToast(`Failed to reject "${s.channelName}".`, 'error'),
       }),
     );
+  }
+
+  addAdminChannel(): void {
+    const raw = this.adminAddInput().trim();
+    if (!raw) { return; }
+    const handle = this.parseHandle(raw);
+    this.adminAdding.set(true);
+    this.api.resolveChannel(handle).subscribe({
+      next: (channel) => {
+        if (!channel) {
+          this.adminAdding.set(false);
+          this.showToast(`No YouTube channel found for "${handle}".`, 'error');
+          return;
+        }
+        this.api.addChannel(channel.handle, channel.channelName, channel.channelUrl, channel.thumbnailUrl ?? '', channel.description ?? '', channel.subscriberCount, false, 'ADMIN').subscribe({
+          next: () => {
+            this.adminAdding.set(false);
+            this.adminAddInput.set('');
+            this.showToast(`${channel.channelName} added.`, 'success');
+            this.load();
+          },
+          error: (err: unknown) => {
+            this.adminAdding.set(false);
+            this.showToast(String(err), 'error');
+          },
+        });
+      },
+      error: () => {
+        this.adminAdding.set(false);
+        this.showToast(`Failed to look up "${handle}" on YouTube.`, 'error');
+      },
+    });
+  }
+
+  private parseHandle(raw: string): string {
+    const urlMatch = raw.match(/youtube\.com\/@([^/?&\s]+)/i);
+    if (urlMatch) { return urlMatch[1]; }
+    if (raw.startsWith('@')) { return raw.slice(1).trim(); }
+    return raw.trim();
   }
 
   reprocessChannel(handle: string, channelName: string): void {

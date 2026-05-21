@@ -17,18 +17,20 @@ import com.tubereturns.service.PickPerformanceService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.YouTubeDiscoveryService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RequiredArgsConstructor
@@ -48,6 +50,14 @@ public class ChannelController {
     private final PipelineSchedulerService scheduler;
     private final PickPerformanceService pickPerformanceService;
     private final ChannelRelevanceService channelRelevanceService;
+    private final MeterRegistry meterRegistry;
+
+    @PostConstruct
+    private void initMetrics() {
+        for (String source : List.of("ADMIN", "AUTO")) {
+            Counter.builder("tubereturns.channels.added").tag("source", source).register(meterRegistry);
+        }
+    }
 
     @GetMapping
     @Operation(summary = "Get all channels")
@@ -145,6 +155,13 @@ public class ChannelController {
         return youTubeApiService.searchChannels(q, filterByKeywords);
     }
 
+    @GetMapping("/resolve")
+    @Operation(summary = "Resolve a YouTube channel by handle (1 quota unit)")
+    public ResponseEntity<ChannelSearchResultDto> resolveChannel(@RequestParam String handle) {
+        ChannelSearchResultDto result = youTubeApiService.resolveChannelByHandle(handle);
+        return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
+    }
+
     @GetMapping("/assess-relevance")
     @Operation(summary = "Assess whether a YouTube channel is a stock-picking channel")
     public ResponseEntity<Map<String, Object>> assessRelevance(
@@ -169,6 +186,7 @@ public class ChannelController {
         var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount);
         channel.setApprovalSource(approvalSource);
         channelRepository.save(channel);
+        meterRegistry.counter("tubereturns.channels.added", "source", approvalSource).increment();
         if (notifyOnComplete && authentication != null) {
             userRepository.findByEmail(authentication.getName())
                     .ifPresent(user -> channelNotificationService.scheduleNotification(channel, user));

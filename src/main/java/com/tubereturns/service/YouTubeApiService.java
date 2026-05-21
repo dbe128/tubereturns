@@ -10,7 +10,9 @@ import com.google.api.services.youtube.model.Video;
 import com.google.api.services.youtube.model.VideoListResponse;
 import com.tubereturns.dto.ChannelSearchResultDto;
 import com.tubereturns.dto.YouTubeVideoDto;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,6 +46,19 @@ public class YouTubeApiService {
 
     public record ChannelInfo(String uploadsPlaylistId, String thumbnailUrl, Long subscriberCount) {}
 
+    @PostConstruct
+    private void initMetrics() {
+        for (String method : List.of("searchChannels", "getRecentVideoTitles", "resolveChannelInfo", "getVideosFromPlaylist", "resolveChannelByHandle")) {
+            Counter.builder("tubereturns.youtube.api.calls").tag("method", method).register(meterRegistry);
+            Counter.builder("tubereturns.youtube.api.errors").tag("method", method).register(meterRegistry);
+        }
+        Counter.builder("tubereturns.youtube.quota.units").register(meterRegistry);
+    }
+
+    private void quota(long units) {
+        meterRegistry.counter("tubereturns.youtube.quota.units").increment(units);
+    }
+
     public List<ChannelSearchResultDto> searchChannels(String query, boolean filterByKeywords) {
         meterRegistry.counter("tubereturns.youtube.api.calls", "method", "searchChannels").increment();
         if (!enabled || apiKey == null || apiKey.isBlank()) {
@@ -60,6 +75,7 @@ public class YouTubeApiService {
                     .setKey(apiKey)
                     .execute()
                     .getItems();
+            quota(100);
 
             if (searchItems == null || searchItems.isEmpty()) {
                 return List.of();
@@ -75,6 +91,7 @@ public class YouTubeApiService {
                     .setId(channelIds)
                     .setKey(apiKey)
                     .execute();
+            quota(1);
             if (detailResponse.getItems() != null) {
                 for (var ch : detailResponse.getItems()) {
                     detailMap.put(ch.getId(), ch);
@@ -155,6 +172,7 @@ public class YouTubeApiService {
                     .setMaxResults((long) Math.min(maxResults, 50))
                     .setKey(apiKey)
                     .execute();
+            quota(1);
             if (response.getItems() == null) {
                 return List.of();
             }
@@ -182,6 +200,60 @@ public class YouTubeApiService {
         } catch (Exception e) {
             meterRegistry.counter("tubereturns.youtube.api.errors", "method", "resolveChannelInfo").increment();
             log.error("Failed to resolve channel info for {}: {}", channelUrl, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    public ChannelSearchResultDto resolveChannelByHandle(String handle) {
+        meterRegistry.counter("tubereturns.youtube.api.calls", "method", "resolveChannelByHandle").increment();
+        if (!enabled || apiKey == null || apiKey.isBlank()) {
+            return null;
+        }
+        try {
+            YouTube youtube = buildClient();
+            var response = youtube.channels()
+                    .list(List.of("snippet", "statistics"))
+                    .set("forHandle", handle)
+                    .setKey(apiKey)
+                    .execute();
+            quota(1);
+            if (response.getItems() == null || response.getItems().isEmpty()) {
+                return null;
+            }
+            var item = response.getItems().getFirst();
+            String customUrl = item.getSnippet().getCustomUrl();
+            String resolvedHandle = customUrl != null
+                    ? customUrl.toLowerCase().replaceAll("^@", "")
+                    : handle.toLowerCase();
+            String channelUrl = "https://www.youtube.com/@" + resolvedHandle;
+            String thumbnailUrl = null;
+            if (item.getSnippet().getThumbnails() != null) {
+                var t = item.getSnippet().getThumbnails();
+                if (t.getHigh() != null) { thumbnailUrl = t.getHigh().getUrl(); }
+                else if (t.getMedium() != null) { thumbnailUrl = t.getMedium().getUrl(); }
+                else if (t.getDefault() != null) { thumbnailUrl = t.getDefault().getUrl(); }
+            }
+            Long subscriberCount = null;
+            Long videoCount = null;
+            if (item.getStatistics() != null) {
+                if (!Boolean.TRUE.equals(item.getStatistics().getHiddenSubscriberCount())
+                        && item.getStatistics().getSubscriberCount() != null) {
+                    subscriberCount = item.getStatistics().getSubscriberCount().longValue();
+                }
+                if (item.getStatistics().getVideoCount() != null) {
+                    videoCount = item.getStatistics().getVideoCount().longValue();
+                }
+            }
+            String channelCreatedAt = null;
+            if (item.getSnippet().getPublishedAt() != null) {
+                channelCreatedAt = Instant.ofEpochMilli(item.getSnippet().getPublishedAt().getValue())
+                        .toString().substring(0, 10);
+            }
+            return new ChannelSearchResultDto(resolvedHandle, item.getSnippet().getTitle(), channelUrl,
+                    thumbnailUrl, item.getSnippet().getDescription(), subscriberCount, videoCount, channelCreatedAt);
+        } catch (Exception e) {
+            meterRegistry.counter("tubereturns.youtube.api.errors", "method", "resolveChannelByHandle").increment();
+            log.error("Failed to resolve channel for handle @{}: {}", handle, e.getMessage(), e);
             return null;
         }
     }
@@ -250,6 +322,7 @@ public class YouTubeApiService {
         }
 
         var response = request.execute();
+        quota(1);
         if (response.getItems() == null || response.getItems().isEmpty()) {
             return null;
         }
@@ -292,6 +365,7 @@ public class YouTubeApiService {
             }
 
             PlaylistItemListResponse response = request.execute();
+            quota(1);
             if (response.getItems() == null) {
                 break;
             }
@@ -331,6 +405,7 @@ public class YouTubeApiService {
                     .setId(batch)
                     .setKey(apiKey)
                     .execute();
+            quota(1);
 
             if (response.getItems() != null) {
                 for (Video video : response.getItems()) {

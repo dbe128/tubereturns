@@ -231,6 +231,13 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/channel-suggestions/${handle}/reject`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
+  resolveChannel(handle: string): Observable<ChannelSearchResult | null> {
+    return this.validated(
+      ChannelSearchResultSchema,
+      this.http.get<unknown>('/api/channels/resolve', { params: new HttpParams().set('handle', handle) }).pipe(catchError((e) => this.handleError(e))),
+    ).pipe(catchError(() => of(null)));
+  }
+
   searchChannels(q: string, filterByKeywords: boolean): Observable<ChannelSearchResult[]> {
     return this.validated(
       z.array(ChannelSearchResultSchema),

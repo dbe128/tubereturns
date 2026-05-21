@@ -10,6 +10,11 @@ Do NOT commit or push changes to this repo unless explicitly asked by the user.
 
 For the companion monitoring repo at `~/IdeaProjects/tubereturns-monitoring`, commits and pushes may be made autonomously whenever monitoring-related changes are ready.
 
+### Grafana dashboard conventions
+- **Never hardcode a fixed time window in stat panels.** Stat panels that count or sum events (e.g. `increase(...)`) must use `[$__range]` so the value reflects the dashboard's selected time range. Titles must not contain a hardcoded duration (e.g. say "API Calls (window)" not "API Calls (1h)").
+- Timeseries panels that compute a rate for display (e.g. `rate(...[5m])`) may keep a fixed sampling interval — `[5m]` is appropriate there.
+- **noValue must always be set to `"0"`** on every panel so zero is shown instead of "No data" when no events have occurred.
+
 ---
 
 ## Commands
