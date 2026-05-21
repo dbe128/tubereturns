@@ -28,7 +28,7 @@ import type { Channel, ChannelSearchResult } from '../../api/types';
       <div class="px-6 h-[3.33rem] flex items-center justify-between">
         <div class="flex items-center gap-4">
           <a routerLink="/" class="flex items-center gap-2">
-            <img src="logo.png" alt="TubeReturns" class="h-36 rounded" />
+            <img src="logo.webp" alt="TubeReturns" class="h-36 rounded" />
             <span class="text-xs text-gray-500 font-mono">v{{ version() }}</span>
           </a>
 
