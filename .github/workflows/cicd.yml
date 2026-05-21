@@ -169,6 +169,7 @@ jobs:
             docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
 
   health-check:
+    name: Wait for healthy backend
     needs: deploy
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -196,6 +197,7 @@ jobs:
           done
 
   pre-warm-cache:
+    name: Warm up cache
     needs: health-check
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
