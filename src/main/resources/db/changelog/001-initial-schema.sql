@@ -26,6 +26,7 @@ CREATE TABLE channels
     discovery_complete     BOOLEAN      NOT NULL DEFAULT FALSE,
     last_processed_at      TIMESTAMP,
     deleted_at             TIMESTAMP WITH TIME ZONE,
+    approval_source        VARCHAR(20),
     created_at             TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
     updated_at             TIMESTAMP    DEFAULT CURRENT_TIMESTAMP
 );

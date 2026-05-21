@@ -7,8 +7,20 @@ import com.tubereturns.dto.YtbsdStatsDto;
 import com.tubereturns.model.Stock;
 import com.tubereturns.model.StockPrice;
 import com.tubereturns.model.Video;
-import com.tubereturns.repository.*;
-import com.tubereturns.service.*;
+import com.tubereturns.repository.ChannelProcessingNotificationRepository;
+import com.tubereturns.repository.ChannelRepository;
+import com.tubereturns.repository.PickRepository;
+import com.tubereturns.repository.StockPriceRepository;
+import com.tubereturns.repository.StockRepository;
+import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.service.AiModelService;
+import com.tubereturns.service.ChannelNotificationService;
+import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.PipelineStatusRegistry;
+import com.tubereturns.service.StockPickExtractionService;
+import com.tubereturns.service.StockPriceService;
+import com.tubereturns.service.TranscriptDownloadService;
+import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -81,8 +93,6 @@ public class AdminController {
     @DeleteMapping("/channels/{handle}")
     @Operation(summary = "Soft-delete a channel")
     public ResponseEntity<Map<String, String>> deleteChannel(@PathVariable String handle) {
-        channelRepository.findByHandle(handle).ifPresent(channel -> {
-        });
         discoveryService.softDeleteChannel(handle);
         return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
     }
