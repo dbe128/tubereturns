@@ -6,15 +6,15 @@ spring:
     import: classpath:channels-config.yml
 
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:tubereturns@gmail.com}
-    password: ${MAIL_PASSWORD:}
+    host: smtp.resend.com
+    port: 465
+    username: resend
+    password: ${RESEND_API_KEY:}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
+          ssl:
             enable: true
           connectiontimeout: 10000
           timeout: 30000

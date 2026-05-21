@@ -1,5 +1,7 @@
 package com.tubereturns.service;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,9 @@ public class EmailService {
 
     @Autowired(required = false)
     private JavaMailSender mailSender;
+
+    @Autowired
+    private MeterRegistry meterRegistry;
 
     @Value("${tubereturns.app.base-url}")
     private String baseUrl;
@@ -112,15 +117,23 @@ public class EmailService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, "TubeReturns");
             helper.setTo(toEmail);
             helper.setSubject(subject);
             helper.setText(html, true);
             helper.addInline("logo", LOGO);
             mailSender.send(message);
+            counter("success").increment();
             log.info("Email sent to {}", toEmail);
         } catch (Exception e) {
+            counter("failure").increment();
             log.warn("Failed to send email to {}: {}", toEmail, e.getMessage());
         }
+    }
+
+    private Counter counter(String outcome) {
+        return Counter.builder("tubereturns.emails.sent")
+                .tag("outcome", outcome)
+                .register(meterRegistry);
     }
 }

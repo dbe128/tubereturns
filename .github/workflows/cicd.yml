@@ -136,15 +136,14 @@ jobs:
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
-          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         with:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,MAIL_USERNAME,MAIL_PASSWORD,MAIL_FROM,GH_TOKEN
+          envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,RESEND_API_KEY,MAIL_FROM,GH_TOKEN
           script: |
             set -euo pipefail
             export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
@@ -157,8 +156,7 @@ jobs:
               printf 'APP_BASE_URL="%s"\n'        "$APP_BASE_URL"
               printf 'YOUTUBE_API_KEY="%s"\n'     "$YOUTUBE_API_KEY"
               printf 'OPENROUTER_API_KEY="%s"\n'  "$OPENROUTER_API_KEY"
-              printf 'MAIL_USERNAME="%s"\n'       "$MAIL_USERNAME"
-              printf 'MAIL_PASSWORD="%s"\n'       "$MAIL_PASSWORD"
+              printf 'RESEND_API_KEY="%s"\n'       "$RESEND_API_KEY"
               printf 'MAIL_FROM="%s"\n'           "$MAIL_FROM"
             } > .env
             chmod 600 .env
