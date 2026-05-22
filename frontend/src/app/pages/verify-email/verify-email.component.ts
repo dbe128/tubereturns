@@ -8,7 +8,7 @@ import { ApiService } from '../../api/api.service';
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm text-center">
         @if (status() === 'loading') {
           <div class="flex justify-center py-4">
@@ -20,7 +20,7 @@ import { ApiService } from '../../api/api.service';
           <h1 class="text-xl font-bold text-gray-900 mb-2">Email verified!</h1>
           <p class="text-sm text-gray-500 mb-6">Your account is now active. You can sign in.</p>
           <a routerLink="/login"
-            class="block w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors">
+            class="block w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
             Sign in
           </a>
         } @else {
@@ -28,7 +28,7 @@ import { ApiService } from '../../api/api.service';
           <h1 class="text-xl font-bold text-gray-900 mb-2">Verification failed</h1>
           <p class="text-sm text-gray-500 mb-6">{{ error() }}</p>
           <a routerLink="/signup"
-            class="block w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors">
+            class="block w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
             Sign up again
           </a>
         }

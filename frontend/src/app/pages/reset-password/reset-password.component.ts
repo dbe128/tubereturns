@@ -9,7 +9,7 @@ import { ApiService } from '../../api/api.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
         @if (status() === 'success') {
           <div class="text-center py-4">
@@ -66,7 +66,7 @@ import { ApiService } from '../../api/api.service';
             }
 
             <button type="submit" [disabled]="loading()"
-              class="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-50 transition-colors">
+              class="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
               {{ loading() ? 'Updating…' : 'Update password' }}
             </button>
           </form>

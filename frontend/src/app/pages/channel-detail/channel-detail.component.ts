@@ -78,22 +78,23 @@ interface IndexedVideo {
         </a>
       </div>
     } @else {
+      <div class="bg-gray-600 w-full min-h-screen">
       <div class="max-w-screen-2xl mx-auto px-6 py-10">
-        <a routerLink="/" class="text-primary-600 hover:text-primary-700 text-sm font-medium mb-6 inline-block">
+        <a routerLink="/" class="text-green-400 hover:text-green-300 text-sm font-medium mb-6 inline-block">
           ← Leaderboard
         </a>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 p-6 mb-4">
           <div class="flex items-center gap-4">
             @if (channel()!.hasThumbnail) {
               <img
                 [src]="'/api/channels/' + channel()!.handle + '/thumbnail'"
                 [alt]="channel()!.channelName"
-                class="w-14 h-14 rounded-full ring-2 ring-gray-100 flex-shrink-0"
+                class="w-14 h-14 rounded-full ring-2 ring-gray-700 flex-shrink-0"
               />
             }
             <div class="flex-1 min-w-0">
-              <h1 class="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <h1 class="text-xl font-bold text-white flex items-center gap-2">
                 {{ channel()!.channelName }}
                 @if (!channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
                   <span class="relative group/tip flex-shrink-0">
@@ -110,7 +111,7 @@ interface IndexedVideo {
             <div class="flex items-center gap-6 flex-shrink-0">
               <div class="flex gap-8 text-sm text-gray-400">
                 <div class="text-center">
-                  <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score1m)">{{ formatPickReturn(channel()!.score1m) }}</div>
+                  <div class="text-3xl font-black font-mono" [class]="pickReturnClass(channel()!.score1m)">{{ formatPickReturn(channel()!.score1m) }}</div>
                   <div class="text-xs uppercase tracking-wide">1M Alpha</div>
                 </div>
                 <div class="text-center">
@@ -121,9 +122,9 @@ interface IndexedVideo {
                   <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score3y)">{{ formatPickReturn(channel()!.score3y) }}</div>
                   <div class="text-xs uppercase tracking-wide">3Y Alpha</div>
                 </div>
-                <div class="w-px bg-gray-200 self-stretch mx-2"></div>
+                <div class="w-px bg-gray-700 self-stretch mx-2"></div>
                 <div class="text-center">
-                  <div class="text-2xl font-bold text-gray-800">{{ channel()!.totalVideos === 0 ? '?' : channel()!.totalVideos }}</div>
+                  <div class="text-2xl font-bold text-white">{{ channel()!.totalVideos === 0 ? '?' : channel()!.totalVideos }}</div>
                   <div class="text-xs uppercase tracking-wide">Videos</div>
                 </div>
                 @if (auth.isAdmin || !channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
@@ -137,20 +138,20 @@ interface IndexedVideo {
                 (click)="refresh()"
                 [disabled]="loading()"
                 title="Refresh"
-                class="p-2 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40 transition-colors"
+                class="p-2 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-700 disabled:opacity-40 transition-colors"
                 [class.animate-spin]="loading()"
               >↺</button>
             </div>
           </div>
         </div>
 
-        <div class="flex border-b border-gray-200 mb-4">
+        <div class="flex border-b border-gray-700 mb-4">
           @if (auth.isAdmin) {
           <button
             (click)="switchTab('videos')"
             class="px-6 py-3 text-sm font-medium border-b-2 transition-colors -mb-px"
-            [class.border-primary-600]="activeTab() === 'videos'"
-            [class.text-primary-600]="activeTab() === 'videos'"
+            [class.border-green-500]="activeTab() === 'videos'"
+            [class.text-green-400]="activeTab() === 'videos'"
             [class.border-transparent]="activeTab() !== 'videos'"
             [class.text-gray-500]="activeTab() !== 'videos'"
           >Videos</button>
@@ -158,15 +159,15 @@ interface IndexedVideo {
           <button
             (click)="switchTab('picks')"
             class="px-6 py-3 text-sm font-medium border-b-2 transition-colors -mb-px"
-            [class.border-primary-600]="activeTab() === 'picks'"
-            [class.text-primary-600]="activeTab() === 'picks'"
+            [class.border-green-500]="activeTab() === 'picks'"
+            [class.text-green-400]="activeTab() === 'picks'"
             [class.border-transparent]="activeTab() !== 'picks'"
             [class.text-gray-500]="activeTab() !== 'picks'"
           >Picks</button>
         </div>
 
         @if (activeTab() === 'videos' && auth.isAdmin) {
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-4 mb-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-5 py-4 mb-4">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
             @if (filterTranscript() || filterProcessing() || filterPick() || !hideNoPicks()) {
@@ -183,7 +184,7 @@ interface IndexedVideo {
               <select
                 [ngModel]="filterTranscript()"
                 (ngModelChange)="onTranscriptFilterChange($event)"
-                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">All transcript statuses</option>
                 <option value="DOWNLOADING">Downloading</option>
@@ -200,7 +201,7 @@ interface IndexedVideo {
               <select
                 [ngModel]="filterProcessing()"
                 (ngModelChange)="onProcessingFilterChange($event)"
-                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">All pick statuses</option>
                 <option value="EXTRACTED">Extracted</option>
@@ -216,7 +217,7 @@ interface IndexedVideo {
               <select
                 [ngModel]="filterPick()"
                 (ngModelChange)="onTickerFilterChange($event)"
-                class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
                 <option value="">All picks</option>
                 @for (ticker of allTickers(); track ticker) {
@@ -231,7 +232,7 @@ interface IndexedVideo {
                   type="checkbox"
                   [ngModel]="hideNoPicks()"
                   (ngModelChange)="onHideNoPicksChange($event)"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
+                  class="rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
                 />
                 Hide processed without picks
               </label>
@@ -243,7 +244,7 @@ interface IndexedVideo {
                   type="checkbox"
                   [ngModel]="hideUnprocessed()"
                   (ngModelChange)="onHideUnprocessedChange($event)"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
+                  class="rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
                 />
                 Hide unprocessed
               </label>
@@ -255,7 +256,7 @@ interface IndexedVideo {
                   type="checkbox"
                   [ngModel]="showExcluded()"
                   (ngModelChange)="onShowExcludedChange($event)"
-                  class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
+                  class="rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
                 />
                 Show excluded
               </label>
@@ -271,35 +272,35 @@ interface IndexedVideo {
           </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
           <table class="w-full text-sm">
             <thead>
-              <tr class="bg-gray-50 border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <tr class="bg-gray-800 border-b border-gray-700 text-left text-xs text-gray-500 uppercase tracking-wider">
                 <th
-                  class="px-4 py-3 w-12 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  class="px-4 py-3 w-12 cursor-pointer select-none hover:text-green-400 transition-colors"
                   (click)="toggleSort('index')"
                 >#<span class="ml-1" [class.text-primary-500]="sortKey() === 'index'" [class.text-gray-300]="sortKey() !== 'index'">{{ sortKey() === 'index' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3">Video</th>
                 <th
-                  class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  class="px-4 py-3 w-28 cursor-pointer select-none hover:text-green-400 transition-colors"
                   (click)="toggleSort('publishedAt')"
                 >Upload Date<span class="ml-1" [class.text-primary-500]="sortKey() === 'publishedAt'" [class.text-gray-300]="sortKey() !== 'publishedAt'">{{ sortKey() === 'publishedAt' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th
-                  class="px-4 py-3 w-16 text-right whitespace-nowrap cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  class="px-4 py-3 w-16 text-right whitespace-nowrap cursor-pointer select-none hover:text-green-400 transition-colors"
                   (click)="toggleSort('viewCount')"
                 >Views<span class="ml-1" [class.text-primary-500]="sortKey() === 'viewCount'" [class.text-gray-300]="sortKey() !== 'viewCount'">{{ sortKey() === 'viewCount' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 @if (auth.isAdmin) {
                 <th
-                  class="px-4 py-3 w-32 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  class="px-4 py-3 w-32 cursor-pointer select-none hover:text-green-400 transition-colors"
                   (click)="toggleSort('transcriptStatus')"
                 >Transcript<span class="ml-1" [class.text-primary-500]="sortKey() === 'transcriptStatus'" [class.text-gray-300]="sortKey() !== 'transcriptStatus'">{{ sortKey() === 'transcriptStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th
-                  class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors"
+                  class="px-4 py-3 w-28 cursor-pointer select-none hover:text-green-400 transition-colors"
                   (click)="toggleSort('extractionStatus')"
                 >Picks<span class="ml-1" [class.text-primary-500]="sortKey() === 'extractionStatus'" [class.text-gray-300]="sortKey() !== 'extractionStatus'">{{ sortKey() === 'extractionStatus' ? (sortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
                 <th class="px-4 py-3 w-36 text-gray-500">Model</th>
                 }
-                <th class="px-4 py-3 w-28 text-primary-600 whitespace-nowrap">▲ Buy</th>
+                <th class="px-4 py-3 w-28 text-green-400 whitespace-nowrap">▲ Buy</th>
                 @if (auth.isAdmin) {
                 <th class="px-4 py-3 w-32 whitespace-nowrap">Excl. Reason</th>
                 <th class="px-4 py-3 w-24">Actions</th>
@@ -315,11 +316,11 @@ interface IndexedVideo {
                 </tr>
               } @else {
                 @for (item of sorted(); track item.v.videoId) {
-                  <tr class="border-b border-gray-100" [class.hover:bg-gray-50]="!item.v.excluded" [class.bg-amber-50]="item.v.excluded" [class.hover:bg-amber-100]="item.v.excluded">
+                  <tr class="border-b border-gray-700" [class.hover:bg-gray-800]="!item.v.excluded" [class.bg-amber-900/20]="item.v.excluded" [class.hover:bg-amber-900/30]="item.v.excluded">
                     <td class="px-4 py-3 text-gray-400 font-mono">{{ item.originalIndex }}</td>
                     <td class="px-4 py-3 max-w-0">
                       <div class="relative group/title flex items-center gap-1.5">
-                        <span class="text-gray-900 block truncate">{{ item.v.title }}</span>
+                        <span class="text-white block truncate">{{ item.v.title }}</span>
                         <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
                         @if (item.v.transcriptStatus === 'PENDING' || item.v.transcriptStatus === 'DOWNLOADING' || (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTED')) {
                           <span class="relative group/tip flex-shrink-0">
@@ -399,7 +400,7 @@ interface IndexedVideo {
                             (click)="handleRedownloadTranscript(item.v)"
                             [disabled]="redownloading() === item.v.videoId"
                             [title]="item.v.transcriptStatus === 'PENDING' ? 'Download transcript' : 'Re-download transcript'"
-                            class="p-1 rounded transition-colors text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                            class="p-1 rounded transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-900/30"
                             [class.opacity-40]="redownloading() === item.v.videoId"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
@@ -426,9 +427,9 @@ interface IndexedVideo {
                           [title]="item.v.excluded ? 'Include in returns' : 'Exclude from returns'"
                           class="p-1 rounded transition-colors"
                           [class.text-yellow-600]="!item.v.excluded"
-                          [class.hover:bg-yellow-100]="!item.v.excluded"
+                          [class.hover:bg-yellow-900/30]="!item.v.excluded"
                           [class.text-gray-400]="item.v.excluded"
-                          [class.hover:bg-gray-100]="item.v.excluded"
+                          [class.hover:bg-gray-700]="item.v.excluded"
                           [class.opacity-40]="togglingExclusion() === item.v.videoId"
                         >
                           @if (item.v.excluded) {
@@ -458,13 +459,13 @@ interface IndexedVideo {
             <button
               [disabled]="currentPage() === 0"
               (click)="setPage(currentPage() - 1)"
-              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 text-gray-300 disabled:opacity-40 hover:bg-gray-700 transition-colors"
             >← Prev</button>
             <span class="text-sm text-gray-500">Page {{ currentPage() + 1 }} of {{ totalPages() }} · {{ totalElements() }} videos</span>
             <button
               [disabled]="currentPage() >= totalPages() - 1"
               (click)="setPage(currentPage() + 1)"
-              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 text-gray-300 disabled:opacity-40 hover:bg-gray-700 transition-colors"
             >Next →</button>
           </div>
         }
@@ -472,13 +473,13 @@ interface IndexedVideo {
 
         @if (activeTab() === 'picks') {
         @if (!picksLoading() && !picksError() && picks().length > 0) {
-        <div class="bg-white border border-gray-200 rounded-xl shadow-sm px-5 py-3 mb-4 flex items-center gap-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-5 py-3 mb-4 flex items-center gap-4">
           <div class="flex flex-col gap-1">
             <label class="text-xs text-gray-500">Ticker</label>
             <select
               [ngModel]="pickTickerFilter()"
               (ngModelChange)="onPickTickerFilterChange($event)"
-              class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
+              class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="">All tickers</option>
               @for (ticker of allPickTickers(); track ticker) {
@@ -494,7 +495,7 @@ interface IndexedVideo {
           }
         </div>
         }
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
           @if (picksLoading()) {
             <div class="flex justify-center py-12">
               <div class="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
@@ -506,11 +507,11 @@ interface IndexedVideo {
           } @else {
             <table class="w-full text-sm">
               <thead>
-                <tr class="bg-gray-50 border-b border-gray-200 text-left text-xs text-gray-500 uppercase tracking-wider">
-                  <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('date')">Date<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'date'" [class.text-gray-300]="pickSortKey() !== 'date'">{{ pickSortKey() === 'date' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
-                  <th class="px-4 py-3 cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('company')">Company<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'company'" [class.text-gray-300]="pickSortKey() !== 'company'">{{ pickSortKey() === 'company' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
-                  <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('ticker')">Ticker<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'ticker'" [class.text-gray-300]="pickSortKey() !== 'ticker'">{{ pickSortKey() === 'ticker' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
-                  <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('1m')">
+                <tr class="bg-gray-800 border-b border-gray-700 text-left text-xs text-gray-500 uppercase tracking-wider">
+                  <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('date')">Date<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'date'" [class.text-gray-300]="pickSortKey() !== 'date'">{{ pickSortKey() === 'date' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  <th class="px-4 py-3 cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('company')">Company<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'company'" [class.text-gray-300]="pickSortKey() !== 'company'">{{ pickSortKey() === 'company' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('ticker')">Ticker<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'ticker'" [class.text-gray-300]="pickSortKey() !== 'ticker'">{{ pickSortKey() === 'ticker' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
+                  <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('1m')">
                     <span class="inline-flex items-center gap-1 justify-end">1M Alpha
                       <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
                         <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 month from the video date.</span>
@@ -518,7 +519,7 @@ interface IndexedVideo {
                       <span class="ml-1" [class.text-primary-500]="pickSortKey() === '1m'" [class.text-gray-300]="pickSortKey() !== '1m'">{{ pickSortKey() === '1m' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
                     </span>
                   </th>
-                  <th class="px-4 py-3 w-32 text-right cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('1y')">
+                  <th class="px-4 py-3 w-32 text-right cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('1y')">
                     <span class="inline-flex items-center gap-1 justify-end">1Y Alpha
                       <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
                         <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 year from the video date.</span>
@@ -526,7 +527,7 @@ interface IndexedVideo {
                       <span class="ml-1" [class.text-primary-500]="pickSortKey() === '1y'" [class.text-gray-300]="pickSortKey() !== '1y'">{{ pickSortKey() === '1y' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
                     </span>
                   </th>
-                  <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-primary-600 transition-colors" (click)="togglePickSort('3y')">
+                  <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('3y')">
                     <span class="inline-flex items-center gap-1 justify-end">3Y Alpha
                       <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
                         <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 3 years from the video date.</span>
@@ -539,26 +540,26 @@ interface IndexedVideo {
               <tbody>
                 @for (pick of pagedPicks(); track pick.videoId + pick.tickerSymbol) {
                   @if (!pick.unknown || auth.isAdmin) {
-                  <tr class="border-b border-gray-100 hover:bg-gray-50">
+                  <tr class="border-b border-gray-700 hover:bg-gray-800/60">
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
                       {{ pick.videoPublishedAt | date: 'shortDate' }}
                     </td>
                     <td class="px-4 py-3 max-w-0">
-                      <span class="text-gray-900 block truncate">{{ pick.companyName ?? '—' }}</span>
+                      <span class="text-white block truncate">{{ pick.companyName ?? '—' }}</span>
                     </td>
                     <td class="px-4 py-3 font-mono font-medium">
-                      <span class="inline-flex items-center gap-0.5 text-gray-800">{{ pick.tickerSymbol }}
+                      <span class="inline-flex items-center gap-0.5 text-gray-200">{{ pick.tickerSymbol }}
                         @if (pick.unknown) {
                           <span class="relative group/unk inline-block text-yellow-500 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unresolved ticker — excluded from returns</span></span>
                         }
                       </span>
                     </td>
                     @for (col of pickTimeColumns; track col) {
-                      <td class="px-4 py-3 text-right font-mono text-xs whitespace-nowrap" [ngClass]="pickReturnClass(alphaForColumn(pick, col))">
+                      <td class="px-4 py-3 text-right font-mono text-sm font-semibold whitespace-nowrap" [ngClass]="pickReturnClass(alphaForColumn(pick, col))">
                         {{ formatPickReturn(alphaForColumn(pick, col)) }}
                         @if (alphaForColumn(pick, col) !== null) {
                           <span class="relative group/spy inline-block ml-1 cursor-default not-italic text-base leading-none"
-                                [class]="alphaForColumn(pick, col)! > 0 ? 'text-primary-600' : 'text-danger-500'">
+                                [class]="alphaForColumn(pick, col)! > 0 ? 'text-green-400' : 'text-red-400'">
                             {{ alphaForColumn(pick, col)! > 0 ? '↑' : '↓' }}
                             <span class="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/spy:opacity-100 transition-opacity z-50">
                               Pick: {{ formatPickReturn(pickReturnForColumn(pick, col)) }} · S&P 500: {{ formatPickReturn(spyReturnForColumn(pick, col)) }}
@@ -573,23 +574,24 @@ interface IndexedVideo {
               </tbody>
             </table>
             @if (picksTotalPages() > 1) {
-              <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-100">
+              <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-700">
                 <button
                   [disabled]="picksPage() === 0"
                   (click)="setPicksPage(picksPage() - 1)"
-                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 text-gray-300 disabled:opacity-40 hover:bg-gray-700 transition-colors"
                 >← Prev</button>
                 <span class="text-sm text-gray-500">Page {{ picksPage() + 1 }} of {{ picksTotalPages() }}</span>
                 <button
                   [disabled]="picksPage() >= picksTotalPages() - 1"
                   (click)="setPicksPage(picksPage() + 1)"
-                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 text-gray-300 disabled:opacity-40 hover:bg-gray-700 transition-colors"
                 >Next →</button>
               </div>
             }
           }
         </div>
         }
+      </div>
       </div>
 
       @if (transcriptPopup() !== null || transcriptLoading()) {
@@ -598,7 +600,7 @@ interface IndexedVideo {
           (click)="closeTranscript()"
         ></div>
         <div
-          class="fixed z-50 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-2xl p-5 text-xs text-gray-700 whitespace-pre-wrap leading-relaxed"
+          class="fixed z-50 overflow-y-auto bg-gray-900 border border-gray-700 rounded-xl shadow-2xl p-5 text-xs text-gray-300 whitespace-pre-wrap leading-relaxed"
           [style.top.px]="transcriptPopupPos().top"
           [style.left.px]="transcriptPopupPos().left"
           [style.width.px]="transcriptPopupPos().width"
@@ -607,7 +609,7 @@ interface IndexedVideo {
         >
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Transcript</span>
-            <button (click)="closeTranscript()" class="text-gray-400 hover:text-gray-600 text-base leading-none">✕</button>
+            <button (click)="closeTranscript()" class="text-gray-400 hover:text-gray-200 text-base leading-none">✕</button>
           </div>
           @if (transcriptLoading()) {
             <div class="flex justify-center py-8">
@@ -873,8 +875,8 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   }
 
   pickReturnClass(value: number | null | undefined): string {
-    if (value == null) { return 'text-gray-300'; }
-    return value >= 0 ? 'text-primary-600' : 'text-danger-500';
+    if (value == null) { return 'text-gray-400'; }
+    return value >= 0 ? 'text-green-400' : 'text-red-400';
   }
 
   pickReturnForColumn(pick: PickPerformance, col: '1m' | '1y' | '3y'): number | null {

@@ -10,7 +10,7 @@ import { AuthService } from '../../services/auth.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
         <h1 class="text-xl font-bold text-gray-900 mb-6">{{ heading }}</h1>
 
@@ -34,7 +34,7 @@ import { AuthService } from '../../services/auth.service';
           }
 
           <button type="submit" [disabled]="loading()"
-            class="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-50 transition-colors">
+            class="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
             {{ loading() ? 'Signing in…' : 'Sign in' }}
           </button>
         </form>

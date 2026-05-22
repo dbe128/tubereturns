@@ -9,11 +9,11 @@ import { ApiService } from '../../api/api.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
         @if (registered()) {
           <div class="text-center py-4">
-            <div class="text-3xl mb-3">✉</div>
+            <div class="text-7xl mb-4">✉</div>
             <h1 class="text-xl font-bold text-gray-900 mb-2">Check your email</h1>
             <p class="text-sm text-gray-500">We sent a verification link to <strong>{{ email }}</strong>. Click it to activate your account.</p>
             <p class="text-xs text-gray-400 mt-2">It may take a few minutes to arrive. Can't find it? Check your <strong>spam or junk folder</strong>.</p>
@@ -86,7 +86,7 @@ import { ApiService } from '../../api/api.service';
           }
 
           <button type="submit" [disabled]="loading()"
-            class="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-50 transition-colors">
+            class="w-full py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors">
             {{ loading() ? 'Creating account…' : 'Create account' }}
           </button>
         </form>

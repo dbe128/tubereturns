@@ -25,18 +25,18 @@ import type { ChannelSearchResult } from '../../api/types';
       </div>
     }
 
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <header class="bg-gray-100 border-b border-gray-200">
       <div class="px-6 h-[3.33rem] flex items-center justify-between">
         <div class="flex items-center gap-4">
           <a routerLink="/" class="flex items-center gap-2">
             <img src="logo.webp" alt="TubeReturns" class="h-36 rounded" />
-            <span class="text-xs text-gray-500 font-mono">v{{ version() }}</span>
+            <span class="text-xs text-gray-400 font-mono">v{{ version() }}</span>
           </a>
 
           <div class="relative w-96">
-            <div class="flex items-center border border-gray-200 rounded-lg px-3 py-1.5 gap-2 bg-white focus-within:ring-2 focus-within:ring-primary-500">
+            <div class="flex items-center border border-gray-200 rounded-lg px-3 py-1.5 gap-2 bg-gray-100 focus-within:ring-2 focus-within:ring-green-500">
               @if (searching()) {
-                <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin flex-shrink-0"></div>
+                <div class="w-4 h-4 rounded-full border-2 border-green-500 border-t-transparent animate-spin flex-shrink-0"></div>
               } @else {
                 <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
@@ -47,7 +47,7 @@ import type { ChannelSearchResult } from '../../api/types';
                 (ngModelChange)="onSearchChange($event)"
                 (blur)="hideSearch()"
                 placeholder="Stock-picking YouTube channel…"
-                class="w-full text-sm focus:outline-none bg-transparent"
+                class="w-full text-sm focus:outline-none bg-transparent text-gray-900 placeholder-gray-400"
               />
             </div>
             @if (ytResults().length > 0) {
@@ -64,13 +64,13 @@ import type { ChannelSearchResult } from '../../api/types';
                         <img [src]="result.thumbnailUrl" [alt]="result.channelName"
                              referrerpolicy="no-referrer"
                              (error)="hideImgOnError($event)"
-                             class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
+                             class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-200" />
                       } @else {
-                        <div class="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
                       }
                       <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-gray-800 truncate">{{ result.channelName }}</p>
-                        <p class="text-xs text-gray-400">&#64;{{ result.handle }}</p>
+                        <p class="text-sm font-semibold text-gray-900 truncate">{{ result.channelName }}</p>
+                        <p class="text-xs text-gray-500">&#64;{{ result.handle }}</p>
                       </div>
                       @if (addingHandle() === result.handle) {
                         <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin flex-shrink-0"></div>
@@ -88,6 +88,12 @@ import type { ChannelSearchResult } from '../../api/types';
         </div>
 
         <div class="flex items-center gap-3">
+          @if (auth.isAdmin) {
+            <a routerLink="/admin"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
+              Admin
+            </a>
+          }
           @if (auth.isAuthenticated) {
             <span class="text-sm text-gray-500">Welcome, {{ auth.user()?.firstName }}</span>
             <button (click)="logout()"
@@ -100,7 +106,7 @@ import type { ChannelSearchResult } from '../../api/types';
               Sign in
             </a>
             <a routerLink="/signup"
-              class="px-3 py-1.5 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 transition-colors">
+              class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
               Sign up
             </a>
           }
@@ -250,7 +256,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   private proceedWithAdd(result: ChannelSearchResult, approvalSource: string = 'AUTO'): void {
-    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, false, approvalSource).subscribe({
+    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, true, approvalSource).subscribe({
       next: () => {
         this.addingHandle.set(null);
         this.searchQuery.set('');
