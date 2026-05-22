@@ -2,8 +2,10 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.dto.ChannelSearchResultDto;
+import com.tubereturns.dto.PagedVideoResponse;
 import com.tubereturns.dto.PickPerformanceDto;
 import com.tubereturns.dto.VideoSummaryDto;
+import com.tubereturns.dto.VideoTranscriptDto;
 import com.tubereturns.model.Channel;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
@@ -27,6 +29,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -104,14 +109,47 @@ public class ChannelController {
     }
 
     @GetMapping("/{handle}/videos")
-    @Operation(summary = "Get videos for a channel with pick summaries")
-    public ResponseEntity<List<VideoSummaryDto>> getChannelVideos(@PathVariable String handle) {
+    @Operation(summary = "Get paginated videos for a channel with pick summaries")
+    public ResponseEntity<PagedVideoResponse> getChannelVideos(
+            @PathVariable String handle,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "publishedAt") String sort,
+            @RequestParam(defaultValue = "desc") String dir,
+            @RequestParam(required = false) String transcriptStatus,
+            @RequestParam(required = false) String extractionStatus,
+            @RequestParam(defaultValue = "false") boolean requirePicks,
+            @RequestParam(defaultValue = "false") boolean showExcluded,
+            @RequestParam(defaultValue = "true") boolean hideUnprocessed) {
         Optional<Channel> channelOpt = channelRepository.findByHandle(handle);
         if (channelOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-        List<Video> videos = videoRepository.findByChannelIdOrderByPublishedAtDesc(channelOpt.get().getId());
-        return ResponseEntity.ok(videos.stream().map(this::toVideoSummaryDto).toList());
+        String sortField = switch (sort) {
+            case "viewCount", "transcriptStatus", "extractionStatus" -> sort;
+            default -> "publishedAt";
+        };
+        Sort.Direction direction = "asc".equalsIgnoreCase(dir) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        PageRequest pageRequest = PageRequest.of(page, 50, Sort.by(direction, sortField));
+        Video.TranscriptStatus ts = (transcriptStatus == null || transcriptStatus.isBlank()) ? null
+                : Video.TranscriptStatus.valueOf(transcriptStatus);
+        Video.ExtractionStatus es = (extractionStatus == null || extractionStatus.isBlank()) ? null
+                : Video.ExtractionStatus.valueOf(extractionStatus);
+        Page<Video> result = videoRepository.findByChannelIdWithFilters(
+                channelOpt.get().getId(), showExcluded, hideUnprocessed, ts, es, requirePicks, pageRequest);
+        List<VideoSummaryDto> content = result.getContent().stream().map(this::toVideoSummaryDto).toList();
+        return ResponseEntity.ok(new PagedVideoResponse(
+                content, result.getNumber(), result.getSize(),
+                result.getTotalElements(), result.getTotalPages()));
+    }
+
+    @GetMapping("/{handle}/videos/{videoId}/transcript")
+    @Operation(summary = "Get transcript text for a video")
+    public ResponseEntity<VideoTranscriptDto> getVideoTranscript(
+            @PathVariable String handle, @PathVariable String videoId) {
+        return videoRepository.findByVideoId(videoId)
+                .filter(v -> v.getChannel().getHandle().equals(handle))
+                .map(v -> ResponseEntity.ok(new VideoTranscriptDto(v.getTranscriptText())))
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/{handle}/picks")
@@ -250,7 +288,6 @@ public class ChannelController {
             video.getExtractionStatus().name(),
             video.getExtractionModel(),
             buyPicks,
-            video.getTranscriptStatus() == Video.TranscriptStatus.DOWNLOADED ? video.getTranscriptText() : null,
             video.isExcluded(),
             video.getExclusionReason()
         );

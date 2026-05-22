@@ -5,11 +5,14 @@ import {
   computed,
   OnInit,
   OnDestroy,
+  Injector,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
@@ -18,14 +21,6 @@ import type { Channel, VideoSummary, PickPerformance } from '../../api/types';
 type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'extractionStatus';
 type PickSortKey = 'date' | 'company' | 'ticker' | '1m' | '1y' | '3y';
 type SortDir = 'asc' | 'desc';
-
-const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
-  DOWNLOADED: 0, NO_TRANSCRIPT: 1, TOO_LONG: 2, PENDING: 3, DOWNLOADING: 4, FAILED: 5,
-};
-
-const EXTRACTION_ORDER: Record<VideoSummary['extractionStatus'], number> = {
-  EXTRACTED: 0, EXTRACTING: 1, PENDING: 2, FAILED: 3,
-};
 
 const TRANSCRIPT_LABELS: Record<VideoSummary['transcriptStatus'], string> = {
   DOWNLOADING: 'Downloading',
@@ -187,7 +182,7 @@ interface IndexedVideo {
               <label class="text-xs text-gray-500">Transcript status</label>
               <select
                 [ngModel]="filterTranscript()"
-                (ngModelChange)="filterTranscript.set($event)"
+                (ngModelChange)="onTranscriptFilterChange($event)"
                 class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
               >
                 <option value="">All transcript statuses</option>
@@ -204,7 +199,7 @@ interface IndexedVideo {
               <label class="text-xs text-gray-500">Pick extraction</label>
               <select
                 [ngModel]="filterProcessing()"
-                (ngModelChange)="filterProcessing.set($event)"
+                (ngModelChange)="onProcessingFilterChange($event)"
                 class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
               >
                 <option value="">All pick statuses</option>
@@ -235,7 +230,7 @@ interface IndexedVideo {
                 <input
                   type="checkbox"
                   [ngModel]="hideNoPicks()"
-                  (ngModelChange)="hideNoPicks.set($event)"
+                  (ngModelChange)="onHideNoPicksChange($event)"
                   class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
                 />
                 Hide processed without picks
@@ -247,7 +242,7 @@ interface IndexedVideo {
                 <input
                   type="checkbox"
                   [ngModel]="hideUnprocessed()"
-                  (ngModelChange)="hideUnprocessed.set($event)"
+                  (ngModelChange)="onHideUnprocessedChange($event)"
                   class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
                 />
                 Hide unprocessed
@@ -259,17 +254,17 @@ interface IndexedVideo {
                 <input
                   type="checkbox"
                   [ngModel]="showExcluded()"
-                  (ngModelChange)="showExcluded.set($event)"
+                  (ngModelChange)="onShowExcludedChange($event)"
                   class="rounded border-gray-300 text-primary-600 focus:ring-primary-300"
                 />
                 Show excluded
               </label>
             </div>
 
-            @if (filterTranscript() || filterProcessing() || filterPick()) {
+            @if (filterTranscript() || filterProcessing() || filterPick() || !hideNoPicks()) {
               <div class="flex items-end">
                 <span class="text-xs text-gray-400 pb-2">
-                  {{ sorted().length }} of {{ videos().length }} videos
+                  {{ totalElements() }} videos
                 </span>
               </div>
             }
@@ -457,6 +452,22 @@ interface IndexedVideo {
             </tbody>
           </table>
         </div>
+
+        @if (totalPages() > 1) {
+          <div class="flex items-center justify-center gap-4 py-4">
+            <button
+              [disabled]="currentPage() === 0"
+              (click)="setPage(currentPage() - 1)"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            >← Prev</button>
+            <span class="text-sm text-gray-500">Page {{ currentPage() + 1 }} of {{ totalPages() }} · {{ totalElements() }} videos</span>
+            <button
+              [disabled]="currentPage() >= totalPages() - 1"
+              (click)="setPage(currentPage() + 1)"
+              class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            >Next →</button>
+          </div>
+        }
         }
 
         @if (activeTab() === 'picks') {
@@ -466,7 +477,7 @@ interface IndexedVideo {
             <label class="text-xs text-gray-500">Ticker</label>
             <select
               [ngModel]="pickTickerFilter()"
-              (ngModelChange)="pickTickerFilter.set($event)"
+              (ngModelChange)="onPickTickerFilterChange($event)"
               class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
             >
               <option value="">All tickers</option>
@@ -477,7 +488,7 @@ interface IndexedVideo {
           </div>
           @if (pickTickerFilter()) {
             <div class="flex items-end pb-1">
-              <button (click)="pickTickerFilter.set('')" class="text-xs text-primary-600 hover:text-primary-800 font-medium">Clear</button>
+              <button (click)="pickTickerFilter.set(''); picksPage.set(0)" class="text-xs text-primary-600 hover:text-primary-800 font-medium">Clear</button>
             </div>
             <span class="text-xs text-gray-400 self-end pb-1.5">{{ filteredAndSortedPicks().length }} picks</span>
           }
@@ -526,7 +537,7 @@ interface IndexedVideo {
                 </tr>
               </thead>
               <tbody>
-                @for (pick of filteredAndSortedPicks(); track pick.videoId + pick.tickerSymbol) {
+                @for (pick of pagedPicks(); track pick.videoId + pick.tickerSymbol) {
                   @if (!pick.unknown || auth.isAdmin) {
                   <tr class="border-b border-gray-100 hover:bg-gray-50">
                     <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
@@ -561,12 +572,27 @@ interface IndexedVideo {
                 }
               </tbody>
             </table>
+            @if (picksTotalPages() > 1) {
+              <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-100">
+                <button
+                  [disabled]="picksPage() === 0"
+                  (click)="setPicksPage(picksPage() - 1)"
+                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                >← Prev</button>
+                <span class="text-sm text-gray-500">Page {{ picksPage() + 1 }} of {{ picksTotalPages() }}</span>
+                <button
+                  [disabled]="picksPage() >= picksTotalPages() - 1"
+                  (click)="setPicksPage(picksPage() + 1)"
+                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-200 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                >Next →</button>
+              </div>
+            }
           }
         </div>
         }
       </div>
 
-      @if (transcriptPopup()) {
+      @if (transcriptPopup() !== null || transcriptLoading()) {
         <div
           class="fixed inset-0 z-40"
           (click)="closeTranscript()"
@@ -583,7 +609,13 @@ interface IndexedVideo {
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Transcript</span>
             <button (click)="closeTranscript()" class="text-gray-400 hover:text-gray-600 text-base leading-none">✕</button>
           </div>
-          {{ transcriptPopup() }}
+          @if (transcriptLoading()) {
+            <div class="flex justify-center py-8">
+              <div class="animate-spin rounded-full h-5 w-5 border-2 border-primary-500 border-t-transparent"></div>
+            </div>
+          } @else {
+            {{ transcriptPopup() }}
+          }
         </div>
       }
     }
@@ -594,6 +626,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private readonly recovery = inject(BackendRecoveryService);
+  private readonly injector = inject(Injector);
+
+  private channelHandle = '';
+  private videoSub?: Subscription;
+  private readonly transcriptCache = new Map<string, string>();
 
   readonly pickTimeColumns: ReadonlyArray<'1m' | '1y' | '3y'> = ['1m', '1y', '3y'];
   readonly tickerMap = signal<Record<string, string>>({});
@@ -605,6 +642,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly reextracting = signal<string | null>(null);
   readonly togglingExclusion = signal<string | null>(null);
   readonly redownloading = signal<string | null>(null);
+  readonly transcriptLoading = signal(false);
   readonly isMockChannel = computed(() => this.channel()?.handle?.startsWith('mock-') ?? false);
 
   readonly sortKey = signal<SortKey>('publishedAt');
@@ -626,6 +664,24 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly pickTickerFilter = signal('');
   readonly pickSortKey = signal<PickSortKey>('date');
   readonly pickSortDir = signal<SortDir>('asc');
+
+  readonly currentPage = signal(0);
+  readonly totalPages = signal(0);
+  readonly totalElements = signal(0);
+  private readonly videoReloadTick = signal(0);
+  readonly picksPage = signal(0);
+
+  private readonly videoQueryParams = computed(() => ({
+    tick: this.videoReloadTick(),
+    page: this.currentPage(),
+    sort: this.sortKey() === 'index' ? 'publishedAt' : this.sortKey(),
+    dir: this.sortDir(),
+    transcriptStatus: this.filterTranscript() || undefined,
+    extractionStatus: this.filterProcessing() || undefined,
+    requirePicks: this.hideNoPicks(),
+    showExcluded: this.showExcluded(),
+    hideUnprocessed: this.hideUnprocessed(),
+  }));
 
   readonly allTickers = computed(() => {
     const tickers = new Set<string>();
@@ -666,89 +722,91 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     return list;
   });
 
-  readonly filtered = computed(() =>
-    this.videos().filter((v) => {
-      if (!this.showExcluded() && v.excluded) return false;
-      if (this.hideUnprocessed() && (
-        v.transcriptStatus === 'PENDING' ||
-        v.transcriptStatus === 'DOWNLOADING' ||
-        (v.transcriptStatus === 'DOWNLOADED' && v.extractionStatus !== 'EXTRACTED')
-      )) return false;
-      if (this.hideNoPicks() && v.extractionStatus === 'EXTRACTED' && v.buyPicks.length === 0) return false;
-      if (this.filterTranscript() && v.transcriptStatus !== this.filterTranscript()) return false;
-      if (this.filterProcessing() && v.extractionStatus !== this.filterProcessing()) return false;
-      return !(this.filterPick() && !v.buyPicks.includes(this.filterPick()));
+  readonly picksTotalPages = computed(() =>
+    Math.ceil(this.filteredAndSortedPicks().length / 50)
+  );
 
-    }),
+  readonly pagedPicks = computed(() =>
+    this.filteredAndSortedPicks().slice(this.picksPage() * 50, (this.picksPage() + 1) * 50)
   );
 
   readonly sorted = computed((): IndexedVideo[] => {
-    const vids = this.videos();
-    const withIndex: IndexedVideo[] = this.filtered().map((v) => ({
-      v,
-      originalIndex: vids.indexOf(v) + 1,
-    }));
-    const key = this.sortKey();
-    const dir = this.sortDir();
-    withIndex.sort((a, b) => {
-      let cmp = 0;
-      if (key === 'index') {
-        cmp = a.originalIndex - b.originalIndex;
-      } else if (key === 'publishedAt') {
-        cmp = new Date(a.v.publishedAt).getTime() - new Date(b.v.publishedAt).getTime();
-      } else if (key === 'viewCount') {
-        cmp = (a.v.viewCount ?? -1) - (b.v.viewCount ?? -1);
-      } else if (key === 'transcriptStatus') {
-        cmp = TRANSCRIPT_ORDER[a.v.transcriptStatus] - TRANSCRIPT_ORDER[b.v.transcriptStatus];
-      } else if (key === 'extractionStatus') {
-        cmp = EXTRACTION_ORDER[a.v.extractionStatus] - EXTRACTION_ORDER[b.v.extractionStatus];
-      }
-      return dir === 'asc' ? cmp : -cmp;
-    });
-    return withIndex;
+    const offset = this.currentPage() * 50;
+    const tickerFilter = this.filterPick();
+    const vids = tickerFilter
+      ? this.videos().filter(v => v.buyPicks.includes(tickerFilter))
+      : this.videos();
+    return vids.map((v, i) => ({ v, originalIndex: offset + i + 1 }));
   });
 
   ngOnInit(): void {
     this.api.getTickers().subscribe({ next: (d) => { this.tickerMap.set(d.companies); this.unknownTickers.set(new Set(d.unknownTickers)); }, error: () => {} });
-    const channelId = this.route.snapshot.paramMap.get('channelId');
-    if (channelId) {
-      this.loadData(channelId);
-      this.loadPicks();
-    }
-  }
 
-  ngOnDestroy(): void {
-    this.recovery.stopPolling();
-  }
+    const channelHandle = this.route.snapshot.paramMap.get('channelId');
+    if (!channelHandle) { return; }
+    this.channelHandle = channelHandle;
 
-  loadData(id: string): void {
     this.loading.set(true);
     this.error.set(null);
-    this.recovery.stopPolling();
 
-    forkJoin({
-      channel: this.api.getChannel(id),
-      videos: this.api.getVideosForChannel(id),
-    }).subscribe({
-      next: ({ channel, videos }) => {
-        this.channel.set(channel);
-        this.videos.set(videos);
-        this.loading.set(false);
-      },
+    let channelLoaded = false;
+    let firstVideoLoaded = false;
+    const checkDone = (): void => { if (channelLoaded && firstVideoLoaded) { this.loading.set(false); } };
+
+    this.api.getChannel(channelHandle).subscribe({
+      next: (channel) => { this.channel.set(channel); channelLoaded = true; checkDone(); },
       error: (_err: unknown) => {
         this.error.set('A deployment is probably in progress. Please try again shortly.');
         this.loading.set(false);
         this.recovery.startPolling(() => {
           const cid = this.route.snapshot.paramMap.get('channelId');
-          if (cid) this.loadData(cid);
+          if (cid) { this.loadChannel(cid); }
         });
       },
     });
+
+    this.videoSub = toObservable(this.videoQueryParams, { injector: this.injector })
+      .pipe(switchMap(({ tick: _tick, ...params }) => this.api.getVideosForChannel(channelHandle, params)))
+      .subscribe({
+        next: (resp) => {
+          this.videos.set(resp.content);
+          this.totalPages.set(resp.totalPages);
+          this.totalElements.set(resp.totalElements);
+          if (!firstVideoLoaded) { firstVideoLoaded = true; checkDone(); }
+        },
+        error: (_err: unknown) => {
+          if (!firstVideoLoaded) { firstVideoLoaded = true; checkDone(); }
+        },
+      });
+
+    this.loadPicks();
+  }
+
+  ngOnDestroy(): void {
+    this.recovery.stopPolling();
+    this.videoSub?.unsubscribe();
+  }
+
+  private loadChannel(handle: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.recovery.stopPolling();
+    this.api.getChannel(handle).subscribe({
+      next: (channel) => { this.channel.set(channel); this.loading.set(false); },
+      error: (_err: unknown) => {
+        this.error.set('A deployment is probably in progress. Please try again shortly.');
+        this.loading.set(false);
+        this.recovery.startPolling(() => {
+          const cid = this.route.snapshot.paramMap.get('channelId');
+          if (cid) { this.loadChannel(cid); }
+        });
+      },
+    });
+    this.videoReloadTick.update(n => n + 1);
   }
 
   refresh(): void {
-    const cid = this.route.snapshot.paramMap.get('channelId');
-    if (cid) this.loadData(cid);
+    if (this.channelHandle) { this.loadChannel(this.channelHandle); }
   }
 
   switchTab(tab: 'videos' | 'picks'): void {
@@ -759,24 +817,61 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   }
 
   loadPicks(): void {
-    const handle = this.route.snapshot.paramMap.get('channelId');
-    if (!handle) return;
+    if (!this.channelHandle) { return; }
     this.picksLoading.set(true);
     this.picksError.set(null);
-    this.api.getChannelPicks(handle).subscribe({
+    this.api.getChannelPicks(this.channelHandle).subscribe({
       next: (data) => { this.picks.set(data); this.picksLoading.set(false); },
       error: () => { this.picksError.set('Failed to load picks.'); this.picksLoading.set(false); },
     });
   }
 
+  setPage(n: number): void {
+    this.currentPage.set(n);
+  }
+
+  setPicksPage(n: number): void {
+    this.picksPage.set(n);
+  }
+
+  onTranscriptFilterChange(val: string): void {
+    this.currentPage.set(0);
+    this.filterTranscript.set(val as VideoSummary['transcriptStatus'] | '');
+  }
+
+  onProcessingFilterChange(val: string): void {
+    this.currentPage.set(0);
+    this.filterProcessing.set(val as VideoSummary['extractionStatus'] | '');
+  }
+
+  onHideNoPicksChange(val: boolean): void {
+    this.currentPage.set(0);
+    this.hideNoPicks.set(val);
+  }
+
+  onHideUnprocessedChange(val: boolean): void {
+    this.currentPage.set(0);
+    this.hideUnprocessed.set(val);
+  }
+
+  onShowExcludedChange(val: boolean): void {
+    this.currentPage.set(0);
+    this.showExcluded.set(val);
+  }
+
+  onPickTickerFilterChange(val: string): void {
+    this.picksPage.set(0);
+    this.pickTickerFilter.set(val);
+  }
+
   formatPickReturn(value: number | null | undefined): string {
-    if (value == null) return '—';
+    if (value == null) { return '—'; }
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(1)}%`;
   }
 
   pickReturnClass(value: number | null | undefined): string {
-    if (value == null) return 'text-gray-300';
+    if (value == null) { return 'text-gray-300'; }
     return value >= 0 ? 'text-primary-600' : 'text-danger-500';
   }
 
@@ -806,6 +901,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
       this.sortKey.set(key);
       this.sortDir.set('asc');
     }
+    this.currentPage.set(0);
   }
 
   togglePickSort(key: PickSortKey): void {
@@ -815,6 +911,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
       this.pickSortKey.set(key);
       this.pickSortDir.set('asc');
     }
+    this.picksPage.set(0);
   }
 
   clearFilters(): void {
@@ -823,6 +920,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.filterPick.set('');
     this.showExcluded.set(false);
     this.hideNoPicks.set(true);
+    this.currentPage.set(0);
   }
 
   handleToggleExclusion(video: VideoSummary): void {
@@ -836,6 +934,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
             : v)
         );
         this.togglingExclusion.set(null);
+        this.videoReloadTick.update(n => n + 1);
       },
       error: () => {
         this.togglingExclusion.set(null);
@@ -848,20 +947,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.api.redownloadTranscript(video.videoId).subscribe({
       next: () => {
         this.redownloading.set(null);
-        this.reloadVideos();
+        this.videoReloadTick.update(n => n + 1);
       },
       error: () => {
         this.redownloading.set(null);
       },
-    });
-  }
-
-  private reloadVideos(): void {
-    const handle = this.route.snapshot.paramMap.get('channelId');
-    if (!handle) return;
-    this.api.getVideosForChannel(handle).subscribe({
-      next: (videos) => this.videos.set(videos),
-      error: () => {},
     });
   }
 
@@ -870,7 +960,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.api.reextractVideo(videoId).subscribe({
       next: () => {
         this.reextracting.set(null);
-        this.reloadVideos();
+        this.videoReloadTick.update(n => n + 1);
       },
       error: () => {
         this.reextracting.set(null);
@@ -879,7 +969,8 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   }
 
   openTranscript(v: VideoSummary): void {
-    if (!v.transcriptText) return;
+    if (v.transcriptStatus !== 'DOWNLOADED') { return; }
+
     const popupWidth = 520;
     const popupHeight = Math.min(window.innerHeight * 0.75, 600);
     const margin = 12;
@@ -890,11 +981,31 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     }
     top = Math.max(margin, window.innerHeight / 2 - popupHeight / 2);
     this.transcriptPopupPos.set({ top, left, width: popupWidth, maxHeight: popupHeight });
-    this.transcriptPopup.set(v.transcriptText);
+
+    if (this.transcriptCache.has(v.videoId)) {
+      this.transcriptPopup.set(this.transcriptCache.get(v.videoId)!);
+      return;
+    }
+
+    this.transcriptPopup.set(null);
+    this.transcriptLoading.set(true);
+
+    this.api.getVideoTranscript(this.channelHandle, v.videoId).subscribe({
+      next: (data) => {
+        const text = data.transcriptText ?? '(empty transcript)';
+        this.transcriptCache.set(v.videoId, text);
+        this.transcriptLoading.set(false);
+        this.transcriptPopup.set(text);
+      },
+      error: () => {
+        this.transcriptLoading.set(false);
+      },
+    });
   }
 
   closeTranscript(): void {
     this.transcriptPopup.set(null);
+    this.transcriptLoading.set(false);
   }
 
   transcriptLabel(status: VideoSummary['transcriptStatus']): string {

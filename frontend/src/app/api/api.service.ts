@@ -5,7 +5,8 @@ import { catchError, map } from 'rxjs/operators';
 import { z } from 'zod';
 import {
   ChannelSchema,
-  VideoSummarySchema,
+  PagedVideoResponseSchema,
+  VideoTranscriptSchema,
   PickPerformanceSchema,
   PipelineStepStatusSchema,
   ChannelSearchResultSchema,
@@ -19,7 +20,7 @@ import {
   UnknownStockSchema,
   ChannelRelevanceSchema,
 } from './types';
-import type { Channel, VideoSummary, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, ChannelRelevance } from './types';
+import type { Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, ChannelRelevance } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -74,10 +75,32 @@ export class ApiService {
     );
   }
 
-  getVideosForChannel(handle: string): Observable<VideoSummary[]> {
+  getVideosForChannel(handle: string, params?: {
+    page?: number; sort?: string; dir?: string;
+    transcriptStatus?: string; extractionStatus?: string;
+    requirePicks?: boolean; showExcluded?: boolean; hideUnprocessed?: boolean;
+  }): Observable<PagedVideoResponse> {
+    let httpParams = new HttpParams();
+    if (params) {
+      if (params.page !== undefined) { httpParams = httpParams.set('page', params.page); }
+      if (params.sort) { httpParams = httpParams.set('sort', params.sort); }
+      if (params.dir) { httpParams = httpParams.set('dir', params.dir); }
+      if (params.transcriptStatus) { httpParams = httpParams.set('transcriptStatus', params.transcriptStatus); }
+      if (params.extractionStatus) { httpParams = httpParams.set('extractionStatus', params.extractionStatus); }
+      if (params.requirePicks !== undefined) { httpParams = httpParams.set('requirePicks', params.requirePicks); }
+      if (params.showExcluded !== undefined) { httpParams = httpParams.set('showExcluded', params.showExcluded); }
+      if (params.hideUnprocessed !== undefined) { httpParams = httpParams.set('hideUnprocessed', params.hideUnprocessed); }
+    }
     return this.validated(
-      z.array(VideoSummarySchema),
-      this.http.get<unknown>(`/api/channels/${handle}/videos`).pipe(catchError((e) => this.handleError(e))),
+      PagedVideoResponseSchema,
+      this.http.get<unknown>(`/api/channels/${handle}/videos`, { params: httpParams }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getVideoTranscript(handle: string, videoId: string): Observable<VideoTranscript> {
+    return this.validated(
+      VideoTranscriptSchema,
+      this.http.get<unknown>(`/api/channels/${handle}/videos/${videoId}/transcript`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

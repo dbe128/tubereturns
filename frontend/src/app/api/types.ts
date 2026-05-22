@@ -32,10 +32,21 @@ export const VideoSummarySchema = z.object({
   extractionStatus: z.enum(['PENDING', 'EXTRACTING', 'EXTRACTED', 'FAILED']),
   extractionModel: z.string().nullable(),
   buyPicks: z.array(z.string()),
-  transcriptText: z.string().nullable(),
   excluded: z.boolean(),
   exclusionReason: z.string().nullable(),
 });
+
+export const PagedVideoResponseSchema = z.object({
+  content: z.array(VideoSummarySchema),
+  page: z.number(),
+  size: z.number(),
+  totalElements: z.number(),
+  totalPages: z.number(),
+});
+export type PagedVideoResponse = z.infer<typeof PagedVideoResponseSchema>;
+
+export const VideoTranscriptSchema = z.object({ transcriptText: z.string().nullable() });
+export type VideoTranscript = z.infer<typeof VideoTranscriptSchema>;
 
 export const PickPerformanceSchema = z.object({
   tickerSymbol: z.string(),

@@ -25,6 +25,28 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
 
     Page<Video> findByChannelIdOrderByPublishedAtDesc(Long channelId, Pageable pageable);
 
+    @Query("""
+        SELECT v FROM Video v
+        WHERE v.channel.id = :channelId
+          AND (:showExcluded = true OR v.excluded = false)
+          AND (:hideUnprocessed = false OR (
+                  v.transcriptStatus NOT IN ('PENDING', 'DOWNLOADING')
+                  AND NOT (v.transcriptStatus = 'DOWNLOADED'
+                           AND v.extractionStatus <> 'EXTRACTED')))
+          AND (:transcriptStatus IS NULL OR v.transcriptStatus = :transcriptStatus)
+          AND (:extractionStatus IS NULL OR v.extractionStatus = :extractionStatus)
+          AND (:requirePicks = false
+               OR EXISTS (SELECT p FROM Pick p WHERE p.video = v))
+        """)
+    Page<Video> findByChannelIdWithFilters(
+        @Param("channelId") Long channelId,
+        @Param("showExcluded") boolean showExcluded,
+        @Param("hideUnprocessed") boolean hideUnprocessed,
+        @Param("transcriptStatus") Video.TranscriptStatus transcriptStatus,
+        @Param("extractionStatus") Video.ExtractionStatus extractionStatus,
+        @Param("requirePicks") boolean requirePicks,
+        Pageable pageable);
+
     @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")
     List<Video> findByTranscriptStatus(@Param("status") Video.TranscriptStatus status, @Param("limit") int limit);
 

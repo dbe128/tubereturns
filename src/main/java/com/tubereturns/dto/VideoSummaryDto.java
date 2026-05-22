@@ -12,7 +12,6 @@ public record VideoSummaryDto(
     String extractionStatus,
     String extractionModel,
     List<String> buyPicks,
-    String transcriptText,
     boolean excluded,
     String exclusionReason
 ) {}
