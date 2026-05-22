@@ -28,6 +28,7 @@ public class ApplicationConfig {
                 Caffeine.newBuilder()
                         .expireAfterWrite(4, TimeUnit.HOURS)
                         .maximumSize(1)
+                        .recordStats()
                         .build());
         SimpleCacheManager manager = new SimpleCacheManager();
         manager.setCaches(List.of(allChannels));

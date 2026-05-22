@@ -4,6 +4,9 @@ import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.model.Channel;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.VideoRepository;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -26,10 +30,20 @@ public class ChannelListService {
     private final ChannelRepository channelRepository;
     private final VideoRepository videoRepository;
     private final PickPerformanceService pickPerformanceService;
+    private final MeterRegistry meterRegistry;
+
+    private final AtomicLong lastWarmupDurationMs = new AtomicLong(-1);
 
     @Lazy
     @Autowired
     private ChannelListService self;
+
+    @PostConstruct
+    public void initMetrics() {
+        Gauge.builder("tubereturns.cache.warmup.duration.ms", lastWarmupDurationMs, AtomicLong::get)
+                .description("Duration of the last allChannels cache warm-up in milliseconds")
+                .register(meterRegistry);
+    }
 
     @Cacheable("allChannels")
     public List<ChannelResponseDto> getAllChannels() {
@@ -46,7 +60,9 @@ public class ChannelListService {
         log.info("Pre-warming allChannels cache");
         long start = System.currentTimeMillis();
         self.getAllChannels();
-        log.info("allChannels cache warm-up complete in {}ms", System.currentTimeMillis() - start);
+        long duration = System.currentTimeMillis() - start;
+        lastWarmupDurationMs.set(duration);
+        log.info("allChannels cache warm-up complete in {}ms", duration);
     }
 
     private List<ChannelResponseDto> buildChannelList() {
