@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @RequiredArgsConstructor
 @RestController
@@ -85,6 +87,7 @@ public class ChannelController {
         return channelRepository.findByHandle(handle)
                 .filter(c -> c.getThumbnailData() != null)
                 .map(c -> ResponseEntity.ok()
+                        .cacheControl(CacheControl.maxAge(1, TimeUnit.DAYS).cachePublic())
                         .contentType(MediaType.parseMediaType(
                                 c.getThumbnailContentType() != null ? c.getThumbnailContentType() : "image/jpeg"))
                         .body(c.getThumbnailData()))
