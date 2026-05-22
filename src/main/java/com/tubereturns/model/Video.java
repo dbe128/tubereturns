@@ -100,7 +100,7 @@ public class Video {
     }
 
     public enum TranscriptStatus {
-        PENDING, DOWNLOADING, DOWNLOADED, NO_TRANSCRIPT, FAILED
+        PENDING, DOWNLOADING, DOWNLOADED, NO_TRANSCRIPT, TOO_LONG, FAILED
     }
 
     public enum ExtractionStatus {

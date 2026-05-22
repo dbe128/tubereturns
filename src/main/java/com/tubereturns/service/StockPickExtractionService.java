@@ -54,6 +54,9 @@ public class StockPickExtractionService {
     @Value("${tubereturns.pipeline.extraction.threads}")
     private int threadCount;
 
+    @Value("${tubereturns.ai.max-transcript-chars}")
+    private int maxTranscriptChars;
+
     private ExecutorService extractionExecutor;
 
     private final LinkedList<String> pendingVideoIds = new LinkedList<>();
@@ -177,6 +180,14 @@ public class StockPickExtractionService {
         if (video.getTranscriptText() == null || video.getTranscriptText().isBlank()) {
             log.warn("No transcript text for {} ({})", video.getTitle(), videoUrl);
             video.setExtractionStatus(Video.ExtractionStatus.FAILED);
+            videoRepository.save(video);
+            return false;
+        }
+
+        if (video.getTranscriptText().length() > maxTranscriptChars) {
+            log.warn("Transcript too long ({} chars) for {} ({})", video.getTranscriptText().length(), video.getTitle(), videoUrl);
+            video.setTranscriptStatus(Video.TranscriptStatus.TOO_LONG);
+            video.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
             videoRepository.save(video);
             return false;
         }

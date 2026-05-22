@@ -20,7 +20,7 @@ type PickSortKey = 'date' | 'company' | 'ticker' | '1m' | '1y' | '3y';
 type SortDir = 'asc' | 'desc';
 
 const TRANSCRIPT_ORDER: Record<VideoSummary['transcriptStatus'], number> = {
-  DOWNLOADED: 0, NO_TRANSCRIPT: 1, PENDING: 2, DOWNLOADING: 3, FAILED: 4,
+  DOWNLOADED: 0, NO_TRANSCRIPT: 1, TOO_LONG: 2, PENDING: 3, DOWNLOADING: 4, FAILED: 5,
 };
 
 const EXTRACTION_ORDER: Record<VideoSummary['extractionStatus'], number> = {
@@ -31,6 +31,7 @@ const TRANSCRIPT_LABELS: Record<VideoSummary['transcriptStatus'], string> = {
   DOWNLOADING: 'Downloading',
   DOWNLOADED: 'Downloaded',
   NO_TRANSCRIPT: 'No transcript',
+  TOO_LONG: 'Too long',
   FAILED: 'Failed',
   PENDING: 'Pending',
 };
@@ -46,6 +47,7 @@ const TRANSCRIPT_STYLES: Record<VideoSummary['transcriptStatus'], string> = {
   DOWNLOADING: 'bg-blue-50 text-blue-600 animate-pulse',
   DOWNLOADED: 'bg-primary-50 text-primary-700',
   NO_TRANSCRIPT: 'bg-yellow-50 text-yellow-700',
+  TOO_LONG: 'bg-amber-100 text-amber-800',
   FAILED: 'bg-danger-50 text-danger-500',
   PENDING: 'bg-gray-100 text-gray-400',
 };
@@ -192,6 +194,7 @@ interface IndexedVideo {
                 <option value="DOWNLOADING">Downloading</option>
                 <option value="DOWNLOADED">Downloaded</option>
                 <option value="NO_TRANSCRIPT">No transcript</option>
+                <option value="TOO_LONG">Too long</option>
                 <option value="FAILED">Failed</option>
                 <option value="PENDING">Pending</option>
               </select>

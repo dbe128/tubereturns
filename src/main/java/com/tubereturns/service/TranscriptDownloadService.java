@@ -54,6 +54,9 @@ public class TranscriptDownloadService {
     @Value("${tubereturns.pipeline.transcript.batch-size}")
     private int batchSize;
 
+    @Value("${tubereturns.ai.max-transcript-chars}")
+    private int maxTranscriptChars;
+
     private final ExecutorService ytbsdExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "ytbsd-worker");
         t.setDaemon(true);
@@ -231,9 +234,15 @@ public class TranscriptDownloadService {
                         videoRepository.findByVideoId(videoId).ifPresent(v -> {
                             if (transcript != null && !transcript.isBlank()) {
                                 v.setTranscriptText(transcript);
-                                v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
-                                downloadedIds.add(videoId);
-                                log.info("Transcript downloaded: {} (https://youtu.be/{})", v.getTitle(), videoId);
+                                if (transcript.length() > maxTranscriptChars) {
+                                    v.setTranscriptStatus(Video.TranscriptStatus.TOO_LONG);
+                                    v.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);
+                                    log.warn("Transcript too long ({} chars) for: {} (https://youtu.be/{})", transcript.length(), v.getTitle(), videoId);
+                                } else {
+                                    v.setTranscriptStatus(Video.TranscriptStatus.DOWNLOADED);
+                                    downloadedIds.add(videoId);
+                                    log.info("Transcript downloaded: {} (https://youtu.be/{})", v.getTitle(), videoId);
+                                }
                             } else {
                                 v.setTranscriptStatus(Video.TranscriptStatus.NO_TRANSCRIPT);
                                 v.setExtractionStatus(Video.ExtractionStatus.EXTRACTED);

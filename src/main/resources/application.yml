@@ -72,6 +72,7 @@ tubereturns:
     api-key: ${OPENROUTER_API_KEY:}
     models-file: llm-models.txt
     model-reset-minutes: 60
+    max-transcript-chars: 380000
     connect-timeout-seconds: 10
     read-timeout-seconds: 180
     timeout-retries: 3
