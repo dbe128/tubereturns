@@ -346,7 +346,7 @@ interface UnknownStockRow extends UnknownStock {
                         <div class="flex items-center gap-2">
                           <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
                                [alt]="s.channelName"
-                               (error)="$any($event.target).style.display='none'"
+                               (error)="hideImgOnError($event)"
                                class="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
                           <div>
                             <p class="font-semibold text-gray-800">{{ s.channelName }}</p>
@@ -688,7 +688,7 @@ interface UnknownStockRow extends UnknownStock {
                         <div class="flex items-center gap-2">
                           <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
                                [alt]="s.channelName"
-                               (error)="$any($event.target).style.display='none'"
+                               (error)="hideImgOnError($event)"
                                class="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
                           <div>
                             <p class="font-semibold text-gray-800">{{ s.channelName }}</p>
@@ -1175,5 +1175,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
           }
         },
       });
+  }
+
+  hideImgOnError(event: Event): void {
+    (event.target as HTMLImageElement).style.display = 'none';
   }
 }

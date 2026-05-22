@@ -37,6 +37,8 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
           AND (:extractionStatus IS NULL OR v.extractionStatus = :extractionStatus)
           AND (:requirePicks = false
                OR EXISTS (SELECT p FROM Pick p WHERE p.video = v))
+          AND (:tickerFilter IS NULL
+               OR EXISTS (SELECT p FROM Pick p WHERE p.video = v AND p.stock.tickerSymbol = :tickerFilter))
         """)
     Page<Video> findByChannelIdWithFilters(
         @Param("channelId") Long channelId,
@@ -45,6 +47,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
         @Param("transcriptStatus") Video.TranscriptStatus transcriptStatus,
         @Param("extractionStatus") Video.ExtractionStatus extractionStatus,
         @Param("requirePicks") boolean requirePicks,
+        @Param("tickerFilter") String tickerFilter,
         Pageable pageable);
 
     @Query("SELECT v FROM Video v WHERE v.transcriptStatus = :status AND v.excluded = false ORDER BY v.publishedAt ASC LIMIT :limit")

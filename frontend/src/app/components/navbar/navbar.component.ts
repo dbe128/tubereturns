@@ -63,7 +63,7 @@ import type { ChannelSearchResult } from '../../api/types';
                       @if (result.thumbnailUrl) {
                         <img [src]="result.thumbnailUrl" [alt]="result.channelName"
                              referrerpolicy="no-referrer"
-                             (error)="$any($event.target).style.display='none'"
+                             (error)="hideImgOnError($event)"
                              class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-100" />
                       } @else {
                         <div class="w-8 h-8 rounded-full bg-gray-100 flex-shrink-0"></div>
@@ -286,6 +286,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
     clearTimeout(this.toastTimers.get(id));
     this.toastTimers.delete(id);
     this.toasts.update(ts => ts.filter(t => t.id !== id));
+  }
+
+  hideImgOnError(event: Event): void {
+    (event.target as HTMLImageElement).style.display = 'none';
   }
 
   logout(): void {

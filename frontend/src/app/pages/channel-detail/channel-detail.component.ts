@@ -215,7 +215,7 @@ interface IndexedVideo {
               <label class="text-xs text-gray-500">Ticker</label>
               <select
                 [ngModel]="filterPick()"
-                (ngModelChange)="filterPick.set($event)"
+                (ngModelChange)="onTickerFilterChange($event)"
                 class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-300"
               >
                 <option value="">All picks</option>
@@ -681,6 +681,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     requirePicks: this.hideNoPicks(),
     showExcluded: this.showExcluded(),
     hideUnprocessed: this.hideUnprocessed(),
+    tickerFilter: this.filterPick() || undefined,
   }));
 
   readonly allTickers = computed(() => {
@@ -732,11 +733,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
 
   readonly sorted = computed((): IndexedVideo[] => {
     const offset = this.currentPage() * 50;
-    const tickerFilter = this.filterPick();
-    const vids = tickerFilter
-      ? this.videos().filter(v => v.buyPicks.includes(tickerFilter))
-      : this.videos();
-    return vids.map((v, i) => ({ v, originalIndex: offset + i + 1 }));
+    return this.videos().map((v, i) => ({ v, originalIndex: offset + i + 1 }));
   });
 
   ngOnInit(): void {
@@ -857,6 +854,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   onShowExcludedChange(val: boolean): void {
     this.currentPage.set(0);
     this.showExcluded.set(val);
+  }
+
+  onTickerFilterChange(val: string): void {
+    this.currentPage.set(0);
+    this.filterPick.set(val);
   }
 
   onPickTickerFilterChange(val: string): void {

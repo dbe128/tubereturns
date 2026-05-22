@@ -79,6 +79,7 @@ export class ApiService {
     page?: number; sort?: string; dir?: string;
     transcriptStatus?: string; extractionStatus?: string;
     requirePicks?: boolean; showExcluded?: boolean; hideUnprocessed?: boolean;
+    tickerFilter?: string;
   }): Observable<PagedVideoResponse> {
     let httpParams = new HttpParams();
     if (params) {
@@ -90,6 +91,7 @@ export class ApiService {
       if (params.requirePicks !== undefined) { httpParams = httpParams.set('requirePicks', params.requirePicks); }
       if (params.showExcluded !== undefined) { httpParams = httpParams.set('showExcluded', params.showExcluded); }
       if (params.hideUnprocessed !== undefined) { httpParams = httpParams.set('hideUnprocessed', params.hideUnprocessed); }
+      if (params.tickerFilter) { httpParams = httpParams.set('tickerFilter', params.tickerFilter); }
     }
     return this.validated(
       PagedVideoResponseSchema,

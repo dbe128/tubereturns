@@ -119,7 +119,8 @@ public class ChannelController {
             @RequestParam(required = false) String extractionStatus,
             @RequestParam(defaultValue = "false") boolean requirePicks,
             @RequestParam(defaultValue = "false") boolean showExcluded,
-            @RequestParam(defaultValue = "true") boolean hideUnprocessed) {
+            @RequestParam(defaultValue = "true") boolean hideUnprocessed,
+            @RequestParam(required = false) String tickerFilter) {
         Optional<Channel> channelOpt = channelRepository.findByHandle(handle);
         if (channelOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
@@ -134,8 +135,9 @@ public class ChannelController {
                 : Video.TranscriptStatus.valueOf(transcriptStatus);
         Video.ExtractionStatus es = (extractionStatus == null || extractionStatus.isBlank()) ? null
                 : Video.ExtractionStatus.valueOf(extractionStatus);
+        String tf = (tickerFilter == null || tickerFilter.isBlank()) ? null : tickerFilter;
         Page<Video> result = videoRepository.findByChannelIdWithFilters(
-                channelOpt.get().getId(), showExcluded, hideUnprocessed, ts, es, requirePicks, pageRequest);
+                channelOpt.get().getId(), showExcluded, hideUnprocessed, ts, es, requirePicks, tf, pageRequest);
         List<VideoSummaryDto> content = result.getContent().stream().map(this::toVideoSummaryDto).toList();
         return ResponseEntity.ok(new PagedVideoResponse(
                 content, result.getNumber(), result.getSize(),
