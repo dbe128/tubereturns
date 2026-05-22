@@ -1,0 +1,36 @@
+# TubeReturns
+
+TubeReturns ranks finance YouTubers by their actual stock-pick performance, measured against the S&P 500.
+
+## What this site does
+
+- Automatically discovers videos from tracked stock-picking YouTube channels
+- Downloads transcripts and uses AI to extract explicit BUY stock picks
+- Fetches historical stock prices from Yahoo Finance from the video's publication date
+- Computes 1-month, 1-year, and 3-year returns for each pick
+- Calculates alpha (outperformance vs SPY) per pick and per channel
+- Ranks channels on a public leaderboard by average alpha
+
+## What counts as a pick
+
+Only explicit BUY recommendations for individual publicly-traded stocks are tracked. Crypto, ETFs, bonds, general market commentary, and "external positions" (stocks mentioned but not explicitly recommended) are excluded.
+
+## Who can add a channel
+
+Any registered user can suggest a channel. An AI eligibility check verifies the channel focuses on individual stock picks before it is added. Admins can bypass this check.
+
+## Key concepts
+
+- **Alpha**: the channel's average return minus the S&P 500 return over the same period, for picks that have matured
+- **Eligible picks**: picks old enough for the return window to have closed (e.g. a 1-year pick requires the video to be at least 1 year old)
+- **Unresolved picks**: picks where the stock ticker could not be identified — these are excluded from scoring but shown separately
+
+## Data freshness
+
+- New videos are discovered hourly
+- Stock prices are refreshed three times daily
+- Returns are locked once the measurement window closes (no retroactive changes)
+
+## Source
+
+All data is derived from publicly available YouTube transcripts and Yahoo Finance price data.
