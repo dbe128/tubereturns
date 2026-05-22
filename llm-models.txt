@@ -11,3 +11,5 @@ minimax/minimax-m2.5:free
 arcee-ai/trinity-large-thinking:free
 poolside/laguna-m.1:free
 inclusionai/ling-2.6-flash
+mistralai/mistral-nemo
+meta-llama/llama-3.1-8b-instruct
