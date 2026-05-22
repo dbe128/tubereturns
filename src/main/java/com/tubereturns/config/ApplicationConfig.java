@@ -26,7 +26,7 @@ public class ApplicationConfig {
     public CacheManager cacheManager() {
         CaffeineCache allChannels = new CaffeineCache("allChannels",
                 Caffeine.newBuilder()
-                        .expireAfterWrite(60, TimeUnit.SECONDS)
+                        .expireAfterWrite(4, TimeUnit.HOURS)
                         .maximumSize(1)
                         .build());
         SimpleCacheManager manager = new SimpleCacheManager();

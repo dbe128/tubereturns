@@ -37,6 +37,9 @@ spring:
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.xml
 
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
 management:
   endpoints:
     web:
@@ -109,6 +112,7 @@ logging:
 
 server:
   port: 8080
+  shutdown: graceful
 
 springdoc:
   api-docs:
