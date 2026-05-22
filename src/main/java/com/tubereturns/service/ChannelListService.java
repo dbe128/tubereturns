@@ -44,7 +44,9 @@ public class ChannelListService {
     @EventListener(ApplicationReadyEvent.class)
     public void warmUp() {
         log.info("Pre-warming allChannels cache");
+        long start = System.currentTimeMillis();
         self.getAllChannels();
+        log.info("allChannels cache warm-up complete in {}ms", System.currentTimeMillis() - start);
     }
 
     private List<ChannelResponseDto> buildChannelList() {
