@@ -78,7 +78,7 @@ tubereturns:
     max-transcript-chars: 380000
     connect-timeout-seconds: 10
     read-timeout-seconds: 180
-    timeout-retries: 3
+    timeout-retries: 5
 
   security:
     jwt-secret: ${JWT_SECRET}

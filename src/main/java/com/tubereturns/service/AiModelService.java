@@ -361,7 +361,15 @@ public class AiModelService {
                     log.warn("OpenRouter returned blank content with model {}: {}", model, response.strip());
                     throw new BadResponseException(model);
                 }
-                return new ExtractionResult(stripJsonFences(text), actualModel);
+                String stripped = stripJsonFences(text);
+                try {
+                    objectMapper.readTree(stripped);
+                } catch (Exception parseEx) {
+                    log.warn("OpenRouter returned invalid JSON from model {}: {}", model,
+                            stripped.length() > 300 ? stripped.substring(0, 300) + "..." : stripped);
+                    throw new BadResponseException(model);
+                }
+                return new ExtractionResult(stripped, actualModel);
 
             } catch (HttpClientErrorException e) {
                 if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {

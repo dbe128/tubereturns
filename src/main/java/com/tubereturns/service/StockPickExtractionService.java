@@ -85,9 +85,9 @@ public class StockPickExtractionService {
         });
         log.info("Extraction thread pool initialized with {} thread(s)", threadCount);
         Gauge.builder("tubereturns.extraction.queue.size", this, StockPickExtractionService::getQueueSize)
-             .register(meterRegistry);
+                .register(meterRegistry);
         Gauge.builder("tubereturns.extraction.active.workers", this, StockPickExtractionService::getActiveWorkers)
-             .register(meterRegistry);
+                .register(meterRegistry);
         meterRegistry.counter("tubereturns.extraction.videos", "result", "success");
         meterRegistry.counter("tubereturns.extraction.videos", "result", "failure");
         meterRegistry.counter("tubereturns.extraction.picks");
@@ -204,43 +204,43 @@ public class StockPickExtractionService {
             int retryCount = 0;
 
             try {
-            for (int attempt = 0; attempt <= maxRetries; attempt++) {
-                ExtractionWithModel extracted;
-                try {
-                    extracted = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
-                } catch (Exception e) {
-                    if (best != null) {
-                        log.warn("Extraction retry {} for {} failed: {} — using best result so far ({} unknown)",
-                                attempt, videoUrl, e.getMessage(), best.unknownCount());
+                for (int attempt = 0; attempt <= maxRetries; attempt++) {
+                    ExtractionWithModel extracted;
+                    try {
+                        extracted = extractStockPicks(video.getVideoId(), video.getTitle(), video.getTranscriptText());
+                    } catch (Exception e) {
+                        if (best != null) {
+                            log.warn("Extraction retry {} for {} failed: {} — using best result so far ({} unknown)",
+                                    attempt, videoUrl, e.getMessage(), best.unknownCount());
+                            break;
+                        }
+                        throw e;
+                    }
+
+                    Map<String, Map<LocalDate, Double>> priceCache = new HashMap<>();
+                    int unknownCount = probeExtraction(extracted.dto(), priceDate, priceCache);
+
+                    if (best == null || unknownCount < best.unknownCount()) {
+                        best = new CandidateResult(extracted.dto(), extracted.model(), unknownCount, priceCache);
+                    }
+
+                    if (unknownCount == 0) {
+                        if (attempt > 0) {
+                            log.info("Extraction retry {} for {} resolved all unknown tickers", attempt, videoUrl);
+                        }
                         break;
                     }
-                    throw e;
-                }
 
-                Map<String, Map<LocalDate, Double>> priceCache = new HashMap<>();
-                int unknownCount = probeExtraction(extracted.dto(), priceDate, priceCache);
-
-                if (best == null || unknownCount < best.unknownCount()) {
-                    best = new CandidateResult(extracted.dto(), extracted.model(), unknownCount, priceCache);
-                }
-
-                if (unknownCount == 0) {
-                    if (attempt > 0) {
-                        log.info("Extraction retry {} for {} resolved all unknown tickers", attempt, videoUrl);
+                    if (attempt < maxRetries) {
+                        log.warn("Extraction attempt {} for {} has {} unknown ticker(s) [{}] — retrying with next model",
+                                attempt + 1, videoUrl, unknownCount, formatUnknownTickers(extracted.dto(), priceCache));
+                        aiModelService.advanceModel();
+                        retryCount++;
+                    } else {
+                        log.warn("All {} extraction attempts exhausted for {} — using best result with {} unknown ticker(s) [{}]",
+                                maxRetries + 1, videoUrl, best.unknownCount(), formatUnknownTickers(best.dto(), best.priceCache()));
                     }
-                    break;
                 }
-
-                if (attempt < maxRetries) {
-                    log.warn("Extraction attempt {} for {} has {} unknown ticker(s) [{}] — retrying with next model",
-                            attempt + 1, videoUrl, unknownCount, formatUnknownTickers(extracted.dto(), priceCache));
-                    aiModelService.advanceModel();
-                    retryCount++;
-                } else {
-                    log.warn("All {} extraction attempts exhausted for {} — using best result with {} unknown ticker(s) [{}]",
-                            maxRetries + 1, videoUrl, best.unknownCount(), formatUnknownTickers(best.dto(), best.priceCache()));
-                }
-            }
             } finally {
                 aiModelService.setModelIndex(originalModelIndex);
                 if (retryCount > 0) {
@@ -270,9 +270,12 @@ public class StockPickExtractionService {
         }
     }
 
-    private record ExtractionWithModel(StockPickExtractionDto dto, String model) {}
+    private record ExtractionWithModel(StockPickExtractionDto dto, String model) {
+    }
 
-    private record CandidateResult(StockPickExtractionDto dto, String model, int unknownCount, Map<String, Map<LocalDate, Double>> priceCache) {}
+    private record CandidateResult(StockPickExtractionDto dto, String model, int unknownCount,
+                                   Map<String, Map<LocalDate, Double>> priceCache) {
+    }
 
     private ExtractionWithModel extractStockPicks(String videoId, String videoTitle, String transcriptText) {
         String videoUrl = "https://youtu.be/" + videoId;
@@ -385,7 +388,10 @@ public class StockPickExtractionService {
 
     private String formatUnknownTickers(StockPickExtractionDto dto, Map<String, Map<LocalDate, Double>> priceCache) {
         return dto.extractions().stream()
-                .filter(p -> { var c = priceCache.get(p.tickerSymbol().toUpperCase()); return c != null && c.isEmpty(); })
+                .filter(p -> {
+                    var c = priceCache.get(p.tickerSymbol().toUpperCase());
+                    return c != null && c.isEmpty();
+                })
                 .map(p -> p.tickerSymbol() + " (" + p.companyName() + ")")
                 .distinct()
                 .collect(java.util.stream.Collectors.joining(", "));
