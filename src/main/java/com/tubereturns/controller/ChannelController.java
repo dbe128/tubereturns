@@ -10,9 +10,9 @@ import com.tubereturns.model.Channel;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
 import com.tubereturns.repository.ChannelRepository;
-import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.service.ChannelListService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.ChannelRelevanceService;
 import com.tubereturns.service.PickPerformanceService;
@@ -34,7 +34,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,9 +46,9 @@ public class ChannelController {
 
     private final ChannelRepository channelRepository;
     private final ChannelProcessingNotificationRepository notificationRepository;
-    private final PickRepository pickRepository;
     private final VideoRepository videoRepository;
     private final UserRepository userRepository;
+    private final ChannelListService channelListService;
     private final ChannelNotificationService channelNotificationService;
     private final YouTubeDiscoveryService discoveryService;
     private final YouTubeApiService youTubeApiService;
@@ -68,23 +67,7 @@ public class ChannelController {
     @GetMapping
     @Operation(summary = "Get all channels")
     public ResponseEntity<List<ChannelResponseDto>> getAllChannels() {
-        List<Channel> channels = channelRepository.findAll();
-
-        Map<Long, Long> totalByChannel = new HashMap<>();
-        videoRepository.countAllGroupedByChannelId().forEach(row -> totalByChannel.put((Long) row[0], (Long) row[1]));
-
-        Map<Long, Long> processedByChannel = new HashMap<>();
-        videoRepository.countProcessedGroupedByChannelId().forEach(row -> processedByChannel.put((Long) row[0], (Long) row[1]));
-
-        Map<Long, PickPerformanceService.ChannelScoreResult> scoresByChannel =
-                pickPerformanceService.computeScoresForAllChannels(pickRepository.findAllPicksForScoring());
-
-        return ResponseEntity.ok(channels.stream()
-                .map(c -> toResponseDto(c,
-                        totalByChannel.getOrDefault(c.getId(), 0L),
-                        processedByChannel.getOrDefault(c.getId(), 0L),
-                        scoresByChannel.getOrDefault(c.getId(), PickPerformanceService.ChannelScoreResult.empty())))
-                .toList());
+        return ResponseEntity.ok(channelListService.getAllChannels());
     }
 
     @GetMapping("/{handle}")
@@ -248,6 +231,7 @@ public class ChannelController {
                     .ifPresent(user -> channelNotificationService.scheduleNotification(channel, user));
         }
         scheduler.triggerDiscovery();
+        channelListService.evictAllChannels();
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
     }
 

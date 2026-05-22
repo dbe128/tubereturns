@@ -13,6 +13,7 @@ import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
+import com.tubereturns.service.ChannelListService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.PipelineStatusRegistry;
@@ -46,6 +47,7 @@ public class AdminController {
     private final PipelineStatusRegistry registry;
     private final YouTubeDiscoveryService discoveryService;
     private final ChannelRepository channelRepository;
+    private final ChannelListService channelListService;
     private final StockPickExtractionService stockPickExtractionService;
     private final AiModelService aiModelService;
     private final VideoRepository videoRepository;
@@ -93,6 +95,7 @@ public class AdminController {
     @Operation(summary = "Soft-delete a channel")
     public ResponseEntity<Map<String, String>> deleteChannel(@PathVariable String handle) {
         discoveryService.softDeleteChannel(handle);
+        channelListService.evictAllChannels();
         return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
     }
 
@@ -121,6 +124,7 @@ public class AdminController {
                         count++;
                     }
                     scheduler.triggerExtraction();
+                    channelListService.evictAllChannels();
                     return ResponseEntity.accepted().body(Map.of("message", "Reprocessing " + count + " video(s) for channel: " + handle));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -174,6 +178,7 @@ public class AdminController {
                     video.setExcluded(excluded);
                     video.setExclusionReason(excluded ? "Manual" : null);
                     videoRepository.save(video);
+                    channelListService.evictAllChannels();
                     return ResponseEntity.ok(Map.of("message", "Video " + videoId + " excluded=" + excluded));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -273,6 +278,7 @@ public class AdminController {
                             String msg = "Merged '" + oldTicker + "' into existing '" + newTicker + "' — re-linked "
                                     + pickCount + " pick(s), added " + prices.size() + " price point(s), original record deleted";
                             log.info("Fix complete: {}", msg);
+                            channelListService.evictAllChannels();
                             return ResponseEntity.ok(Map.of("message", msg));
                         } else {
                             if (newCurrency != null) {
@@ -289,6 +295,7 @@ public class AdminController {
                             log.info("Saved {} price point(s) for '{}' (stock id={})", prices.size(), newTicker, stock.getId());
                             String msg = "Resolved '" + oldTicker + "' as '" + newTicker + "' — saved " + prices.size() + " price point(s)";
                             log.info("Fix complete: {}", msg);
+                            channelListService.evictAllChannels();
                             return ResponseEntity.ok(Map.of("message", msg));
                         }
                     } catch (Exception e) {

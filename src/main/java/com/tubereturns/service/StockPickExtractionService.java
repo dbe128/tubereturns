@@ -49,6 +49,7 @@ public class StockPickExtractionService {
     private final PipelineStatusRegistry registry;
     private final ExchangeRateService exchangeRateService;
     private final PickPerformanceService pickPerformanceService;
+    private final ChannelListService channelListService;
     private final MeterRegistry meterRegistry;
 
     @Value("${tubereturns.pipeline.extraction.threads}")
@@ -256,6 +257,7 @@ public class StockPickExtractionService {
                 video.setExclusionReason("External Positions");
             }
             videoRepository.save(video);
+            channelListService.evictAllChannels();
             advanceLastProcessedAt(video);
             meterRegistry.counter("tubereturns.extraction.videos", "result", "success").increment();
             return true;
