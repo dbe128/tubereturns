@@ -1,5 +1,6 @@
 package com.tubereturns.repository;
 
+import com.tubereturns.dto.PickScoringData;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Stock;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,8 +33,25 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     @Query("SELECT p FROM Pick p JOIN FETCH p.video JOIN FETCH p.stock WHERE p.video.channel.id = :channelId AND p.video.excluded = false ORDER BY p.video.publishedAt ASC")
     List<Pick> findPicksByChannelId(@Param("channelId") Long channelId);
 
-    @Query("SELECT p FROM Pick p JOIN FETCH p.video v JOIN FETCH v.channel JOIN FETCH p.stock WHERE v.excluded = false ORDER BY v.channel.id ASC, v.publishedAt ASC")
-    List<Pick> findAllPicksForScoring();
+    @Query("""
+        SELECT new com.tubereturns.dto.PickScoringData(
+            v.channel.id, v.publishedAt, s.unknown, p.alpha1m, p.alpha1y, p.alpha3y
+        )
+        FROM Pick p JOIN p.video v JOIN p.stock s
+        WHERE v.excluded = false
+        ORDER BY v.channel.id ASC, v.publishedAt ASC
+        """)
+    List<PickScoringData> findAllPickDataForScoring();
+
+    @Query("""
+        SELECT new com.tubereturns.dto.PickScoringData(
+            v.channel.id, v.publishedAt, s.unknown, p.alpha1m, p.alpha1y, p.alpha3y
+        )
+        FROM Pick p JOIN p.video v JOIN p.stock s
+        WHERE v.channel.id = :channelId AND v.excluded = false
+        ORDER BY v.publishedAt ASC
+        """)
+    List<PickScoringData> findPickScoringDataForChannel(@Param("channelId") Long channelId);
 
     @Query("SELECT DISTINCT p.video.channel.id FROM Pick p WHERE p.stock.id = :stockId")
     List<Long> findDistinctChannelIdsByStockId(@Param("stockId") Long stockId);

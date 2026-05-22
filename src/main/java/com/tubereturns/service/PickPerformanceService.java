@@ -1,6 +1,7 @@
 package com.tubereturns.service;
 
 import com.tubereturns.dto.PickPerformanceDto;
+import com.tubereturns.dto.PickScoringData;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.StockPrice;
 import com.tubereturns.repository.PickRepository;
@@ -158,35 +159,35 @@ public class PickPerformanceService {
     }
 
     public ChannelScoreResult computeScoreForChannel(Long channelId) {
-        return computeScoreFromPicks(pickRepository.findPicksByChannelId(channelId));
+        return computeScoreFromData(pickRepository.findPickScoringDataForChannel(channelId));
     }
 
-    public Map<Long, ChannelScoreResult> computeScoresForAllChannels(List<Pick> allPicks) {
-        Map<Long, List<Pick>> byChannel = allPicks.stream()
-                .collect(Collectors.groupingBy(p -> p.getVideo().getChannel().getId()));
+    public Map<Long, ChannelScoreResult> computeScoresForAllChannels() {
+        Map<Long, List<PickScoringData>> byChannel = pickRepository.findAllPickDataForScoring().stream()
+                .collect(Collectors.groupingBy(PickScoringData::channelId));
         Map<Long, ChannelScoreResult> results = new HashMap<>();
-        byChannel.forEach((channelId, picks) -> results.put(channelId, computeScoreFromPicks(picks)));
+        byChannel.forEach((channelId, data) -> results.put(channelId, computeScoreFromData(data)));
         return results;
     }
 
-    private ChannelScoreResult computeScoreFromPicks(List<Pick> picks) {
+    private ChannelScoreResult computeScoreFromData(List<PickScoringData> data) {
         LocalDate today = LocalDate.now();
         double alphaSum1m = 0, alphaSum1y = 0, alphaSum3y = 0;
         int eligible1m = 0, eligible1y = 0, eligible3y = 0;
         int unresolved1m = 0, unresolved1y = 0, unresolved3y = 0;
-        for (Pick pick : picks) {
-            LocalDate pickDate = pick.getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
-            boolean isUnresolved = pick.getStock().isUnknown();
+        for (PickScoringData d : data) {
+            LocalDate pickDate = d.videoPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
+            boolean isUnresolved = d.stockUnknown();
             if (today.isAfter(pickDate.plusMonths(1))) {
-                if (pick.getAlpha1m() != null) { alphaSum1m += pick.getAlpha1m(); eligible1m++; }
+                if (d.alpha1m() != null) { alphaSum1m += d.alpha1m(); eligible1m++; }
                 else if (isUnresolved) { unresolved1m++; }
             }
             if (today.isAfter(pickDate.plusYears(1))) {
-                if (pick.getAlpha1y() != null) { alphaSum1y += pick.getAlpha1y(); eligible1y++; }
+                if (d.alpha1y() != null) { alphaSum1y += d.alpha1y(); eligible1y++; }
                 else if (isUnresolved) { unresolved1y++; }
             }
             if (today.isAfter(pickDate.plusYears(3))) {
-                if (pick.getAlpha3y() != null) { alphaSum3y += pick.getAlpha3y(); eligible3y++; }
+                if (d.alpha3y() != null) { alphaSum3y += d.alpha3y(); eligible3y++; }
                 else if (isUnresolved) { unresolved3y++; }
             }
         }

@@ -3,7 +3,6 @@ package com.tubereturns.service;
 import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.model.Channel;
 import com.tubereturns.repository.ChannelRepository;
-import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.VideoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +25,6 @@ public class ChannelListService {
 
     private final ChannelRepository channelRepository;
     private final VideoRepository videoRepository;
-    private final PickRepository pickRepository;
     private final PickPerformanceService pickPerformanceService;
 
     @Lazy
@@ -61,7 +59,7 @@ public class ChannelListService {
                 .forEach(row -> processedByChannel.put((Long) row[0], (Long) row[1]));
 
         Map<Long, PickPerformanceService.ChannelScoreResult> scoresByChannel =
-                pickPerformanceService.computeScoresForAllChannels(pickRepository.findAllPicksForScoring());
+                pickPerformanceService.computeScoresForAllChannels();
 
         return channels.stream()
                 .map(c -> toDto(c,
