@@ -190,15 +190,20 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                           [routerLink]="['/channel', row.handle]"
                           class="flex items-center gap-3 group"
                         >
-                          @if (row.hasThumbnail) {
-                            <img
-                              [src]="'/api/channels/' + row.handle + '/thumbnail'"
-                              [alt]="row.channelName"
-                              class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-700"
-                            />
-                          } @else {
-                            <div class="w-9 h-9 rounded-full bg-gray-700 flex-shrink-0"></div>
-                          }
+                          <div class="relative flex-shrink-0">
+                            @if (row.hasThumbnail) {
+                              <img
+                                [src]="'/api/channels/' + row.handle + '/thumbnail'"
+                                [alt]="row.channelName"
+                                class="w-9 h-9 rounded-full object-cover ring-2 ring-gray-700"
+                              />
+                            } @else {
+                              <div class="w-9 h-9 rounded-full bg-gray-700"></div>
+                            }
+                            @if (i === 0) {
+                              <span class="absolute -top-4 left-1/2 -translate-x-1/2 text-xl leading-none select-none">👑</span>
+                            }
+                          </div>
                           <span class="font-semibold text-white group-hover:text-green-400 transition-colors">
                             {{ row.channelName }}
                           </span>
