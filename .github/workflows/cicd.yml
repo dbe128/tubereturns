@@ -17,9 +17,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh api repos/${{ github.repository }}/actions/artifacts --paginate \
-            | jq -r '.artifacts[].id' \
-            | xargs -I{} gh api --method DELETE repos/${{ github.repository }}/actions/artifacts/{} || true
+          for name in backend-jar frontend-dist; do
+            gh api repos/${{ github.repository }}/actions/artifacts --paginate \
+              | jq -rs --arg name "$name" \
+                  '[.[].artifacts[] | select(.name == $name)] | sort_by(.created_at) | reverse | .[3:][].id' \
+              | xargs -r -I{} gh api --method DELETE repos/${{ github.repository }}/actions/artifacts/{} || true
+          done
 
   test-backend:
     needs: cleanup
