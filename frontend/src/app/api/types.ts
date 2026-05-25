@@ -1,5 +1,14 @@
 import { z } from 'zod';
 
+export const SiteStatsSchema = z.object({
+  totalPicks: z.number(),
+  totalChannels: z.number(),
+  totalStocks: z.number(),
+  totalCurrencies: z.number(),
+  totalLlmModels: z.number(),
+});
+export type SiteStats = z.infer<typeof SiteStatsSchema>;
+
 export const ChannelSchema = z.object({
   id: z.number(),
   handle: z.string(),

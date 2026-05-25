@@ -8,7 +8,7 @@ import {
   Injector,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
@@ -80,7 +80,7 @@ interface IndexedVideo {
     } @else {
       <div class="bg-gray-600 w-full min-h-screen">
       <div class="max-w-screen-2xl mx-auto px-6 py-10">
-        <a routerLink="/" class="text-green-400 hover:text-green-300 text-sm font-medium mb-6 inline-block">
+        <a routerLink="/" [queryParams]="{ scrollTo: 'leaderboard' }" class="text-green-400 hover:text-green-300 text-sm font-medium mb-6 inline-block">
           ← Leaderboard
         </a>
 
@@ -111,15 +111,36 @@ interface IndexedVideo {
             <div class="flex items-center gap-6 flex-shrink-0">
               <div class="flex gap-8 text-sm text-gray-400">
                 <div class="text-center">
-                  <div class="text-3xl font-black font-mono" [class]="pickReturnClass(channel()!.score1m)">{{ formatPickReturn(channel()!.score1m) }}</div>
+                  <div class="mb-1">
+                    @if (channel()!.score1m !== null) {
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-lg font-black font-mono text-2xl leading-tight"
+                            [class]="channel()!.score1m! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">{{ formatPickReturn(channel()!.score1m) }}</span>
+                    } @else {
+                      <span class="text-3xl font-black font-mono text-gray-400">—</span>
+                    }
+                  </div>
                   <div class="text-xs uppercase tracking-wide">1M Alpha</div>
                 </div>
                 <div class="text-center">
-                  <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score1y)">{{ formatPickReturn(channel()!.score1y) }}</div>
+                  <div class="mb-1">
+                    @if (channel()!.score1y !== null) {
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-lg font-black font-mono text-2xl leading-tight"
+                            [class]="channel()!.score1y! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">{{ formatPickReturn(channel()!.score1y) }}</span>
+                    } @else {
+                      <span class="text-2xl font-bold font-mono text-gray-400">—</span>
+                    }
+                  </div>
                   <div class="text-xs uppercase tracking-wide">1Y Alpha</div>
                 </div>
                 <div class="text-center">
-                  <div class="text-2xl font-bold font-mono" [class]="pickReturnClass(channel()!.score3y)">{{ formatPickReturn(channel()!.score3y) }}</div>
+                  <div class="mb-1">
+                    @if (channel()!.score3y !== null) {
+                      <span class="inline-flex items-center px-2.5 py-1 rounded-lg font-black font-mono text-2xl leading-tight"
+                            [class]="channel()!.score3y! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">{{ formatPickReturn(channel()!.score3y) }}</span>
+                    } @else {
+                      <span class="text-2xl font-bold font-mono text-gray-400">—</span>
+                    }
+                  </div>
                   <div class="text-xs uppercase tracking-wide">3Y Alpha</div>
                 </div>
                 <div class="w-px bg-gray-700 self-stretch mx-2"></div>
@@ -555,16 +576,21 @@ interface IndexedVideo {
                       </span>
                     </td>
                     @for (col of pickTimeColumns; track col) {
-                      <td class="px-4 py-3 text-right font-mono text-sm font-semibold whitespace-nowrap" [ngClass]="pickReturnClass(alphaForColumn(pick, col))">
-                        {{ formatPickReturn(alphaForColumn(pick, col)) }}
+                      <td class="px-4 py-3 text-right whitespace-nowrap">
                         @if (alphaForColumn(pick, col) !== null) {
-                          <span class="relative group/spy inline-block ml-1 cursor-default not-italic text-base leading-none"
+                          <span class="inline-flex items-center px-2.5 py-1 rounded-lg font-black font-mono text-sm"
+                                [class]="alphaForColumn(pick, col)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
+                            {{ formatPickReturn(alphaForColumn(pick, col)) }}
+                          </span>
+                          <span class="relative group/spy inline-block ml-1 cursor-default text-base leading-none"
                                 [class]="alphaForColumn(pick, col)! > 0 ? 'text-green-400' : 'text-red-400'">
                             {{ alphaForColumn(pick, col)! > 0 ? '↑' : '↓' }}
                             <span class="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/spy:opacity-100 transition-opacity z-50">
                               Pick: {{ formatPickReturn(pickReturnForColumn(pick, col)) }} · S&P 500: {{ formatPickReturn(spyReturnForColumn(pick, col)) }}
                             </span>
                           </span>
+                        } @else {
+                          <span class="text-gray-400">—</span>
                         }
                       </td>
                     }
@@ -577,13 +603,13 @@ interface IndexedVideo {
               <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-700">
                 <button
                   [disabled]="picksPage() === 0"
-                  (click)="setPicksPage(picksPage() - 1)"
+                  (click)="navigatePicksPage(picksPage() - 1)"
                   class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 text-gray-300 disabled:opacity-40 hover:bg-gray-700 transition-colors"
                 >← Prev</button>
                 <span class="text-sm text-gray-500">Page {{ picksPage() + 1 }} of {{ picksTotalPages() }}</span>
                 <button
                   [disabled]="picksPage() >= picksTotalPages() - 1"
-                  (click)="setPicksPage(picksPage() + 1)"
+                  (click)="navigatePicksPage(picksPage() + 1)"
                   class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 text-gray-300 disabled:opacity-40 hover:bg-gray-700 transition-colors"
                 >Next →</button>
               </div>
@@ -627,12 +653,19 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly recovery = inject(BackendRecoveryService);
   private readonly injector = inject(Injector);
 
   private channelHandle = '';
   private videoSub?: Subscription;
   private readonly transcriptCache = new Map<string, string>();
+
+  readonly channelUrl = computed(() => {
+    const name = this.channel()?.channelName;
+    if (!name) { return `/channel/${this.channelHandle}`; }
+    return `/channel/${name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-returns`;
+  });
 
   readonly pickTimeColumns: ReadonlyArray<'1m' | '1y' | '3y'> = ['1m', '1y', '3y'];
   readonly tickerMap = signal<Record<string, string>>({});
@@ -829,7 +862,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     this.currentPage.set(n);
   }
 
-  setPicksPage(n: number): void {
+  navigatePicksPage(n: number): void {
+    if (!this.auth.isAuthenticated) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.channelUrl() } });
+      return;
+    }
     this.picksPage.set(n);
   }
 
@@ -872,11 +909,6 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     if (value == null) { return '—'; }
     const sign = value >= 0 ? '+' : '';
     return `${sign}${value.toFixed(1)}%`;
-  }
-
-  pickReturnClass(value: number | null | undefined): string {
-    if (value == null) { return 'text-gray-400'; }
-    return value >= 0 ? 'text-green-400' : 'text-red-400';
   }
 
   pickReturnForColumn(pick: PickPerformance, col: '1m' | '1y' | '3y'): number | null {

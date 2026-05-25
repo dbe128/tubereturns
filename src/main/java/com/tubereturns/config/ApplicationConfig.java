@@ -30,8 +30,14 @@ public class ApplicationConfig {
                         .maximumSize(1)
                         .recordStats()
                         .build());
+        CaffeineCache siteStats = new CaffeineCache("siteStats",
+                Caffeine.newBuilder()
+                        .expireAfterWrite(30, TimeUnit.MINUTES)
+                        .maximumSize(1)
+                        .recordStats()
+                        .build());
         SimpleCacheManager manager = new SimpleCacheManager();
-        manager.setCaches(List.of(allChannels));
+        manager.setCaches(List.of(allChannels, siteStats));
         return manager;
     }
 }

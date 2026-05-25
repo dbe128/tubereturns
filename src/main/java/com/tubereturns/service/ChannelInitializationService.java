@@ -43,6 +43,7 @@ public class ChannelInitializationService {
                     log.info("Created new channel: {} (@{})", channelDef.getChannelName(), channelDef.getHandle());
                 } else {
                     existingChannel.setChannelName(channelDef.getChannelName());
+                    existingChannel.setNameSlug(Channel.nameSlugFor(channelDef.getChannelName()));
                     existingChannel.setDescription(channelDef.getDescription());
                     channelRepository.save(existingChannel);
                     log.info("Updated existing channel: {} (@{})", channelDef.getChannelName(), channelDef.getHandle());

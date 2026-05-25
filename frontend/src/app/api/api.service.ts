@@ -4,6 +4,7 @@ import { Observable, Subject, of, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { z } from 'zod';
 import {
+  SiteStatsSchema,
   ChannelSchema,
   PagedVideoResponseSchema,
   VideoTranscriptSchema,
@@ -20,7 +21,7 @@ import {
   UnknownStockSchema,
   ChannelRelevanceSchema,
 } from './types';
-import type { Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, ChannelRelevance } from './types';
+import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, ChannelRelevance } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -275,6 +276,10 @@ export class ApiService {
       ChannelRelevanceSchema,
       this.http.get<unknown>('/api/channels/assess-relevance', { params: new HttpParams().set('handle', handle).set('channelName', channelName) }).pipe(catchError((e) => this.handleError(e))),
     );
+  }
+
+  getStats(): Observable<SiteStats> {
+    return this.validated(SiteStatsSchema, this.http.get<unknown>('/api/stats').pipe(catchError((e) => this.handleError(e))));
   }
 
   getVersion(): Observable<string> {

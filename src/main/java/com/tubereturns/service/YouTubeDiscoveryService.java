@@ -191,6 +191,7 @@ public class YouTubeDiscoveryService {
         return channelRepository.findByHandleIncludingDeleted(handle)
             .map(existing -> {
                 existing.setChannelName(channelName);
+                existing.setNameSlug(Channel.nameSlugFor(channelName));
                 if (description != null && !description.isBlank()) {
                     existing.setDescription(description);
                 }

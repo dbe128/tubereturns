@@ -13,6 +13,11 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
     Optional<Channel> findByHandle(String handle);
 
+    Optional<Channel> findByNameSlug(String nameSlug);
+
+    @Query("SELECT c FROM Channel c WHERE LOWER(c.handle) = LOWER(:slug) OR LOWER(REPLACE(c.handle, '_', '-')) = LOWER(:slug)")
+    Optional<Channel> findBySlugOrHandle(@Param("slug") String slug);
+
     @Query(value = "SELECT * FROM channels WHERE handle = :handle", nativeQuery = true)
     Optional<Channel> findByHandleIncludingDeleted(@Param("handle") String handle);
 

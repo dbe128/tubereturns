@@ -76,7 +76,7 @@ public class ChannelController {
     @Operation(summary = "Get channel by handle")
     public ResponseEntity<ChannelResponseDto> getChannelById(
             @Parameter(description = "Channel handle") @PathVariable String handle) {
-        return channelRepository.findByHandle(handle)
+        return lookupChannel(handle)
                 .map(c -> ResponseEntity.ok(toResponseDto(c)))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -84,7 +84,7 @@ public class ChannelController {
     @GetMapping("/{handle}/thumbnail")
     @Operation(summary = "Get channel thumbnail image")
     public ResponseEntity<byte[]> getChannelThumbnail(@PathVariable String handle) {
-        return channelRepository.findByHandle(handle)
+        return lookupChannel(handle)
                 .filter(c -> c.getThumbnailData() != null)
                 .map(c -> ResponseEntity.ok()
                         .cacheControl(CacheControl.maxAge(1, TimeUnit.DAYS).cachePublic())
@@ -107,7 +107,7 @@ public class ChannelController {
             @RequestParam(defaultValue = "false") boolean showExcluded,
             @RequestParam(defaultValue = "true") boolean hideUnprocessed,
             @RequestParam(required = false) String tickerFilter) {
-        Optional<Channel> channelOpt = channelRepository.findByHandle(handle);
+        Optional<Channel> channelOpt = lookupChannel(handle);
         if (channelOpt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
@@ -134,8 +134,10 @@ public class ChannelController {
     @Operation(summary = "Get transcript text for a video")
     public ResponseEntity<VideoTranscriptDto> getVideoTranscript(
             @PathVariable String handle, @PathVariable String videoId) {
+        Optional<Channel> channelOpt = lookupChannel(handle);
+        if (channelOpt.isEmpty()) { return ResponseEntity.notFound().build(); }
         return videoRepository.findByVideoId(videoId)
-                .filter(v -> v.getChannel().getHandle().equals(handle))
+                .filter(v -> v.getChannel().getId().equals(channelOpt.get().getId()))
                 .map(v -> ResponseEntity.ok(new VideoTranscriptDto(v.getTranscriptText())))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -143,7 +145,7 @@ public class ChannelController {
     @GetMapping("/{handle}/picks")
     @Operation(summary = "Get per-pick performance for a channel")
     public ResponseEntity<List<PickPerformanceDto>> getChannelPicks(@PathVariable String handle) {
-        return channelRepository.findByHandle(handle)
+        return lookupChannel(handle)
                 .map(c -> ResponseEntity.ok(pickPerformanceService.computeForChannel(c.getId())))
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -236,6 +238,12 @@ public class ChannelController {
         scheduler.triggerDiscovery();
         channelListService.evictAllChannels();
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
+    }
+
+    private Optional<Channel> lookupChannel(String slug) {
+        Optional<Channel> byNameSlug = channelRepository.findByNameSlug(slug);
+        if (byNameSlug.isPresent()) { return byNameSlug; }
+        return channelRepository.findBySlugOrHandle(slug);
     }
 
     private ChannelResponseDto toResponseDto(Channel channel) {

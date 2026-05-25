@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -39,7 +39,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
       </div>
     }
     <div class="bg-gray-950 w-full">
-      <div class="max-w-screen-2xl mx-auto px-8 py-28 text-center">
+      <div class="max-w-screen-2xl mx-auto px-8 py-14 text-center">
         <div class="flex items-center justify-center gap-4 mb-10 text-xs font-bold tracking-[0.18em] uppercase">
           <span class="flex items-center gap-1.5 text-green-400">
             <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"></span>
@@ -187,7 +187,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
                         <a
-                          [routerLink]="['/channel', row.handle]"
+                          [routerLink]="['/channel', channelSlug(row.channelName)]"
                           class="flex items-center gap-3 group"
                         >
                           <div class="relative flex-shrink-0">
@@ -358,6 +358,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly recovery = inject(BackendRecoveryService);
   private readonly channelStore = inject(ChannelStoreService);
+  private readonly route = inject(ActivatedRoute);
 
 
   readonly rows = signal<Channel[]>([]);
@@ -400,13 +401,18 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.load();
-    setTimeout(() => {
-      this.animateCount(12994, (v) => this.picksCount.set(v));
-      this.animateCount(93, (v) => this.youTubersCount.set(v));
-      this.animateCount(2099, (v) => this.stocksCount.set(v));
-      this.animateCount(18, (v) => this.currenciesCount.set(v));
-      this.animateCount(14, (v) => this.llmModelsCount.set(v));
-    }, 300);
+    this.api.getStats().subscribe({
+      next: (stats) => {
+        setTimeout(() => {
+          this.animateCount(stats.totalPicks, (v) => this.picksCount.set(v));
+          this.animateCount(stats.totalChannels, (v) => this.youTubersCount.set(v));
+          this.animateCount(stats.totalStocks, (v) => this.stocksCount.set(v));
+          this.animateCount(stats.totalCurrencies, (v) => this.currenciesCount.set(v));
+          this.animateCount(stats.totalLlmModels, (v) => this.llmModelsCount.set(v));
+        }, 300);
+      },
+      error: () => {},
+    });
     if (this.auth.isAuthenticated && !this.auth.isAdmin) {
       this.loadMyChannelSuggestions();
       this.suggestionRefreshSub = this.api.suggestionRefresh$.subscribe(() => this.loadMyChannelSuggestions());
@@ -429,6 +435,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
         this.rows.set(channels);
         this.channelStore.channels.set(channels);
         this.loading.set(false);
+        if (this.route.snapshot.queryParamMap.get('scrollTo') === 'leaderboard') {
+          setTimeout(() => this.scrollToLeaderboard(), 50);
+        }
       },
       error: (_err: unknown) => {
         this.error.set('A deployment is probably in progress. Please try again shortly.');
@@ -510,6 +519,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
       }
     };
     requestAnimationFrame(tick);
+  }
+
+  channelSlug(channelName: string): string {
+    return channelName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-returns';
   }
 
   scrollToLeaderboard(): void {

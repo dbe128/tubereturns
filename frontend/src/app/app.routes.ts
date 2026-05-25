@@ -11,7 +11,7 @@ import { authGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: LeaderboardComponent },
-  { path: 'channel/:channelId', component: ChannelDetailComponent, canActivate: [authGuard] },
+  { path: 'channel/:channelId', component: ChannelDetailComponent },
   { path: 'admin', component: AdminComponent, canActivate: [authGuard] },
   { path: 'login', component: LoginComponent },
   { path: 'signup', component: RegisterComponent },

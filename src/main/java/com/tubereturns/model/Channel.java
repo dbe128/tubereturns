@@ -64,12 +64,22 @@ public class Channel {
     @Column(name = "approval_source", length = 20)
     private String approvalSource;
 
+    @NotBlank
+    @Size(max = 255)
+    @Column(name = "name_slug", unique = true, nullable = false)
+    private String nameSlug;
+
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Video> videos;
 
     public Channel(String handle, String channelName) {
         this.handle = handle;
         this.channelName = channelName;
+        this.nameSlug = nameSlugFor(channelName);
+    }
+
+    public static String nameSlugFor(String channelName) {
+        return channelName.toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-|-$", "") + "-returns";
     }
 
     @PrePersist

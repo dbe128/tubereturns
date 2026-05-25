@@ -207,6 +207,10 @@ public class AiModelService {
         return callOpenRouter(videoId, videoTitle, transcriptText);
     }
 
+    public int getModelCount() {
+        return models == null ? 0 : models.size();
+    }
+
     public int getCurrentModelIndex() {
         return currentModelIndex.get() % models.size();
     }

@@ -28,9 +28,8 @@ import type { ChannelSearchResult } from '../../api/types';
     <header class="bg-gray-100 border-b border-gray-200">
       <div class="px-6 h-[3.33rem] flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <a routerLink="/" class="flex items-center gap-2">
+          <a routerLink="/">
             <img src="logo.webp" alt="TubeReturns" class="h-36 rounded" />
-            <span class="text-xs text-gray-400 font-mono">v{{ version() }}</span>
           </a>
 
           <div class="relative w-[26rem]">
@@ -121,7 +120,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
   private readonly api = inject(ApiService);
   private readonly channelStore = inject(ChannelStoreService);
 
-  readonly version = signal('…');
   readonly searchQuery = signal('');
   readonly ytResults = signal<ChannelSearchResult[]>([]);
   readonly searching = signal(false);
@@ -160,7 +158,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
       try { this.pendingAdd.set(JSON.parse(stored) as ChannelSearchResult); }
       catch { localStorage.removeItem('pendingAddChannel'); }
     }
-    this.api.getVersion().subscribe((v) => this.version.set(v));
     this.searchSub = this.searchSubject.pipe(
       debounceTime(400),
       switchMap((q) => {

@@ -9,6 +9,6 @@ export class ChannelStoreService {
   readonly channels = signal<Channel[]>([]);
 
   load(): void {
-    this.api.getChannels().subscribe((channels) => this.channels.set(channels));
+    this.api.getChannels().subscribe((channels: Channel[]) => this.channels.set(channels));
   }
 }

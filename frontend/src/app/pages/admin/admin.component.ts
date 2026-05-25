@@ -41,7 +41,10 @@ interface UnknownStockRow extends UnknownStock {
     <div class="bg-gray-100 w-full min-h-screen">
       <div class="max-w-screen-2xl mx-auto px-6 py-10">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-        <h1 class="text-2xl font-black text-gray-900 mb-8">Admin Dashboard</h1>
+        <div class="flex items-center justify-between mb-8">
+          <h1 class="text-2xl font-black text-gray-900">Admin Dashboard</h1>
+          <span class="text-xs text-gray-400 font-mono">v{{ version() }}</span>
+        </div>
 
         <div class="flex items-center gap-3 mb-10">
           <input
@@ -483,6 +486,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   readonly triggeringNotifications = signal(false);
   readonly unknownStockRows = signal<UnknownStockRow[]>([]);
   readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
+  readonly version = signal('…');
   readonly adminAddInput = signal('');
   readonly adminAdding = signal(false);
   readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -499,6 +503,7 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.router.navigate(['/']);
       return;
     }
+    this.api.getVersion().subscribe((v) => this.version.set(v));
     this.load();
     this.loadMyNotifications();
     this.loadPipelineStatus();
