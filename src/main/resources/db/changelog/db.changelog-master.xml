@@ -8,5 +8,7 @@
     <include file="db/changelog/001-initial-schema.sql"/>
     <include file="db/changelog/002-add-name-slug.sql"/>
     <include file="db/changelog/003-fix-name-slug.sql"/>
+    <include file="db/changelog/004-users-google-fields.sql"/>
+    <include file="db/changelog/005-delete-dbalazs128-user.sql"/>
 
 </databaseChangeLog>

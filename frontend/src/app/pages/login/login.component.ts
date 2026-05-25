@@ -1,9 +1,18 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
+
+type GoogleApi = {
+  accounts: {
+    id: {
+      initialize(config: { client_id: string; callback: (r: { credential: string }) => void }): void;
+      renderButton(el: HTMLElement, opts: { theme: string; size: string; width?: number }): void;
+    };
+  };
+};
 
 @Component({
   selector: 'app-login',
@@ -13,6 +22,14 @@ import { AuthService } from '../../services/auth.service';
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
         <h1 class="text-xl font-bold text-gray-900 mb-6">{{ heading }}</h1>
+
+        <div id="google-signin-btn" class="w-full min-h-[44px] mb-4"></div>
+
+        <div class="relative flex items-center mb-4">
+          <div class="flex-1 border-t border-gray-200"></div>
+          <span class="px-3 text-xs text-gray-400">or</span>
+          <div class="flex-1 border-t border-gray-200"></div>
+        </div>
 
         <form (ngSubmit)="submit()" class="space-y-4">
           <div>
@@ -47,7 +64,7 @@ import { AuthService } from '../../services/auth.service';
     </div>
   `,
 })
-export class LoginComponent {
+export class LoginComponent implements AfterViewInit {
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -66,6 +83,35 @@ export class LoginComponent {
     if (this.returnUrl) return 'Log in to access this feature. You will be redirected afterwards';
     if (localStorage.getItem('pendingAddChannel')) return 'Log in to suggest a channel';
     return 'Sign in';
+  }
+
+  ngAfterViewInit(): void {
+    const google = (window as Window & { google?: GoogleApi }).google;
+    if (!google) { return; }
+    const btn = document.getElementById('google-signin-btn');
+    if (!btn) { return; }
+    google.accounts.id.initialize({
+      client_id: '869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com',
+      callback: (r) => this.handleGoogleCredential(r.credential),
+    });
+    google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large', width: btn.offsetWidth || 344 });
+  }
+
+  handleGoogleCredential(credential: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.googleLogin(credential).subscribe({
+      next: (res) => {
+        this.auth.setToken(res.token);
+        const target = this.returnUrl || localStorage.getItem('pendingReturnUrl') || '/';
+        localStorage.removeItem('pendingReturnUrl');
+        this.router.navigateByUrl(target);
+      },
+      error: (err: unknown) => {
+        this.error.set(String(err));
+        this.loading.set(false);
+      },
+    });
   }
 
   submit(): void {

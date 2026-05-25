@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed, effect, untracked } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, effect, untracked, HostListener } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription, of } from 'rxjs';
@@ -94,11 +94,27 @@ import type { ChannelSearchResult } from '../../api/types';
             </a>
           }
           @if (auth.isAuthenticated) {
-            <span class="text-sm text-gray-500">Welcome, {{ auth.user()?.firstName }}</span>
-            <button (click)="logout()"
-              class="px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
-              Sign out
-            </button>
+            <div class="relative">
+              <button (click)="toggleUserMenu()" class="focus:outline-none">
+                @if (auth.user()?.profilePictureUrl) {
+                  <img [src]="auth.user()!.profilePictureUrl!" [alt]="auth.user()!.firstName"
+                       referrerpolicy="no-referrer"
+                       class="w-8 h-8 rounded-full object-cover ring-1 ring-gray-300 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-green-500 transition-shadow" />
+                } @else {
+                  <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 cursor-pointer hover:bg-green-700 transition-colors">
+                    {{ userInitials() }}
+                  </div>
+                }
+              </button>
+              @if (userMenuOpen()) {
+                <div class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  <button (click)="logout()"
+                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    Sign out
+                  </button>
+                </div>
+              }
+            </div>
           } @else {
             <a routerLink="/login"
               class="px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
@@ -125,6 +141,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   readonly searching = signal(false);
   readonly addingHandle = signal<string | null>(null);
   readonly toasts = signal<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
+  readonly userMenuOpen = signal(false);
   private readonly pendingAdd = signal<ChannelSearchResult | null>(null);
   private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private toastCounter = 0;
@@ -151,6 +168,14 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   readonly dbHandles = computed(() => new Set(this.channelStore.channels().map(c => c.handle)));
+
+  readonly userInitials = computed(() => {
+    const u = this.auth.user();
+    if (!u) { return ''; }
+    const first = u.firstName?.[0] ?? '';
+    const last = u.lastName?.[0] ?? '';
+    return (first + last).toUpperCase();
+  });
 
   ngOnInit(): void {
     const stored = localStorage.getItem('pendingAddChannel');
@@ -295,7 +320,20 @@ export class NavbarComponent implements OnInit, OnDestroy {
     (event.target as HTMLImageElement).style.display = 'none';
   }
 
+  toggleUserMenu(): void {
+    this.userMenuOpen.update(v => !v);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.relative')) {
+      this.userMenuOpen.set(false);
+    }
+  }
+
   logout(): void {
+    this.userMenuOpen.set(false);
     this.auth.logout();
     this.router.navigate(['/']);
   }

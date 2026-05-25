@@ -80,6 +80,9 @@ tubereturns:
     read-timeout-seconds: 180
     timeout-retries: 5
 
+  google:
+    client-id: 869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com
+
   security:
     jwt-secret: ${JWT_SECRET}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}

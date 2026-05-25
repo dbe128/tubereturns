@@ -1,8 +1,18 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../../api/api.service';
+import { AuthService } from '../../services/auth.service';
+
+type GoogleApi = {
+  accounts: {
+    id: {
+      initialize(config: { client_id: string; callback: (r: { credential: string }) => void }): void;
+      renderButton(el: HTMLElement, opts: { theme: string; size: string; width?: number }): void;
+    };
+  };
+};
 
 @Component({
   selector: 'app-register',
@@ -22,6 +32,14 @@ import { ApiService } from '../../api/api.service';
         } @else {
 
         <h1 class="text-xl font-bold text-gray-900 mb-6">Create account</h1>
+
+        <div id="google-signup-btn" class="w-full min-h-[44px] mb-4"></div>
+
+        <div class="relative flex items-center mb-4">
+          <div class="flex-1 border-t border-gray-200"></div>
+          <span class="px-3 text-xs text-gray-400">or sign up with email</span>
+          <div class="flex-1 border-t border-gray-200"></div>
+        </div>
 
         <form (ngSubmit)="submit()" class="space-y-4">
           <div>
@@ -100,8 +118,10 @@ import { ApiService } from '../../api/api.service';
     </div>
   `,
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent implements OnInit, AfterViewInit {
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
   get returnUrl(): string {
@@ -112,6 +132,35 @@ export class RegisterComponent implements OnInit {
     if (this.returnUrl) {
       localStorage.setItem('pendingReturnUrl', this.returnUrl);
     }
+  }
+
+  ngAfterViewInit(): void {
+    const google = (window as Window & { google?: GoogleApi }).google;
+    if (!google) { return; }
+    const btn = document.getElementById('google-signup-btn');
+    if (!btn) { return; }
+    google.accounts.id.initialize({
+      client_id: '869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com',
+      callback: (r) => this.handleGoogleCredential(r.credential),
+    });
+    google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large', width: btn.offsetWidth || 344 });
+  }
+
+  handleGoogleCredential(credential: string): void {
+    this.loading.set(true);
+    this.error.set(null);
+    this.api.googleLogin(credential).subscribe({
+      next: (res) => {
+        this.auth.setToken(res.token);
+        const target = this.returnUrl || localStorage.getItem('pendingReturnUrl') || '/';
+        localStorage.removeItem('pendingReturnUrl');
+        this.router.navigateByUrl(target);
+      },
+      error: (err: unknown) => {
+        this.error.set(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+        this.loading.set(false);
+      },
+    });
   }
 
   firstName = '';

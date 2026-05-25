@@ -22,14 +22,19 @@ public class JwtService {
     private long jwtExpirationMs;
 
     public String generateToken(User user) {
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(user.getEmail())
                 .claim("firstName", user.getFirstName())
                 .claim("role", user.getRole().getName())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
-                .signWith(signingKey())
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs));
+        if (user.getLastName() != null) {
+            builder.claim("lastName", user.getLastName());
+        }
+        if (user.getProfilePictureUrl() != null) {
+            builder.claim("picture", user.getProfilePictureUrl());
+        }
+        return builder.signWith(signingKey()).compact();
     }
 
     public String extractEmail(String token) {

@@ -312,6 +312,13 @@ export class ApiService {
     );
   }
 
+  googleLogin(credential: string): Observable<AuthResponse> {
+    return this.validated(
+      AuthResponseSchema,
+      this.http.post<unknown>('/api/auth/google', { credential }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
   getMe(): Observable<AuthResponse> {
     return this.validated(
       AuthResponseSchema,

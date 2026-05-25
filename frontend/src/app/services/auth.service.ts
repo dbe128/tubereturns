@@ -3,6 +3,8 @@ import { Injectable, signal } from '@angular/core';
 export interface AuthUser {
   email: string;
   firstName: string;
+  lastName: string | null;
+  profilePictureUrl: string | null;
   role: string;
 }
 
@@ -49,7 +51,7 @@ export class AuthService {
         localStorage.removeItem(this.TOKEN_KEY);
         return null;
       }
-      return { email: payload.sub, firstName: payload.firstName, role: payload.role ?? '' };
+      return { email: payload.sub, firstName: payload.firstName, lastName: payload.lastName ?? null, profilePictureUrl: payload.picture ?? null, role: payload.role ?? '' };
     } catch {
       return null;
     }

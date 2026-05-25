@@ -1,12 +1,18 @@
 package com.tubereturns.service;
 
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.tubereturns.dto.RegisterRequestDto;
 import com.tubereturns.model.Role;
 import com.tubereturns.model.User;
 import com.tubereturns.repository.RoleRepository;
 import com.tubereturns.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,7 +20,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.UUID;
 
 @Slf4j
@@ -26,6 +35,18 @@ public class UserService implements UserDetailsService {
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+
+    @Value("${tubereturns.google.client-id}")
+    private String googleClientId;
+
+    private GoogleIdTokenVerifier googleVerifier;
+
+    @PostConstruct
+    private void initGoogleVerifier() {
+        googleVerifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+                .setAudience(Collections.singletonList(googleClientId))
+                .build();
+    }
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
@@ -95,6 +116,50 @@ public class UserService implements UserDetailsService {
         user.setPasswordResetTokenExpiresAt(null);
         userRepository.save(user);
         log.info("Password successfully reset for {}", user.getEmail());
+    }
+
+    @Transactional
+    public User googleSignIn(String credential) {
+        GoogleIdToken idToken;
+        try {
+            idToken = googleVerifier.verify(credential);
+        } catch (GeneralSecurityException | IOException e) {
+            throw new IllegalArgumentException("Invalid Google token");
+        }
+        if (idToken == null) {
+            throw new IllegalArgumentException("Invalid Google token");
+        }
+        GoogleIdToken.Payload payload = idToken.getPayload();
+        String email = payload.getEmail();
+        String firstName = (String) payload.get("given_name");
+        String lastName = (String) payload.get("family_name");
+        String pictureUrl = (String) payload.get("picture");
+        String googleId = payload.getSubject();
+
+        return userRepository.findByEmail(email)
+                .map(existing -> {
+                    if ("local".equals(existing.getProvider())) {
+                        throw new IllegalArgumentException("An account with this email already exists. Please sign in with email and password.");
+                    }
+                    existing.setProviderId(googleId);
+                    existing.setLastName(lastName);
+                    existing.setProfilePictureUrl(pictureUrl);
+                    return userRepository.save(existing);
+                })
+                .orElseGet(() -> {
+                    Role freeRole = roleRepository.findByName("FREE")
+                            .orElseThrow(() -> new IllegalStateException("FREE role not found"));
+                    User user = new User();
+                    user.setFirstName(firstName != null && !firstName.isBlank() ? firstName : email.split("@")[0]);
+                    user.setLastName(lastName);
+                    user.setProfilePictureUrl(pictureUrl);
+                    user.setEmail(email);
+                    user.setProvider("google");
+                    user.setProviderId(googleId);
+                    user.setEmailVerified(true);
+                    user.setRole(freeRole);
+                    return userRepository.save(user);
+                });
     }
 
     @Transactional

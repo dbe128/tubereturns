@@ -2,6 +2,7 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.AuthResponseDto;
 import com.tubereturns.dto.ForgotPasswordRequestDto;
+import com.tubereturns.dto.GoogleAuthRequestDto;
 import com.tubereturns.dto.LoginRequestDto;
 import com.tubereturns.dto.RegisterRequestDto;
 import com.tubereturns.dto.ResetPasswordRequestDto;
@@ -76,6 +77,16 @@ public class AuthController {
         try {
             userService.resetPassword(request.token(), request.newPassword());
             return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> googleLogin(@RequestBody GoogleAuthRequestDto request) {
+        try {
+            User user = userService.googleSignIn(request.credential());
+            return ResponseEntity.ok(new AuthResponseDto(jwtService.generateToken(user), user.getEmail(), user.getFirstName()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
