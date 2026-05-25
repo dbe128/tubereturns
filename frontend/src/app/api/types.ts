@@ -6,6 +6,7 @@ export const SiteStatsSchema = z.object({
   totalStocks: z.number(),
   totalCurrencies: z.number(),
   totalLlmModels: z.number(),
+  version: z.string(),
 });
 export type SiteStats = z.infer<typeof SiteStatsSchema>;
 

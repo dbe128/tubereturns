@@ -333,6 +333,17 @@ export class ApiService {
     );
   }
 
+  getAdminUserCount(): Observable<number> {
+    return this.http.get<{ count: number }>('/api/admin/user-count').pipe(
+      map((r) => r.count),
+      catchError((e) => this.handleError(e)),
+    );
+  }
+
+  sendContact(name: string, email: string, message: string): Observable<void> {
+    return this.http.post<void>('/api/contact', { name, email, message }).pipe(catchError((e) => this.handleError(e)));
+  }
+
   forgotPassword(email: string): Observable<MessageResponse> {
     return this.validated(
       MessageResponseSchema,

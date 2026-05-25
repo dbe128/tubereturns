@@ -401,6 +401,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
         }
 
       }
+
     </div>
     </div>
   `,
@@ -411,7 +412,6 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   private readonly recovery = inject(BackendRecoveryService);
   private readonly channelStore = inject(ChannelStoreService);
   private readonly route = inject(ActivatedRoute);
-
 
   readonly rows = signal<Channel[]>([]);
 

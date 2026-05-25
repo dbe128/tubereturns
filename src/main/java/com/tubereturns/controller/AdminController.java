@@ -11,6 +11,7 @@ import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
+import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.ChannelListService;
@@ -57,6 +58,7 @@ public class AdminController {
     private final ChannelProcessingNotificationRepository notificationRepository;
     private final StockRepository stockRepository;
     private final StockPriceRepository stockPriceRepository;
+    private final UserRepository userRepository;
     private final BuildProperties buildProperties;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
@@ -213,6 +215,12 @@ public class AdminController {
     @Operation(summary = "Health check", description = "Check if the application is running")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of("message", "TubeReturns is running", "version", buildProperties.getVersion()));
+    }
+
+    @GetMapping("/user-count")
+    @Operation(summary = "Get total registered user count")
+    public ResponseEntity<Map<String, Long>> getUserCount() {
+        return ResponseEntity.ok(Map.of("count", userRepository.count()));
     }
 
     @GetMapping("/stocks/unknown")

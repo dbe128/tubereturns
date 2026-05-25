@@ -89,6 +89,21 @@ import type { ChannelSearchResult } from '../../api/types';
 
         <div class="flex items-center gap-3">
           <div class="hidden md:flex items-center gap-3">
+            <a routerLink="/faq"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
+              FAQ
+            </a>
+            @if (auth.isAuthenticated) {
+              <a routerLink="/contact"
+                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
+                Contact us
+              </a>
+            } @else {
+              <a href="mailto:feedback@tubereturns.com"
+                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
+                Contact us
+              </a>
+            }
             @if (auth.isAdmin) {
               <a routerLink="/admin"
                 class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
@@ -124,6 +139,11 @@ import type { ChannelSearchResult } from '../../api/types';
                       class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
                       Sign out
                     </button>
+                    @if (version()) {
+                      <div class="border-t border-gray-100 mt-1 px-4 py-2">
+                        <span class="text-xs text-gray-400">version: {{ version() }}</span>
+                      </div>
+                    }
                   </div>
                 }
               </div>
@@ -190,10 +210,6 @@ import type { ChannelSearchResult } from '../../api/types';
                   [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
               </button>
             </div>
-            <button (click)="logout()"
-              class="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
-              Sign out
-            </button>
           } @else {
             <div class="flex flex-col gap-2">
               <a routerLink="/login" (click)="closeMobileMenu()"
@@ -206,7 +222,37 @@ import type { ChannelSearchResult } from '../../api/types';
               </a>
             </div>
           }
+          <div class="mt-4 pt-4 border-t border-gray-100">
+            <a routerLink="/faq" (click)="closeMobileMenu()"
+              class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              FAQ
+            </a>
+            @if (auth.isAuthenticated) {
+              <a routerLink="/contact" (click)="closeMobileMenu()"
+                class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                Contact us
+              </a>
+            } @else {
+              <a href="mailto:feedback@tubereturns.com"
+                class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                Contact us
+              </a>
+            }
+          </div>
+          @if (auth.isAuthenticated) {
+            <div class="mt-2 pt-2 border-t border-gray-100">
+              <button (click)="logout()"
+                class="w-full text-left px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+                Sign out
+              </button>
+            </div>
+          }
         </div>
+        @if (version()) {
+          <div class="px-4 py-2 border-t border-gray-100">
+            <span class="text-xs text-gray-400">version: {{ version() }}</span>
+          </div>
+        }
       </div>
     }
   `,
@@ -224,6 +270,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   readonly toasts = signal<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
   readonly userMenuOpen = signal(false);
   readonly mobileMenuOpen = signal(false);
+  readonly version = signal<string | null>(null);
   private readonly pendingAdd = signal<ChannelSearchResult | null>(null);
   private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private toastCounter = 0;
@@ -260,6 +307,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
+    this.api.getVersion().subscribe({ next: (v) => this.version.set(v), error: () => {} });
     const stored = localStorage.getItem('pendingAddChannel');
     if (stored) {
       try { this.pendingAdd.set(JSON.parse(stored) as ChannelSearchResult); }

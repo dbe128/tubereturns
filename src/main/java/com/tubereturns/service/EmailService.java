@@ -113,6 +113,49 @@ public class EmailService {
         }
     }
 
+    @Async
+    public void sendContactEmail(String senderName, String senderEmail, String message) {
+        if (mailSender == null) {
+            log.warn("Mail not configured — contact message from {}: {}", senderEmail, message);
+            return;
+        }
+        String escapedMessage = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>");
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"></head>
+                <body style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#111;">
+                  <div style="margin-bottom:24px;">
+                    <img src="cid:logo" alt="TubeReturns" style="height:150px;" />
+                  </div>
+                  <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;">New feedback message</h2>
+                  <p style="margin:0 0 4px;color:#6b7280;font-size:13px;"><strong>From:</strong> %s &lt;%s&gt;</p>
+                  <div style="margin:16px 0;padding:16px;background:#f9fafb;border-left:3px solid #16a34a;border-radius:4px;font-size:14px;color:#374151;line-height:1.6;">%s</div>
+                  <p style="margin:24px 0 0;color:#9ca3af;font-size:12px;">— TubeReturns</p>
+                </body>
+                </html>
+                """.formatted(senderName, senderEmail, escapedMessage);
+        trySend("feedback@tubereturns.com", "TubeReturns feedback", html);
+
+        String copyHtml = """
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"></head>
+                <body style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#111;">
+                  <div style="margin-bottom:24px;">
+                    <img src="cid:logo" alt="TubeReturns" style="height:150px;" />
+                  </div>
+                  <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;">We received your message</h2>
+                  <p style="margin:0 0 8px;color:#374151;font-size:15px;">Hi %s,</p>
+                  <p style="margin:0 0 16px;color:#6b7280;font-size:14px;">Thanks for reaching out! Here's a copy of what you sent us:</p>
+                  <div style="margin:0 0 24px;padding:16px;background:#f9fafb;border-left:3px solid #16a34a;border-radius:4px;font-size:14px;color:#374151;line-height:1.6;">%s</div>
+                  <p style="margin:0 0 0;color:#9ca3af;font-size:12px;">We'll get back to you as soon as we can. — TubeReturns</p>
+                </body>
+                </html>
+                """.formatted(senderName, escapedMessage);
+        trySend(senderEmail, "TubeReturns feedback — your message", copyHtml);
+    }
+
     private void trySend(String toEmail, String subject, String html) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

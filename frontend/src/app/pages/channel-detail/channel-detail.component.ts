@@ -313,7 +313,7 @@ interface IndexedVideo {
               }
             }
           </div>
-          <div class="hidden md:block overflow-x-auto">
+          <div class="hidden md:block overflow-x-auto overflow-y-hidden">
           <table class="w-full min-w-max text-sm">
             <thead>
               <tr class="bg-gray-800 border-b border-gray-700 text-left text-xs text-gray-500 uppercase tracking-wider">
@@ -579,7 +579,7 @@ interface IndexedVideo {
                 }
               }
             </div>
-            <div class="hidden md:block overflow-x-auto">
+            <div class="hidden md:block overflow-x-auto overflow-y-hidden">
             <table class="w-full min-w-max text-sm">
               <thead>
                 <tr class="bg-gray-800 border-b border-gray-700 text-left text-xs text-gray-500 uppercase tracking-wider">

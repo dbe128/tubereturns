@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.boot.info.BuildProperties;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
@@ -28,6 +29,7 @@ public class StatsController {
     private final StockRepository stockRepository;
     private final CurrencyRepository currencyRepository;
     private final AiModelService aiModelService;
+    private final BuildProperties buildProperties;
 
     @Lazy
     @Autowired
@@ -41,13 +43,14 @@ public class StatsController {
     @GetMapping
     @Cacheable("siteStats")
     @Operation(summary = "Get site-wide stats")
-    public Map<String, Long> getStats() {
+    public Map<String, Object> getStats() {
         return Map.of(
                 "totalPicks", pickRepository.count(),
                 "totalChannels", channelRepository.count(),
                 "totalStocks", stockRepository.count(),
                 "totalCurrencies", currencyRepository.count(),
-                "totalLlmModels", (long) aiModelService.getModelCount()
+                "totalLlmModels", (long) aiModelService.getModelCount(),
+                "version", buildProperties.getVersion()
         );
     }
 }
