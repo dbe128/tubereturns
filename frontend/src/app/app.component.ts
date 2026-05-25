@@ -13,7 +13,7 @@ import { NavbarComponent } from './components/navbar/navbar.component';
         <router-outlet />
       </main>
       <footer class="bg-gray-900 border-t border-gray-800 py-4 text-center text-xs text-gray-500">
-        © 2026 TubeReturns.com. All rights reserved.
+        © 2026 <span class="text-red-600 font-semibold">Tube</span><span class="text-green-500 font-semibold">Returns</span>.com. All rights reserved.
       </footer>
     </div>
   `,

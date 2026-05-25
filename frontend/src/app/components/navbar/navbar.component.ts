@@ -33,12 +33,12 @@ import type { ChannelSearchResult } from '../../api/types';
             <span class="text-xs text-gray-400 font-mono">v{{ version() }}</span>
           </a>
 
-          <div class="relative w-96">
-            <div class="flex items-center border border-gray-200 rounded-lg px-3 py-1.5 gap-2 bg-gray-100 focus-within:ring-2 focus-within:ring-green-500">
+          <div class="relative w-[26rem]">
+            <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2 gap-2.5 bg-white shadow-sm focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-400 transition-shadow">
               @if (searching()) {
                 <div class="w-4 h-4 rounded-full border-2 border-green-500 border-t-transparent animate-spin flex-shrink-0"></div>
               } @else {
-                <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4 text-gray-900 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
                 </svg>
               }
@@ -46,8 +46,8 @@ import type { ChannelSearchResult } from '../../api/types';
                 [ngModel]="searchQuery()"
                 (ngModelChange)="onSearchChange($event)"
                 (blur)="hideSearch()"
-                placeholder="Stock-picking YouTube channel…"
-                class="w-full text-sm focus:outline-none bg-transparent text-gray-900 placeholder-gray-400"
+                placeholder="Search stock-picking channels…"
+                class="w-full text-sm focus:outline-none bg-transparent text-gray-900 placeholder-gray-500"
               />
             </div>
             @if (ytResults().length > 0) {
@@ -97,12 +97,12 @@ import type { ChannelSearchResult } from '../../api/types';
           @if (auth.isAuthenticated) {
             <span class="text-sm text-gray-500">Welcome, {{ auth.user()?.firstName }}</span>
             <button (click)="logout()"
-              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              class="px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
               Sign out
             </button>
           } @else {
             <a routerLink="/login"
-              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 transition-colors">
+              class="px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
               Sign in
             </a>
             <a routerLink="/signup"
