@@ -20,7 +20,7 @@ type GoogleApi = {
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 w-full max-w-sm">
         <h1 class="text-xl font-bold text-gray-900 mb-6">{{ heading }}</h1>
 
         <div id="google-signin-btn" class="w-full min-h-[44px] mb-4"></div>

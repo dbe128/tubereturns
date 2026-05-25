@@ -39,7 +39,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
       </div>
     }
     <div class="bg-gray-950 w-full">
-      <div class="max-w-screen-2xl mx-auto px-8 py-14 text-center">
+      <div class="max-w-screen-2xl mx-auto px-4 md:px-8 py-10 md:py-14 text-center">
         <div class="flex items-center justify-center gap-4 mb-10 text-xs font-bold tracking-[0.18em] uppercase">
           <span class="flex items-center gap-1.5 text-green-400">
             <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"></span>
@@ -50,7 +50,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
           <span class="text-gray-700">·</span>
           <span class="text-gray-500">vs. S&amp;P 500</span>
         </div>
-        <h1 class="text-7xl sm:text-8xl font-black text-white leading-none tracking-tight mb-3">
+        <h1 class="text-4xl sm:text-7xl md:text-8xl font-black text-white leading-none tracking-tight mb-3">
           Which finance YouTuber is<br>
           <span class="text-green-400">actually beating the stock market?</span>
         </h1>
@@ -97,7 +97,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
       </div>
     </div>
     <div class="bg-gray-600 w-full">
-    <div class="max-w-screen-2xl mx-auto px-6 py-10">
+    <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-10">
 
       @if (loading()) {
         <div class="flex justify-center py-20">
@@ -113,10 +113,10 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
 
       @if (!loading() && !error()) {
         <div id="leaderboard" class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-          <div class="flex items-center justify-between px-6 py-5 border-b border-gray-700">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-4 md:py-5 border-b border-gray-700">
             <div class="flex flex-col gap-0.5">
               <span class="text-sm font-bold tracking-[0.18em] uppercase text-green-500">★ Leaderboard</span>
-              <h2 class="text-2xl font-black text-white">Top 5 Finance YouTubers &middot; Ranked by Alpha</h2>
+              <h2 class="text-lg md:text-2xl font-black text-white">Top 5 Finance YouTubers<span class="hidden md:inline"> &middot; Ranked by Alpha</span></h2>
             </div>
             <div class="flex items-center gap-1 p-1 bg-gray-800 rounded-lg">
               <button (click)="selectedTimeframe.set('1m')"
@@ -136,6 +136,57 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
               </button>
             </div>
           </div>
+          <div class="md:hidden divide-y divide-gray-700">
+            <div class="flex items-center gap-3 px-4 py-2 bg-gray-800 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div class="w-7 flex-shrink-0">#</div>
+              <div class="w-9 flex-shrink-0"></div>
+              <div class="flex-1">Channel</div>
+              <div class="flex-shrink-0">{{ timeframeLabel() }} Alpha</div>
+            </div>
+            @if (processedChannels().length === 0) {
+              <div class="px-4 py-16 text-center text-gray-400 text-sm">No fully processed channels yet.</div>
+            } @else {
+              @for (row of visibleRows(); track row.handle; let i = $index) {
+                <a
+                  [routerLink]="['/channel', channelSlug(row.channelName)]"
+                  class="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/60 transition-colors"
+                >
+                  <div class="w-7 text-center flex-shrink-0">
+                    @if (i === 0) { <span class="text-lg">🥇</span> }
+                    @else if (i === 1) { <span class="text-lg">🥈</span> }
+                    @else if (i === 2) { <span class="text-lg">🥉</span> }
+                    @else { <span class="text-sm text-gray-400 font-mono">{{ i + 1 }}</span> }
+                  </div>
+                  <div class="relative flex-shrink-0">
+                    @if (row.hasThumbnail) {
+                      <img [src]="'/api/channels/' + row.handle + '/thumbnail'" [alt]="row.channelName"
+                           class="w-9 h-9 rounded-full object-cover ring-2 ring-gray-700" />
+                    } @else {
+                      <div class="w-9 h-9 rounded-full bg-gray-700"></div>
+                    }
+                    @if (i === 0) {
+                      <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-base leading-none select-none">👑</span>
+                    }
+                  </div>
+                  <span class="flex-1 font-semibold text-white truncate text-sm">{{ row.channelName }}</span>
+                  @if (scoreForRow(row) !== null) {
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg font-black font-mono text-xs flex-shrink-0"
+                          [class]="scoreForRow(row)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
+                      {{ formatScore(scoreForRow(row)!) }}
+                    </span>
+                  } @else {
+                    <span class="text-gray-400 flex-shrink-0 text-sm">—</span>
+                  }
+                </a>
+              }
+              @if (!auth.isAdmin && sortedRows().length > 5) {
+                <div class="px-4 py-3 text-center text-xs text-gray-500 bg-gray-800 border-t border-gray-700">
+                  {{ sortedRows().length - 5 }} more channel{{ sortedRows().length - 5 === 1 ? '' : 's' }} not shown
+                </div>
+              }
+            }
+          </div>
+          <div class="hidden md:block">
           <table class="w-full">
             <thead>
               <tr class="border-b border-gray-700 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -256,6 +307,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
               }
             </tbody>
           </table>
+          </div>
         </div>
 
       }
@@ -264,8 +316,8 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
         @if (auth.isAuthenticated && !auth.isAdmin && myChannelSuggestions().length > 0) {
           <div class="mt-10">
             <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">My Channel Suggestions</h2>
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-              <table class="w-full text-xs">
+            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
                     <th class="px-4 py-2 text-left font-medium">Channel</th>

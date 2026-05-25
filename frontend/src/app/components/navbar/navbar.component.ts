@@ -26,13 +26,14 @@ import type { ChannelSearchResult } from '../../api/types';
     }
 
     <header class="bg-gray-100 border-b border-gray-200">
-      <div class="px-6 h-[3.33rem] flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <a routerLink="/">
-            <img src="logo.webp" alt="TubeReturns" class="h-36 rounded" />
+      <div class="px-6 h-[3.33rem] flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
+          <a routerLink="/" class="flex-shrink-0">
+            <img src="logo.webp" alt="TubeReturns" class="h-36 rounded hidden md:block" />
+            <img src="logo-mobile.webp" alt="TubeReturns" class="h-[38px] rounded md:hidden" />
           </a>
 
-          <div class="relative w-[26rem]">
+          <div class="relative flex-1 md:w-[26rem] md:flex-none">
             <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2 gap-2.5 bg-white shadow-sm focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-400 transition-shadow">
               @if (searching()) {
                 <div class="w-4 h-4 rounded-full border-2 border-green-500 border-t-transparent animate-spin flex-shrink-0"></div>
@@ -87,57 +88,127 @@ import type { ChannelSearchResult } from '../../api/types';
         </div>
 
         <div class="flex items-center gap-3">
-          @if (auth.isAdmin) {
-            <a routerLink="/admin"
-              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
-              Admin
-            </a>
-          }
-          @if (auth.isAuthenticated) {
-            <div class="relative">
-              <button (click)="toggleUserMenu()" class="focus:outline-none">
-                @if (auth.user()?.profilePictureUrl) {
-                  <img [src]="auth.user()!.profilePictureUrl!" [alt]="auth.user()!.firstName"
-                       referrerpolicy="no-referrer"
-                       class="w-8 h-8 rounded-full object-cover ring-1 ring-gray-300 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-green-500 transition-shadow" />
-                } @else {
-                  <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 cursor-pointer hover:bg-green-700 transition-colors">
-                    {{ userInitials() }}
-                  </div>
-                }
-              </button>
-              @if (userMenuOpen()) {
-                <div class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
-                  <div class="flex items-center justify-between px-4 py-2.5 gap-3">
-                    <span class="text-xs text-gray-600 leading-snug">Notify when my suggested channel is processed</span>
-                    <button (click)="toggleNotifyPreference()"
-                      class="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
-                      [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'bg-green-600' : 'bg-gray-300'">
-                      <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
-                        [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
+          <div class="hidden md:flex items-center gap-3">
+            @if (auth.isAdmin) {
+              <a routerLink="/admin"
+                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
+                Admin
+              </a>
+            }
+            @if (auth.isAuthenticated) {
+              <div class="relative">
+                <button (click)="toggleUserMenu()" class="focus:outline-none">
+                  @if (auth.user()?.profilePictureUrl) {
+                    <img [src]="auth.user()!.profilePictureUrl!" [alt]="auth.user()!.firstName"
+                         referrerpolicy="no-referrer"
+                         class="w-8 h-8 rounded-full object-cover ring-1 ring-gray-300 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-green-500 transition-shadow" />
+                  } @else {
+                    <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 cursor-pointer hover:bg-green-700 transition-colors">
+                      {{ userInitials() }}
+                    </div>
+                  }
+                </button>
+                @if (userMenuOpen()) {
+                  <div class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                    <div class="flex items-center justify-between px-4 py-2.5 gap-3">
+                      <span class="text-xs text-gray-600 leading-snug">Notify when my suggested channel is processed</span>
+                      <button (click)="toggleNotifyPreference()"
+                        class="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                        [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'bg-green-600' : 'bg-gray-300'">
+                        <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                          [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
+                      </button>
+                    </div>
+                    <div class="border-t border-gray-100 my-1"></div>
+                    <button (click)="logout()"
+                      class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
+                      Sign out
                     </button>
                   </div>
-                  <div class="border-t border-gray-100 my-1"></div>
-                  <button (click)="logout()"
-                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
-                    Sign out
-                  </button>
-                </div>
-              }
-            </div>
-          } @else {
-            <a routerLink="/login"
-              class="px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
-              Sign in
-            </a>
-            <a routerLink="/signup"
-              class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
-              Sign up
-            </a>
-          }
+                }
+              </div>
+            } @else {
+              <a routerLink="/login"
+                class="px-3 py-1.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors">
+                Sign in
+              </a>
+              <a routerLink="/signup"
+                class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors">
+                Sign up
+              </a>
+            }
+          </div>
+          <button (click)="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-200 transition-colors" aria-label="Menu">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
       </div>
     </header>
+
+    @if (mobileMenuOpen()) {
+      <div class="fixed inset-0 z-40 bg-black/40 md:hidden" (click)="closeMobileMenu()"></div>
+      <div class="fixed top-0 right-0 bottom-0 z-50 w-80 max-w-[85vw] bg-white flex flex-col md:hidden shadow-xl">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+          <span class="text-sm font-semibold text-gray-700">Menu</span>
+          <button (click)="closeMobileMenu()" class="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="flex-1 overflow-y-auto px-4 py-3">
+          @if (auth.isAuthenticated) {
+            <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
+              @if (auth.user()?.profilePictureUrl) {
+                <img [src]="auth.user()!.profilePictureUrl!" [alt]="auth.user()!.firstName"
+                     referrerpolicy="no-referrer"
+                     class="w-10 h-10 rounded-full object-cover ring-1 ring-gray-300 flex-shrink-0" />
+              } @else {
+                <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                  {{ userInitials() }}
+                </div>
+              }
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-900 truncate">{{ auth.user()?.firstName }}{{ auth.user()?.lastName ? ' ' + auth.user()!.lastName! : '' }}</p>
+                <p class="text-xs text-gray-500 truncate">{{ auth.user()?.email }}</p>
+              </div>
+            </div>
+            @if (auth.isAdmin) {
+              <a routerLink="/admin" (click)="closeMobileMenu()"
+                class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors mb-1">
+                Admin Dashboard
+              </a>
+            }
+            <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-lg mb-1">
+              <span class="text-xs text-gray-600 leading-snug flex-1 mr-3">Notify when my suggested channel is processed</span>
+              <button (click)="toggleNotifyPreference()"
+                class="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'bg-green-600' : 'bg-gray-300'">
+                <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                  [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
+              </button>
+            </div>
+            <button (click)="logout()"
+              class="w-full text-left px-3 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+              Sign out
+            </button>
+          } @else {
+            <div class="flex flex-col gap-2">
+              <a routerLink="/login" (click)="closeMobileMenu()"
+                class="block px-3 py-2.5 text-sm font-semibold text-gray-700 border border-gray-300 rounded-lg hover:border-gray-400 hover:text-gray-900 transition-colors text-center">
+                Sign in
+              </a>
+              <a routerLink="/signup" (click)="closeMobileMenu()"
+                class="block px-3 py-2.5 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition-colors text-center">
+                Sign up
+              </a>
+            </div>
+          }
+        </div>
+      </div>
+    }
   `,
 })
 export class NavbarComponent implements OnInit, OnDestroy {
@@ -152,6 +223,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   readonly addingHandle = signal<string | null>(null);
   readonly toasts = signal<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
   readonly userMenuOpen = signal(false);
+  readonly mobileMenuOpen = signal(false);
   private readonly pendingAdd = signal<ChannelSearchResult | null>(null);
   private toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
   private toastCounter = 0;
@@ -245,6 +317,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   handleSelect(result: ChannelSearchResult): void {
+    this.closeMobileMenu();
     if (this.isInDb(result.handle)) {
       this.searchQuery.set('');
       this.ytResults.set([]);
@@ -335,6 +408,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.userMenuOpen.update(v => !v);
   }
 
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update(v => !v);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
+    this.searchQuery.set('');
+    this.ytResults.set([]);
+  }
+
   toggleNotifyPreference(): void {
     const current = this.auth.user()?.notifyOnChannelProcessed ?? true;
     this.api.updateNotifyPreference(!current).subscribe({
@@ -351,8 +434,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
   }
 
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.userMenuOpen.set(false);
+    this.closeMobileMenu();
+  }
+
   logout(): void {
     this.userMenuOpen.set(false);
+    this.closeMobileMenu();
     this.auth.logout();
     this.router.navigate(['/']);
   }

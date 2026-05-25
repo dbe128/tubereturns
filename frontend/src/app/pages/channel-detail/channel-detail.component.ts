@@ -79,13 +79,13 @@ interface IndexedVideo {
       </div>
     } @else {
       <div class="bg-gray-600 w-full min-h-screen">
-      <div class="max-w-screen-2xl mx-auto px-6 py-10">
+      <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-10">
         <a routerLink="/" [queryParams]="{ scrollTo: 'leaderboard' }" class="text-green-400 hover:text-green-300 text-sm font-medium mb-6 inline-block">
           ← Leaderboard
         </a>
 
         <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 p-6 mb-4">
-          <div class="flex items-center gap-4">
+          <div class="flex flex-wrap items-center gap-4">
             @if (channel()!.hasThumbnail) {
               <img
                 [src]="'/api/channels/' + channel()!.handle + '/thumbnail'"
@@ -108,8 +108,8 @@ interface IndexedVideo {
               </h1>
               <span class="text-gray-400 text-xs mt-0.5 inline-block">youtube.com/@{{ channel()!.handle }}</span>
             </div>
-            <div class="flex items-center gap-6 flex-shrink-0">
-              <div class="flex gap-8 text-sm text-gray-400">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:flex justify-items-center gap-4 md:gap-8 text-sm text-gray-400 flex-1">
                 <div class="text-center">
                   <div class="mb-1">
                     @if (channel()!.score1m !== null) {
@@ -143,7 +143,7 @@ interface IndexedVideo {
                   </div>
                   <div class="text-xs uppercase tracking-wide">3Y Alpha</div>
                 </div>
-                <div class="w-px bg-gray-700 self-stretch mx-2"></div>
+                <div class="w-px bg-gray-700 self-stretch mx-2 hidden md:block"></div>
                 <div class="text-center">
                   <div class="text-2xl font-bold text-white">{{ channel()!.totalVideos === 0 ? '?' : channel()!.totalVideos }}</div>
                   <div class="text-xs uppercase tracking-wide">Videos</div>
@@ -188,7 +188,7 @@ interface IndexedVideo {
         </div>
 
         @if (activeTab() === 'videos' && auth.isAdmin) {
-        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-5 py-4 mb-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-4 md:px-5 py-4 mb-4">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
             @if (filterTranscript() || filterProcessing() || filterPick() || !hideNoPicks()) {
@@ -294,7 +294,27 @@ interface IndexedVideo {
         </div>
 
         <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-          <table class="w-full text-sm">
+          <div class="md:hidden divide-y divide-gray-700">
+            @if (sorted().length === 0) {
+              <div class="px-4 py-12 text-center text-gray-400 text-sm">No videos match the current filters.</div>
+            } @else {
+              @for (item of sorted(); track item.v.videoId) {
+                <div class="px-4 py-3" [class.bg-amber-900/20]="item.v.excluded">
+                  <p class="text-sm text-white truncate mb-1">{{ item.v.title }}</p>
+                  <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+                    <span>{{ item.v.publishedAt | date: 'shortDate' }}</span>
+                    @if (item.v.buyPicks.length > 0) {
+                      <span class="font-mono text-primary-600">{{ item.v.buyPicks.join(', ') }}</span>
+                    }
+                    <span class="inline-block px-2 py-0.5 rounded font-medium"
+                          [ngClass]="transcriptStyle(item.v.transcriptStatus)">{{ transcriptLabel(item.v.transcriptStatus) }}</span>
+                  </div>
+                </div>
+              }
+            }
+          </div>
+          <div class="hidden md:block overflow-x-auto">
+          <table class="w-full min-w-max text-sm">
             <thead>
               <tr class="bg-gray-800 border-b border-gray-700 text-left text-xs text-gray-500 uppercase tracking-wider">
                 <th
@@ -473,6 +493,7 @@ interface IndexedVideo {
               }
             </tbody>
           </table>
+          </div>
         </div>
 
         @if (totalPages() > 1) {
@@ -494,7 +515,7 @@ interface IndexedVideo {
 
         @if (activeTab() === 'picks') {
         @if (!picksLoading() && !picksError() && picks().length > 0) {
-        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-5 py-3 mb-4 flex items-center gap-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-4 md:px-5 py-3 mb-4 flex flex-wrap items-center gap-4">
           <div class="flex flex-col gap-1">
             <label class="text-xs text-gray-500">Ticker</label>
             <select
@@ -526,7 +547,40 @@ interface IndexedVideo {
           } @else if (picks().length === 0) {
             <div class="p-12 text-center text-gray-400 text-sm">No picks extracted yet.</div>
           } @else {
-            <table class="w-full text-sm">
+            <div class="md:hidden divide-y divide-gray-700">
+              @for (pick of pagedPicks(); track pick.videoId + pick.tickerSymbol) {
+                @if (!pick.unknown || auth.isAdmin) {
+                <div class="px-4 py-3">
+                  <div class="flex items-start justify-between gap-2 mb-1">
+                    <div class="min-w-0">
+                      <span class="font-mono font-semibold text-gray-200 text-sm">{{ pick.tickerSymbol }}</span>
+                      @if (pick.unknown) {
+                        <span class="text-yellow-500 font-normal text-lg leading-none ml-0.5">⚠</span>
+                      }
+                      @if (pick.companyName) {
+                        <span class="text-xs text-gray-400 ml-2">{{ pick.companyName }}</span>
+                      }
+                    </div>
+                    <span class="text-xs text-gray-500 flex-shrink-0">{{ pick.videoPublishedAt | date: 'shortDate' }}</span>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-1">
+                    @for (col of pickTimeColumns; track col) {
+                      @if (alphaForColumn(pick, col) !== null) {
+                        <span class="inline-flex items-center px-2 py-0.5 rounded font-black font-mono text-xs"
+                              [class]="alphaForColumn(pick, col)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
+                          {{ col.toUpperCase() }} {{ formatPickReturn(alphaForColumn(pick, col)) }}
+                        </span>
+                      } @else {
+                        <span class="text-xs text-gray-500">{{ col.toUpperCase() }} —</span>
+                      }
+                    }
+                  </div>
+                </div>
+                }
+              }
+            </div>
+            <div class="hidden md:block overflow-x-auto">
+            <table class="w-full min-w-max text-sm">
               <thead>
                 <tr class="bg-gray-800 border-b border-gray-700 text-left text-xs text-gray-500 uppercase tracking-wider">
                   <th class="px-4 py-3 w-28 cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('date')">Date<span class="ml-1" [class.text-primary-500]="pickSortKey() === 'date'" [class.text-gray-300]="pickSortKey() !== 'date'">{{ pickSortKey() === 'date' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span></th>
@@ -599,6 +653,7 @@ interface IndexedVideo {
                 }
               </tbody>
             </table>
+            </div>
             @if (picksTotalPages() > 1) {
               <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-700">
                 <button
@@ -1007,15 +1062,11 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   openTranscript(v: VideoSummary): void {
     if (v.transcriptStatus !== 'DOWNLOADED') { return; }
 
-    const popupWidth = 520;
-    const popupHeight = Math.min(window.innerHeight * 0.75, 600);
     const margin = 12;
-    let left = margin;
-    let top = margin;
-    if (popupWidth + 2 * margin < window.innerWidth) {
-      left = Math.max(margin, Math.min(window.innerWidth - popupWidth - margin, window.innerWidth / 2 - popupWidth / 2));
-    }
-    top = Math.max(margin, window.innerHeight / 2 - popupHeight / 2);
+    const popupWidth = Math.min(520, window.innerWidth - 2 * margin);
+    const popupHeight = Math.min(window.innerHeight * 0.8, 600);
+    const left = Math.max(margin, window.innerWidth / 2 - popupWidth / 2);
+    const top = Math.max(margin, window.innerHeight / 2 - popupHeight / 2);
     this.transcriptPopupPos.set({ top, left, width: popupWidth, maxHeight: popupHeight });
 
     if (this.transcriptCache.has(v.videoId)) {

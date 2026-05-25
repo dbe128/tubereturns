@@ -20,7 +20,7 @@ type GoogleApi = {
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 w-full max-w-sm">
         @if (registered()) {
           <div class="text-center py-4">
             <div class="text-7xl mb-4">✉</div>

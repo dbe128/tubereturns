@@ -39,14 +39,14 @@ interface UnknownStockRow extends UnknownStock {
       </div>
     }
     <div class="bg-gray-100 w-full min-h-screen">
-      <div class="max-w-screen-2xl mx-auto px-6 py-10">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+      <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-10">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 md:p-8">
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-2xl font-black text-gray-900">Admin Dashboard</h1>
           <span class="text-xs text-gray-400 font-mono">v{{ version() }}</span>
         </div>
 
-        <div class="flex items-center gap-3 mb-10">
+        <div class="flex flex-wrap items-center gap-3 mb-10">
           <input
             [ngModel]="adminAddInput()"
             (ngModelChange)="adminAddInput.set($event)"
@@ -77,8 +77,41 @@ interface UnknownStockRow extends UnknownStock {
         @if (!loading() && inProgressChannels().length > 0) {
           <div class="mb-10">
             <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Channels Being Processed</h2>
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-              <table class="w-full">
+            <!-- mobile cards -->
+            <div class="md:hidden flex flex-col gap-3">
+              @for (row of inProgressSorted(); track row.handle) {
+                <div class="bg-gray-900 border border-gray-700 rounded-xl p-4">
+                  <a [routerLink]="['/channel', row.handle]" class="flex items-center gap-3 mb-3 group">
+                    @if (row.hasThumbnail) {
+                      <img [src]="'/api/channels/' + row.handle + '/thumbnail'" [alt]="row.channelName"
+                           class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-700" />
+                    } @else {
+                      <div class="w-9 h-9 rounded-full bg-gray-700 flex-shrink-0"></div>
+                    }
+                    <span class="font-semibold text-white group-hover:text-green-400 transition-colors truncate">{{ row.channelName }}</span>
+                  </a>
+                  <div class="flex items-center gap-4 text-xs font-mono text-gray-400 mb-3">
+                    <span>{{ row.subscriberCount != null ? formatSubscriberCount(row.subscriberCount) : '—' }} subs</span>
+                    <span>{{ row.processedVideos }}/{{ row.totalVideos }} videos</span>
+                    <span class="ml-auto">{{ formatProgress(row) }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    @if (togglingNotificationFor() === row.handle) {
+                      <div class="animate-spin rounded-full h-5 w-5 border-2 border-amber-400 border-t-transparent"></div>
+                    } @else if (myNotifiedHandles().has(row.handle)) {
+                      <button (click)="toggleNotification(row)" class="flex-1 py-1.5 bg-amber-900/40 text-amber-400 rounded text-xs font-semibold hover:bg-amber-900/60 transition-colors">Unsubscribe</button>
+                    } @else {
+                      <button (click)="toggleNotification(row)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded text-xs font-semibold hover:text-amber-400 transition-colors">Notify me</button>
+                    }
+                    <button (click)="reprocessChannel(row.handle, row.channelName)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded text-xs font-semibold hover:text-amber-400 transition-colors">Re-extract</button>
+                    <button (click)="deleteChannel(row.handle, row.channelName)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded text-xs font-semibold hover:text-danger-500 transition-colors">Delete</button>
+                  </div>
+                </div>
+              }
+            </div>
+            <!-- desktop table -->
+            <div class="hidden md:block bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max">
                 <thead>
                   <tr class="border-b border-gray-700 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     <th class="px-6 py-4">Channel</th>
@@ -313,8 +346,8 @@ interface UnknownStockRow extends UnknownStock {
           @if (notificationsStatus().items.length === 0) {
             <p class="text-xs text-gray-500">No pending notifications.</p>
           } @else {
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-              <table class="w-full text-xs">
+            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
                     <th class="px-4 py-2 text-left font-medium">Channel</th>
@@ -341,8 +374,50 @@ interface UnknownStockRow extends UnknownStock {
           @if (unknownStockRows().length === 0) {
             <p class="text-xs text-gray-500">No unreviewed unknown stocks.</p>
           } @else {
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-              <table class="w-full text-xs">
+            <!-- mobile cards -->
+            <div class="md:hidden flex flex-col gap-3">
+              @for (row of unknownStockRows(); track row.id) {
+                @let hasChanges = stockHasChanges(row);
+                <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs">
+                  <div class="flex items-center gap-3 mb-3">
+                    <input
+                      [ngModel]="row.editTicker"
+                      (ngModelChange)="updateStockRow(row.id, 'editTicker', $event)"
+                      [disabled]="row.saving"
+                      class="w-28 border border-gray-700 bg-gray-800 text-white rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                    <span class="text-gray-400 flex-1 truncate">{{ row.companyName ?? '—' }}</span>
+                    <span class="font-mono text-gray-300 flex-shrink-0">{{ row.pickCount }} picks</span>
+                  </div>
+                  <div class="flex items-center gap-3 mb-3">
+                    <span class="text-gray-500">Currency</span>
+                    <input
+                      [ngModel]="row.editCurrency"
+                      (ngModelChange)="updateStockRow(row.id, 'editCurrency', $event)"
+                      [disabled]="row.saving"
+                      maxlength="3"
+                      class="w-16 border border-gray-700 bg-gray-800 text-white rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                    />
+                    <span class="font-mono text-gray-500 ml-auto">{{ row.createdAt | date:'dd MMM yyyy' }}</span>
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      (click)="tryTicker(row)"
+                      [disabled]="row.saving || (hasChanges && !row.editCurrency)"
+                      class="flex-1 py-1.5 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 disabled:opacity-40 transition-colors"
+                    >{{ hasChanges ? 'Fix' : 'Retry' }}</button>
+                    <button
+                      (click)="acceptUnknown(row)"
+                      [disabled]="row.saving"
+                      class="flex-1 py-1.5 bg-gray-700 text-white rounded text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors"
+                    >Accept</button>
+                  </div>
+                </div>
+              }
+            </div>
+            <!-- desktop table -->
+            <div class="hidden md:block bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
                     <th class="px-4 py-2 text-left font-medium">Ticker</th>
@@ -404,8 +479,37 @@ interface UnknownStockRow extends UnknownStock {
           @if (pendingChannelSuggestions().length === 0) {
             <p class="text-xs text-gray-500">No pending channel suggestions.</p>
           } @else {
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
-              <table class="w-full text-xs">
+            <!-- mobile cards -->
+            <div class="md:hidden flex flex-col gap-3">
+              @for (s of pendingChannelSuggestions(); track s.handle) {
+                <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs">
+                  <div class="flex items-center gap-2 mb-3">
+                    <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
+                         [alt]="s.channelName"
+                         (error)="hideImgOnError($event)"
+                         class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-700" />
+                    <div class="min-w-0 flex-1">
+                      <p class="font-semibold text-white truncate">{{ s.channelName }}</p>
+                      <p class="text-gray-400">&#64;{{ s.handle }}</p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-4 font-mono text-gray-400 mb-3">
+                    <span>{{ s.subscriberCount != null ? formatSubscriberCount(s.subscriberCount) : '—' }} subs</span>
+                    <span>{{ s.suggestionCount }} suggestion{{ s.suggestionCount === 1 ? '' : 's' }}</span>
+                    <span class="ml-auto text-gray-500">{{ s.firstSuggestedAt | date:'dd MMM yyyy' }}</span>
+                  </div>
+                  <div class="flex gap-2">
+                    <button (click)="approveSuggestion(s)"
+                      class="flex-1 py-1.5 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 transition-colors">Add</button>
+                    <button (click)="rejectSuggestion(s)"
+                      class="flex-1 py-1.5 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition-colors">Reject</button>
+                  </div>
+                </div>
+              }
+            </div>
+            <!-- desktop table -->
+            <div class="hidden md:block bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
                     <th class="px-4 py-2 text-left font-medium">Channel</th>
