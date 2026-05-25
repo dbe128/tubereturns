@@ -163,6 +163,13 @@ public class UserService implements UserDetailsService {
     }
 
     @Transactional
+    public User updateNotifyPreference(String email, boolean notifyOnChannelProcessed) {
+        User user = (User) loadUserByUsername(email);
+        user.setNotifyOnChannelProcessed(notifyOnChannelProcessed);
+        return userRepository.save(user);
+    }
+
+    @Transactional
     public User findOrCreateOAuth2User(String provider, String providerId, String email, String firstName) {
         return userRepository.findByEmail(email)
                 .map(existing -> {

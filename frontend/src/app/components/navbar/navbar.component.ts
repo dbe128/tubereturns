@@ -107,7 +107,17 @@ import type { ChannelSearchResult } from '../../api/types';
                 }
               </button>
               @if (userMenuOpen()) {
-                <div class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                <div class="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-50 py-1">
+                  <div class="flex items-center justify-between px-4 py-2.5 gap-3">
+                    <span class="text-xs text-gray-600 leading-snug">Notify when my suggested channel is processed</span>
+                    <button (click)="toggleNotifyPreference()"
+                      class="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                      [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'bg-green-600' : 'bg-gray-300'">
+                      <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                        [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
+                    </button>
+                  </div>
+                  <div class="border-t border-gray-100 my-1"></div>
                   <button (click)="logout()"
                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                     Sign out
@@ -278,7 +288,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   private proceedWithAdd(result: ChannelSearchResult, approvalSource: string = 'AUTO'): void {
-    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, true, approvalSource).subscribe({
+    const notify = this.auth.user()?.notifyOnChannelProcessed ?? true;
+    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, notify, approvalSource).subscribe({
       next: () => {
         this.addingHandle.set(null);
         this.searchQuery.set('');
@@ -322,6 +333,14 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   toggleUserMenu(): void {
     this.userMenuOpen.update(v => !v);
+  }
+
+  toggleNotifyPreference(): void {
+    const current = this.auth.user()?.notifyOnChannelProcessed ?? true;
+    this.api.updateNotifyPreference(!current).subscribe({
+      next: (res) => this.auth.setToken(res.token),
+      error: () => this.showToast('Failed to update notification preference.', 'error'),
+    });
   }
 
   @HostListener('document:click', ['$event'])

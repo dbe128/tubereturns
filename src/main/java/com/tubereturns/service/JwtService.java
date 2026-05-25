@@ -34,6 +34,7 @@ public class JwtService {
         if (user.getProfilePictureUrl() != null) {
             builder.claim("picture", user.getProfilePictureUrl());
         }
+        builder.claim("notifyOnChannelProcessed", user.isNotifyOnChannelProcessed());
         return builder.signWith(signingKey()).compact();
     }
 

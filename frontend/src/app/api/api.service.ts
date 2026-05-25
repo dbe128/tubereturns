@@ -312,6 +312,13 @@ export class ApiService {
     );
   }
 
+  updateNotifyPreference(notifyOnChannelProcessed: boolean): Observable<AuthResponse> {
+    return this.validated(
+      AuthResponseSchema,
+      this.http.patch<unknown>('/api/auth/preferences', { notifyOnChannelProcessed }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
   googleLogin(credential: string): Observable<AuthResponse> {
     return this.validated(
       AuthResponseSchema,

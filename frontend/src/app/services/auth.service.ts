@@ -6,6 +6,7 @@ export interface AuthUser {
   lastName: string | null;
   profilePictureUrl: string | null;
   role: string;
+  notifyOnChannelProcessed: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -51,7 +52,7 @@ export class AuthService {
         localStorage.removeItem(this.TOKEN_KEY);
         return null;
       }
-      return { email: payload.sub, firstName: payload.firstName, lastName: payload.lastName ?? null, profilePictureUrl: payload.picture ?? null, role: payload.role ?? '' };
+      return { email: payload.sub, firstName: payload.firstName, lastName: payload.lastName ?? null, profilePictureUrl: payload.picture ?? null, role: payload.role ?? '', notifyOnChannelProcessed: payload.notifyOnChannelProcessed ?? true };
     } catch {
       return null;
     }

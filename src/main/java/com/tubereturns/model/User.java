@@ -32,6 +32,9 @@ public class User implements UserDetails {
     @Column(name = "profile_picture_url", length = 512)
     private String profilePictureUrl;
 
+    @Column(name = "notify_on_channel_processed", nullable = false)
+    private boolean notifyOnChannelProcessed = true;
+
     @Column(nullable = false, unique = true)
     private String email;
 
