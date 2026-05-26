@@ -402,6 +402,10 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
 
       }
 
+      <div class="mx-4 mt-8 mb-2 rounded-xl border border-gray-700 bg-gray-800/60 px-5 py-3 text-center text-sm text-gray-300">
+        ⚠️ Not financial advice. Data may be incomplete — picks from deleted or private videos are not reflected in the rankings.
+      </div>
+
     </div>
     </div>
   `,
