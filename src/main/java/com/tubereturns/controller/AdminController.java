@@ -76,7 +76,8 @@ public class AdminController {
                 toDto("discovery", "Video Discovery", discoveryService.getQueueSize(), null),
                 toDto("transcript", "Transcript Downloads (YTBSD)", transcriptDownloadService.getQueueSize(), ytbsdStatsDto),
                 toDto("extraction", "Pick Extraction", stockPickExtractionService.getQueueSize(), null, stockPickExtractionService.isWorkerRunning(), toAiModelStatusDto(aiModelService.getStatus()), stockPickExtractionService.getActiveWorkers()),
-                toDto("price-refresh", "Stock Price Refresh", null, null)
+                toDto("price-refresh", "Stock Price Refresh", null, null),
+                toDto("stock-resolution", "Unknown Stock Resolution", null, null)
         );
     }
 
@@ -88,6 +89,7 @@ public class AdminController {
             case "transcript" -> scheduler.triggerTranscript();
             case "extraction" -> scheduler.triggerExtraction();
             case "price-refresh" -> scheduler.triggerPriceRefresh();
+            case "stock-resolution" -> scheduler.triggerStockResolution();
             default -> { return ResponseEntity.badRequest().body(Map.of("message", "Unknown step: " + step)); }
         }
         return ResponseEntity.accepted().body(Map.of("message", "Step '" + step + "' triggered"));

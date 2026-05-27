@@ -32,11 +32,17 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.price-refresh.cron}")
     private String priceRefreshCron;
 
+    @Value("${tubereturns.pipeline.stock-resolution.cron}")
+    private String stockResolutionCron;
+
     @Value("${tubereturns.pipeline.discovery.max-items}")
     private int discoveryMaxItems;
 
     @Value("${tubereturns.pipeline.transcript.batch-size}")
     private int transcriptMaxItems;
+
+    @Value("${tubereturns.pipeline.stock-resolution.max-items}")
+    private int stockResolutionMaxItems;
 
     private final YouTubeDiscoveryService discoveryService;
     private final TranscriptDownloadService transcriptService;
@@ -44,6 +50,7 @@ public class PipelineSchedulerService {
     private final StockPriceRefreshService priceRefreshService;
     private final ExchangeRateService exchangeRateService;
     private final PickPerformanceService pickPerformanceService;
+    private final UnknownStockResolutionService stockResolutionService;
     private final PipelineStatusRegistry registry;
     private final VideoRepository videoRepository;
 
@@ -53,6 +60,7 @@ public class PipelineSchedulerService {
         registry.registerStep("transcript", transcriptCron, transcriptMaxItems);
         registry.registerStep("extraction", extractionCron, 1);
         registry.registerStep("price-refresh", priceRefreshCron, null);
+        registry.registerStep("stock-resolution", stockResolutionCron, stockResolutionMaxItems);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -133,6 +141,16 @@ public class PipelineSchedulerService {
             pickPerformanceService.refreshLockedReturns();
             return prices;
         });
+    }
+
+    @Scheduled(cron = "${tubereturns.pipeline.stock-resolution.cron}")
+    public void runStockResolution() {
+        runStep("stock-resolution", () -> stockResolutionService.resolveAll(stockResolutionMaxItems));
+    }
+
+    @Async
+    public void triggerStockResolution() {
+        runStep("stock-resolution", () -> stockResolutionService.resolveAll(stockResolutionMaxItems));
     }
 
     private void runStep(String step, IntSupplier task) {

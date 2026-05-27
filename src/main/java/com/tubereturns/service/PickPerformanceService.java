@@ -31,13 +31,14 @@ public class PickPerformanceService {
 
     public List<PickPerformanceDto> computeForChannel(Long channelId) {
         return pickRepository.findPicksByChannelId(channelId).stream()
-                .map(pick -> pick.getStock().isUnknown() ? unknown(pick) : new PickPerformanceDto(
+                .map(pick -> (pick.getStock().isUnknown() && !pick.isApproximatedPrices()) ? unknown(pick) : new PickPerformanceDto(
                         pick.getStock().getTickerSymbol(),
                         pick.getStock().getCompanyName(),
                         pick.getVideo().getVideoId(),
                         pick.getVideo().getTitle(),
                         pick.getVideo().getPublishedAt(),
                         false,
+                        pick.isApproximatedPrices(),
                         pick.getReturn1m(), pick.getReturn1y(), pick.getReturn3y(),
                         pick.getAlpha1m(), pick.getAlpha1y(), pick.getAlpha3y()
                 ))
@@ -55,7 +56,7 @@ public class PickPerformanceService {
     }
 
     public void computeAndSaveReturns(Pick pick) {
-        if (pick.getStock().isUnknown()) {
+        if (pick.getStock().isUnknown() && !pick.isApproximatedPrices()) {
             return;
         }
         LocalDate pickDate = pick.getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
@@ -215,6 +216,7 @@ public class PickPerformanceService {
                 pick.getVideo().getTitle(),
                 pick.getVideo().getPublishedAt(),
                 true,
+                false,
                 null, null, null,
                 null, null, null
         );

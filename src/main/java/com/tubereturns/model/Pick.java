@@ -53,6 +53,9 @@ public class Pick {
     @Column(name = "alpha_3y")
     private Double alpha3y;
 
+    @Column(name = "approximated_prices", nullable = false)
+    private boolean approximatedPrices = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

@@ -65,6 +65,7 @@ export const PickPerformanceSchema = z.object({
   videoTitle: z.string(),
   videoPublishedAt: z.string(),
   unknown: z.boolean(),
+  approximatedPrices: z.boolean().optional(),
   return1m: z.number().nullable(),
   return1y: z.number().nullable(),
   return3y: z.number().nullable(),

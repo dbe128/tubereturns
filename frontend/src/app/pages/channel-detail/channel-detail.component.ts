@@ -557,6 +557,9 @@ interface IndexedVideo {
                       @if (pick.unknown) {
                         <span class="text-yellow-500 font-normal text-lg leading-none ml-0.5">⚠</span>
                       }
+                      @if (pick.approximatedPrices) {
+                        <span class="text-blue-400 font-normal text-xs ml-0.5" title="Return estimated using AI-approximated price data">~</span>
+                      }
                       @if (pick.companyName) {
                         <span class="text-xs text-gray-400 ml-2">{{ pick.companyName }}</span>
                       }
@@ -627,6 +630,9 @@ interface IndexedVideo {
                         @if (pick.unknown) {
                           <span class="relative group/unk inline-block text-yellow-500 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unresolved ticker — excluded from returns</span></span>
                         }
+                        @if (pick.approximatedPrices) {
+                          <span class="relative group/approx inline-block text-blue-400 font-normal cursor-default text-sm leading-none">~<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/approx:opacity-100 transition-opacity z-50">Return estimated using AI-approximated price data</span></span>
+                        }
                       </span>
                     </td>
                     @for (col of pickTimeColumns; track col) {
@@ -654,6 +660,9 @@ interface IndexedVideo {
               </tbody>
             </table>
             </div>
+            @if (picks().some(p => p.approximatedPrices)) {
+              <div class="px-4 py-2 text-xs text-blue-400 border-t border-gray-700">~ Return estimated using AI-approximated price data</div>
+            }
             @if (picksTotalPages() > 1) {
               <div class="flex items-center justify-center gap-4 py-4 border-t border-gray-700">
                 <button

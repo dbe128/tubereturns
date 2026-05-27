@@ -40,6 +40,12 @@ public class Stock {
     @Column(name = "reviewed", nullable = false)
     private boolean reviewed = false;
 
+    @Column(name = "resolution_attempts", nullable = false)
+    private int resolutionAttempts = 0;
+
+    @Column(name = "corporate_action", length = 50)
+    private String corporateAction;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

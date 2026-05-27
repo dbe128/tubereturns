@@ -103,6 +103,10 @@ tubereturns:
       threads: 10
     price-refresh:
       cron: "0 0 14,18,22 * * *"
+    stock-resolution:
+      cron: "0 45 2,8,14,20 * * *"
+      max-items: 50
+      max-attempts: 3
     notification:
       cron: "0 */2 * * * *"
 

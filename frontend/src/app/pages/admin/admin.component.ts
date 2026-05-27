@@ -43,7 +43,12 @@ interface UnknownStockRow extends UnknownStock {
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 md:p-8">
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-2xl font-black text-gray-900">Admin Dashboard</h1>
-          <span class="text-xs text-gray-400 font-mono">{{ userCount() }} users</span>
+          <div class="flex items-center gap-4 text-xs text-gray-400 font-mono">
+            <span>{{ userCount() }} users</span>
+            @if (unknownStockRows().length > 0) {
+              <span class="text-amber-500 font-semibold">{{ unknownStockRows().length }} unknown stock{{ unknownStockRows().length === 1 ? '' : 's' }}</span>
+            }
+          </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-3 mb-10">

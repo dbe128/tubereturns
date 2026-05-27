@@ -11,5 +11,6 @@
     <include file="db/changelog/004-users-google-fields.sql"/>
     <include file="db/changelog/005-delete-dbalazs128-user.sql"/>
     <include file="db/changelog/006-user-notify-preference.sql"/>
+    <include file="db/changelog/007-stock-resolution.sql"/>
 
 </databaseChangeLog>

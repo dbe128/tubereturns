@@ -56,6 +56,9 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     @Query("SELECT DISTINCT p.video.channel.id FROM Pick p WHERE p.stock.id = :stockId")
     List<Long> findDistinctChannelIdsByStockId(@Param("stockId") Long stockId);
 
+    @Query("SELECT p FROM Pick p JOIN FETCH p.video v JOIN FETCH p.stock WHERE p.stock.id = :stockId AND v.excluded = false")
+    List<Pick> findByStockId(@Param("stockId") Long stockId);
+
     @Query("""
         SELECT p FROM Pick p
         JOIN FETCH p.video v

@@ -207,6 +207,38 @@ public class AiModelService {
         return callOpenRouter(videoId, videoTitle, transcriptText);
     }
 
+    public String callRaw(String systemPrompt, String userPrompt) {
+        List<String> available = (models != null && !models.isEmpty()) ? models : List.of("openrouter/owl-alpha");
+        int maxAttempts = available.size();
+        int startIdx = lastKnownModelIndex % available.size();
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            String model = available.get((startIdx + attempt) % available.size());
+            Map<String, Object> body = Map.of(
+                "model", model,
+                "messages", List.of(
+                    Map.of("role", "system", "content", systemPrompt),
+                    Map.of("role", "user", "content", userPrompt)
+                )
+            );
+            try {
+                String response = restClient.post()
+                        .uri("https://openrouter.ai/api/v1/chat/completions")
+                        .header("Authorization", "Bearer " + apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
+                JsonNode root = objectMapper.readTree(response);
+                String text = root.path("choices").get(0).path("message").path("content").asText().strip();
+                return stripJsonFences(text);
+            } catch (Exception e) {
+                log.warn("callRaw failed with model {} (attempt {}/{}): {}", model, attempt + 1, maxAttempts, e.getMessage());
+                lastKnownModelIndex = (startIdx + attempt + 1) % available.size();
+            }
+        }
+        throw new RuntimeException("All AI models failed for raw call");
+    }
+
     public int getModelCount() {
         return models == null ? 0 : models.size();
     }

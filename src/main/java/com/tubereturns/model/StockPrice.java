@@ -35,6 +35,9 @@ public class StockPrice {
     @Column(name = "close_price", nullable = false)
     private Double closePrice;
 
+    @Column(name = "approximated", nullable = false)
+    private boolean approximated = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
