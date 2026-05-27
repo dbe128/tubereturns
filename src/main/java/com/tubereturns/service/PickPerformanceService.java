@@ -8,6 +8,7 @@ import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,6 +21,7 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PickPerformanceService {
@@ -50,18 +52,26 @@ public class PickPerformanceService {
         Instant cutoff1y = LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant cutoff3y = LocalDate.now().minusYears(3).atStartOfDay(ZoneOffset.UTC).toInstant();
         List<Pick> candidates = pickRepository.findPicksNeedingReturnComputation(cutoff1m, cutoff1y, cutoff3y);
+        log.info("refreshLockedReturns: {} pick(s) need return computation", candidates.size());
         for (Pick pick : candidates) {
+            log.info("Computing returns for pick id={} stock='{}' video='{}'",
+                    pick.getId(), pick.getStock().getTickerSymbol(), pick.getVideo().getTitle());
             computeAndSaveReturns(pick);
         }
+        log.info("refreshLockedReturns: done");
     }
 
     public void computeAndSaveReturns(Pick pick) {
+        String ticker = pick.getStock().getTickerSymbol();
+        Long pickId = pick.getId();
         if (pick.getStock().isUnknown() && !pick.isApproximatedPrices()) {
+            log.info("Skipping pick id={} '{}' — stock is unknown and prices not approximated", pickId, ticker);
             return;
         }
         LocalDate pickDate = pick.getVideo().getPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
         LocalDate today = LocalDate.now();
         if (!today.isAfter(pickDate.plusMonths(1))) {
+            log.info("Skipping pick id={} '{}' — 1M window not yet elapsed (pickDate={})", pickId, ticker, pickDate);
             return;
         }
 
@@ -71,6 +81,7 @@ public class PickPerformanceService {
         List<StockPrice> rawPrices = stockPriceRepository
                 .findByStockIdAndPriceDateBetweenOrderByPriceDateAsc(pick.getStock().getId(), from, to);
         if (rawPrices.isEmpty()) {
+            log.info("Skipping pick id={} '{}' — no price data found in range [{}, {}]", pickId, ticker, from, to);
             return;
         }
         NavigableMap<LocalDate, Double> prices = new TreeMap<>();
@@ -79,6 +90,7 @@ public class PickPerformanceService {
 
         Double entry = floor(usdPrices, pickDate);
         if (entry == null || entry == 0) {
+            log.info("Skipping pick id={} '{}' — no entry price found near pickDate={}", pickId, ticker, pickDate);
             return;
         }
 
@@ -97,6 +109,7 @@ public class PickPerformanceService {
             Double spyRet = pctReturn(spyEntry, spyExit1m);
             pick.setReturn1m(ret);
             pick.setAlpha1m(alpha(ret, spyRet));
+            log.info("Pick id={} '{}': 1M return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, exit1m);
             changed = true;
         }
         if (today.isAfter(pickDate.plusYears(1)) && pick.getReturn1y() == null) {
@@ -106,6 +119,7 @@ public class PickPerformanceService {
             Double spyRet = pctReturn(spyEntry, spyExit1y);
             pick.setReturn1y(ret);
             pick.setAlpha1y(alpha(ret, spyRet));
+            log.info("Pick id={} '{}': 1Y return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, exit1y);
             changed = true;
         }
         if (today.isAfter(pickDate.plusYears(3)) && pick.getReturn3y() == null) {
@@ -115,11 +129,15 @@ public class PickPerformanceService {
             Double spyRet = pctReturn(spyEntry, spyExit3y);
             pick.setReturn3y(ret);
             pick.setAlpha3y(alpha(ret, spyRet));
+            log.info("Pick id={} '{}': 3Y return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, exit3y);
             changed = true;
         }
 
         if (changed) {
             pickRepository.save(pick);
+            log.info("Saved updated returns for pick id={} '{}'", pickId, ticker);
+        } else {
+            log.info("Pick id={} '{}' — no new windows to compute", pickId, ticker);
         }
     }
 

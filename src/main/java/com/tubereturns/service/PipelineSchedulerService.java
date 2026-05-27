@@ -156,10 +156,6 @@ public class PipelineSchedulerService {
 
     @Async
     public void triggerStockResolution() {
-        if (!stockResolutionEnabled) {
-            log.warn("Stock resolution is disabled, ignoring manual trigger");
-            return;
-        }
         runStep("stock-resolution", () -> stockResolutionService.resolveAll(stockResolutionMaxItems));
     }
 

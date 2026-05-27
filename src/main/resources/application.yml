@@ -79,6 +79,7 @@ tubereturns:
     connect-timeout-seconds: 10
     read-timeout-seconds: 180
     timeout-retries: 5
+    stock-resolution-model: google/gemini-3.1-flash-lite
 
   google:
     client-id: 869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com
@@ -92,6 +93,7 @@ tubereturns:
     from-email: ${MAIL_FROM:noreply@tubereturns.com}
 
   pipeline:
+    blacklisted-tickers: "TICKER"
     discovery:
       cron: "0 0 * * * *"
       max-items: 1500
@@ -104,9 +106,9 @@ tubereturns:
     price-refresh:
       cron: "0 0 14,18,22 * * *"
     stock-resolution:
-      enabled: true
+      enabled: false
       cron: "0 45 2,8,14,20 * * *"
-      max-items: 50
+      max-items: 1
       max-attempts: 3
     notification:
       cron: "0 */2 * * * *"

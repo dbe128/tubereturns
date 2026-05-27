@@ -207,6 +207,35 @@ public class AiModelService {
         return callOpenRouter(videoId, videoTitle, transcriptText);
     }
 
+    public String callRaw(String systemPrompt, String userPrompt, String preferredModel) {
+        if (preferredModel != null && !preferredModel.isBlank()) {
+            Map<String, Object> body = Map.of(
+                "model", preferredModel,
+                "messages", List.of(
+                    Map.of("role", "system", "content", systemPrompt),
+                    Map.of("role", "user", "content", userPrompt)
+                )
+            );
+            try {
+                log.info("callRaw: trying preferred model '{}'", preferredModel);
+                String response = restClient.post()
+                        .uri("https://openrouter.ai/api/v1/chat/completions")
+                        .header("Authorization", "Bearer " + apiKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
+                JsonNode root = objectMapper.readTree(response);
+                String text = root.path("choices").get(0).path("message").path("content").asText().strip();
+                log.info("callRaw: preferred model '{}' succeeded", preferredModel);
+                return stripJsonFences(text);
+            } catch (Exception e) {
+                log.warn("callRaw: preferred model '{}' failed ({}), falling back to rotation", preferredModel, e.getMessage());
+            }
+        }
+        return callRaw(systemPrompt, userPrompt);
+    }
+
     public String callRaw(String systemPrompt, String userPrompt) {
         List<String> available = (models != null && !models.isEmpty()) ? models : List.of("openrouter/owl-alpha");
         int maxAttempts = available.size();
@@ -456,6 +485,14 @@ public class AiModelService {
         java.util.regex.Matcher m = FENCED_JSON.matcher(t);
         if (m.find()) {
             return m.group(1).strip();
+        }
+        int arrStart = t.indexOf('[');
+        int objStart = t.indexOf('{');
+        if (arrStart != -1 && (objStart == -1 || arrStart < objStart)) {
+            int arrEnd = t.lastIndexOf(']');
+            if (arrEnd > arrStart) {
+                return t.substring(arrStart, arrEnd + 1);
+            }
         }
         int start = t.indexOf('{');
         int end = t.lastIndexOf('}');

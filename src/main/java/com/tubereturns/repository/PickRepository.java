@@ -19,6 +19,11 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     @Transactional
     void deleteByVideoId(Long videoId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Pick p WHERE p.stock.id = :stockId")
+    void deleteAllByStockId(@Param("stockId") Long stockId);
+
     @Query("SELECT COUNT(p) FROM Pick p WHERE p.video.channel.id = :channelId")
     long countByChannelId(@Param("channelId") Long channelId);
 
@@ -60,15 +65,32 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     List<Pick> findByStockId(@Param("stockId") Long stockId);
 
     @Query("""
+        SELECT COUNT(p) > 0 FROM Pick p JOIN p.video v
+        WHERE p.stock.id = :stockId
+        AND v.excluded = false
+        AND (
+            (v.publishedAt < :cutoff1m AND p.alpha1m IS NULL)
+            OR (v.publishedAt < :cutoff1y AND p.alpha1y IS NULL)
+            OR (v.publishedAt < :cutoff3y AND p.alpha3y IS NULL)
+        )
+        """)
+    boolean existsPickNeedingApproximation(
+        @Param("stockId") Long stockId,
+        @Param("cutoff1m") Instant cutoff1m,
+        @Param("cutoff1y") Instant cutoff1y,
+        @Param("cutoff3y") Instant cutoff3y
+    );
+
+    @Query("""
         SELECT p FROM Pick p
         JOIN FETCH p.video v
         JOIN FETCH p.stock s
         WHERE s.unknown = false
           AND v.excluded = false
           AND (
-            (p.return1m IS NULL AND v.publishedAt < :cutoff1m)
-            OR (p.return1y IS NULL AND v.publishedAt < :cutoff1y)
-            OR (p.return3y IS NULL AND v.publishedAt < :cutoff3y)
+            ((p.return1m IS NULL OR p.alpha1m IS NULL) AND v.publishedAt < :cutoff1m)
+            OR ((p.return1y IS NULL OR p.alpha1y IS NULL) AND v.publishedAt < :cutoff1y)
+            OR ((p.return3y IS NULL OR p.alpha3y IS NULL) AND v.publishedAt < :cutoff3y)
           )
         """)
     List<Pick> findPicksNeedingReturnComputation(

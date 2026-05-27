@@ -58,6 +58,11 @@ public class StockPickExtractionService {
     @Value("${tubereturns.ai.max-transcript-chars}")
     private int maxTranscriptChars;
 
+    @Value("${tubereturns.pipeline.blacklisted-tickers}")
+    private String blacklistedTickersRaw;
+
+    private Set<String> blacklistedTickers;
+
     private ExecutorService extractionExecutor;
 
     private final LinkedList<String> pendingVideoIds = new LinkedList<>();
@@ -78,6 +83,14 @@ public class StockPickExtractionService {
 
     @PostConstruct
     public void init() {
+        blacklistedTickers = java.util.Arrays.stream(blacklistedTickersRaw.split(","))
+                .map(String::strip)
+                .map(String::toUpperCase)
+                .filter(s -> !s.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
+        if (!blacklistedTickers.isEmpty()) {
+            log.info("Blacklisted tickers (extraction): {}", blacklistedTickers);
+        }
         extractionExecutor = Executors.newFixedThreadPool(threadCount, r -> {
             Thread t = new Thread(r, "extraction-worker-" + workerCounter.incrementAndGet());
             t.setDaemon(true);
@@ -296,6 +309,10 @@ public class StockPickExtractionService {
 
         for (StockPickExtractionDto.PickExtractionDto pickDto : extraction.extractions()) {
             String upperTicker = pickDto.tickerSymbol().toUpperCase();
+            if (blacklistedTickers.contains(upperTicker)) {
+                log.info("Skipping blacklisted ticker '{}' in video {}", upperTicker, video.getVideoId());
+                continue;
+            }
             boolean isNewStock = stockRepository.findByTickerSymbol(upperTicker).isEmpty();
             Stock stock = stockRepository.findByTickerSymbol(upperTicker)
                     .orElseGet(() -> stockRepository.save(new Stock(pickDto.tickerSymbol(), pickDto.companyName(), pickDto.currency())));
@@ -345,6 +362,9 @@ public class StockPickExtractionService {
         for (StockPickExtractionDto.PickExtractionDto pickDto : dto.extractions()) {
             String ticker = pickDto.tickerSymbol().toUpperCase();
             if (!probed.add(ticker)) {
+                continue;
+            }
+            if (blacklistedTickers.contains(ticker)) {
                 continue;
             }
             Optional<Stock> existing = stockRepository.findByTickerSymbol(ticker);
