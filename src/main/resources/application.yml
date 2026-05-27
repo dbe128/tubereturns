@@ -104,7 +104,7 @@ tubereturns:
     price-refresh:
       cron: "0 0 14,18,22 * * *"
     stock-resolution:
-      enabled: false
+      enabled: true
       cron: "0 45 2,8,14,20 * * *"
       max-items: 50
       max-attempts: 3

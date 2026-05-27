@@ -35,7 +35,7 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
 
     @Query("""
         SELECT new com.tubereturns.dto.PickScoringData(
-            v.channel.id, v.publishedAt, s.unknown, p.alpha1m, p.alpha1y, p.alpha3y
+            v.channel.id, v.publishedAt, s.unknown, p.approximatedPrices, p.alpha1m, p.alpha1y, p.alpha3y
         )
         FROM Pick p JOIN p.video v JOIN p.stock s
         WHERE v.excluded = false
@@ -45,7 +45,7 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
 
     @Query("""
         SELECT new com.tubereturns.dto.PickScoringData(
-            v.channel.id, v.publishedAt, s.unknown, p.alpha1m, p.alpha1y, p.alpha3y
+            v.channel.id, v.publishedAt, s.unknown, p.approximatedPrices, p.alpha1m, p.alpha1y, p.alpha3y
         )
         FROM Pick p JOIN p.video v JOIN p.stock s
         WHERE v.channel.id = :channelId AND v.excluded = false

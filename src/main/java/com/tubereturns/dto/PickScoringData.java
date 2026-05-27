@@ -6,6 +6,7 @@ public record PickScoringData(
         Long channelId,
         Instant videoPublishedAt,
         boolean stockUnknown,
+        boolean approximatedPrices,
         Double alpha1m,
         Double alpha1y,
         Double alpha3y

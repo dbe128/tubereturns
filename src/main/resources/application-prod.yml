@@ -12,6 +12,10 @@ tubereturns:
   ai:
     api-key: ${OPENROUTER_API_KEY}
 
+  pipeline:
+    stock-resolution:
+      enabled: false
+
 logging:
   level:
     com.tubereturns: INFO

@@ -178,18 +178,18 @@ public class PickPerformanceService {
         int unresolved1m = 0, unresolved1y = 0, unresolved3y = 0;
         for (PickScoringData d : data) {
             LocalDate pickDate = d.videoPublishedAt().atZone(ZoneOffset.UTC).toLocalDate();
-            boolean isUnresolved = d.stockUnknown();
+            boolean isUnresolved = d.stockUnknown() && !d.approximatedPrices();
             if (today.isAfter(pickDate.plusMonths(1))) {
-                if (d.alpha1m() != null) { alphaSum1m += d.alpha1m(); eligible1m++; }
-                else if (isUnresolved) { unresolved1m++; }
+                if (isUnresolved) { unresolved1m++; }
+                else if (d.alpha1m() != null) { alphaSum1m += d.alpha1m(); eligible1m++; }
             }
             if (today.isAfter(pickDate.plusYears(1))) {
-                if (d.alpha1y() != null) { alphaSum1y += d.alpha1y(); eligible1y++; }
-                else if (isUnresolved) { unresolved1y++; }
+                if (isUnresolved) { unresolved1y++; }
+                else if (d.alpha1y() != null) { alphaSum1y += d.alpha1y(); eligible1y++; }
             }
             if (today.isAfter(pickDate.plusYears(3))) {
-                if (d.alpha3y() != null) { alphaSum3y += d.alpha3y(); eligible3y++; }
-                else if (isUnresolved) { unresolved3y++; }
+                if (isUnresolved) { unresolved3y++; }
+                else if (d.alpha3y() != null) { alphaSum3y += d.alpha3y(); eligible3y++; }
             }
         }
         Double score1m = eligible1m > 0 ? alphaSum1m / eligible1m : null;
