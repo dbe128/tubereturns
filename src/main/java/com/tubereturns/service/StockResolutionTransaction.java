@@ -293,6 +293,7 @@ public class StockResolutionTransaction {
             log.info("Computed returns for pick id={} (video: '{}', published: {})",
                     pick.getId(), pick.getVideo().getTitle(), pick.getVideo().getPublishedAt());
         }
+
         channelListService.evictAllChannels();
         log.info("Done computing returns for stock id={} '{}'", stock.getId(), stock.getTickerSymbol());
     }

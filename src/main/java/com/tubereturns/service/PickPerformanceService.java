@@ -89,8 +89,14 @@ public class PickPerformanceService {
         NavigableMap<LocalDate, Double> usdPrices = applyFx(prices, pick.getStock().getCurrency(), from);
 
         Double entry = floor(usdPrices, pickDate);
-        if (entry == null || entry == 0) {
+        if (entry == null) {
             log.info("Skipping pick id={} '{}' — no entry price found near pickDate={}", pickId, ticker, pickDate);
+            return;
+        }
+        if (entry == 0) {
+            log.info("Pick id={} '{}' — buy price is 0, marking stock as UNAVAILABLE", pickId, ticker);
+            pick.getStock().setCorporateAction("UNAVAILABLE");
+            stockRepository.save(pick.getStock());
             return;
         }
 
