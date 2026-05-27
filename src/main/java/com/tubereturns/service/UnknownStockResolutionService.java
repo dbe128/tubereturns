@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Stock;
+import com.tubereturns.model.StockPrice;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockPriceRepository;
 import com.tubereturns.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -36,6 +40,10 @@ public class UnknownStockResolutionService {
     private final ChannelListService channelListService;
     private final ObjectMapper objectMapper;
 
+    @Lazy
+    @Autowired
+    private UnknownStockResolutionService self;
+
     @Value("${tubereturns.pipeline.stock-resolution.max-attempts:3}")
     private int maxAttempts;
 
@@ -46,15 +54,13 @@ public class UnknownStockResolutionService {
                 .toList();
 
         log.info("Stock resolution: {} candidate(s) eligible (maxAttempts={})", candidates.size(), maxAttempts);
-        int processed = 0;
         for (Stock stock : candidates) {
-            boolean resolved = attemptTickerResolution(stock);
+            boolean resolved = self.attemptTickerResolution(stock);
             if (!resolved) {
-                approximateMissingPrices(stock);
+                self.approximateMissingPrices(stock);
             }
-            processed++;
         }
-        return processed;
+        return candidates.size();
     }
 
     @Transactional
@@ -74,6 +80,7 @@ public class UnknownStockResolutionService {
         String response;
         try {
             response = aiModelService.callRaw(SYSTEM_PROMPT, userPrompt);
+            log.info("AI ticker resolution response for stock id={} '{}': {}", stock.getId(), stock.getTickerSymbol(), response);
         } catch (Exception e) {
             log.warn("AI call failed for unknown stock id={} '{}': {}", stock.getId(), stock.getTickerSymbol(), e.getMessage());
             return false;
@@ -162,9 +169,9 @@ public class UnknownStockResolutionService {
         }
 
         LocalDate earliest = neededDates.stream().min(LocalDate::compareTo).orElse(today.minusYears(3));
-        List<LocalDate> existingDates = stockPriceRepository
+        Set<LocalDate> existingDates = stockPriceRepository
                 .findByStockIdAndPriceDateBetweenOrderByPriceDateAsc(stock.getId(), earliest, today)
-                .stream().map(p -> p.getPriceDate()).toList();
+                .stream().map(StockPrice::getPriceDate).collect(Collectors.toSet());
         Set<LocalDate> missing = new LinkedHashSet<>(neededDates);
         missing.removeAll(existingDates);
 
@@ -191,6 +198,7 @@ public class UnknownStockResolutionService {
         String response;
         try {
             response = aiModelService.callRaw(SYSTEM_PROMPT, userPrompt);
+            log.info("AI price approximation response for stock id={} '{}': {}", stock.getId(), stock.getTickerSymbol(), response);
         } catch (Exception e) {
             log.warn("AI price approximation call failed for stock id={} '{}': {}", stock.getId(), stock.getTickerSymbol(), e.getMessage());
             return;

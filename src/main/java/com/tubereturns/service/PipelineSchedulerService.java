@@ -35,6 +35,9 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.stock-resolution.cron}")
     private String stockResolutionCron;
 
+    @Value("${tubereturns.pipeline.stock-resolution.enabled}")
+    private boolean stockResolutionEnabled;
+
     @Value("${tubereturns.pipeline.discovery.max-items}")
     private int discoveryMaxItems;
 
@@ -145,11 +148,18 @@ public class PipelineSchedulerService {
 
     @Scheduled(cron = "${tubereturns.pipeline.stock-resolution.cron}")
     public void runStockResolution() {
+        if (!stockResolutionEnabled) {
+            return;
+        }
         runStep("stock-resolution", () -> stockResolutionService.resolveAll(stockResolutionMaxItems));
     }
 
     @Async
     public void triggerStockResolution() {
+        if (!stockResolutionEnabled) {
+            log.warn("Stock resolution is disabled, ignoring manual trigger");
+            return;
+        }
         runStep("stock-resolution", () -> stockResolutionService.resolveAll(stockResolutionMaxItems));
     }
 
