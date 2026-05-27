@@ -77,6 +77,13 @@ public class UnknownStockResolutionService {
                 continue;
             }
 
+            if ("UNAVAILABLE".equals(stock.getCorporateAction())) {
+                log.info("Stock id={} '{}' — corporate action is UNAVAILABLE, skipping",
+                        stock.getId(), stock.getTickerSymbol());
+                skipped++;
+                continue;
+            }
+
             boolean needsWork = pickRepository.existsPickNeedingApproximation(
                     stock.getId(), cutoff1m, cutoff1y, cutoff3y);
             if (!needsWork) {
@@ -100,10 +107,6 @@ public class UnknownStockResolutionService {
             if (tickerResolved) {
                 resolved++;
                 log.info("Stock id={} '{}' → ticker resolved", stock.getId(), stock.getTickerSymbol());
-            } else if ("UNAVAILABLE".equals(stock.getCorporateAction())) {
-                failed++;
-                log.info("Stock id={} '{}' → corporate action is UNAVAILABLE, skipping price approximation",
-                        stock.getId(), stock.getTickerSymbol());
             } else {
                 log.info("Stock id={} '{}' → attempting price approximation", stock.getId(), stock.getTickerSymbol());
                 boolean hadPicks = transaction.approximateMissingPrices(stock);

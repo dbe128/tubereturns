@@ -265,8 +265,6 @@ public class StockResolutionTransaction {
                 }
                 LocalDate date = LocalDate.parse(dateStr);
                 stockPriceRepository.upsertApproximated(stock.getId(), date, price);
-                log.info("Stored approximated price for stock id={} '{}': {} = {}",
-                        stock.getId(), stock.getTickerSymbol(), date, price);
                 saved++;
             }
             if (resolvedCurrency != null && !resolvedCurrency.equals(stock.getCurrency())) {
