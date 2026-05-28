@@ -93,11 +93,15 @@ public class PickPerformanceService {
             log.info("Skipping pick id={} '{}' — no entry price found near pickDate={}", pickId, ticker, pickDate);
             return;
         }
-        if (entry == 0) {
+        boolean bankrupt = entry == 0 && "BANKRUPT".equals(pick.getStock().getCorporateAction());
+        if (entry == 0 && !bankrupt) {
             log.info("Pick id={} '{}' — buy price is 0, marking stock as UNAVAILABLE", pickId, ticker);
             pick.getStock().setCorporateAction("UNAVAILABLE");
             stockRepository.save(pick.getStock());
             return;
+        }
+        if (bankrupt) {
+            log.info("Pick id={} '{}' — buy price is 0 and stock is BANKRUPT, computing -100% returns", pickId, ticker);
         }
 
         NavigableMap<LocalDate, Double> spyPrices = new TreeMap<>();
@@ -111,31 +115,31 @@ public class PickPerformanceService {
         if (today.isAfter(pickDate.plusMonths(1)) && pick.getReturn1m() == null) {
             Double exit1m = floor(usdPrices, pickDate.plusMonths(1));
             Double spyExit1m = floor(spyPrices, pickDate.plusMonths(1));
-            Double ret = pctReturn(entry, exit1m);
+            Double ret = bankrupt ? (Double)(-100.0) : pctReturn(entry, exit1m);
             Double spyRet = pctReturn(spyEntry, spyExit1m);
             pick.setReturn1m(ret);
             pick.setAlpha1m(alpha(ret, spyRet));
-            log.info("Pick id={} '{}': 1M return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, exit1m);
+            log.info("Pick id={} '{}': 1M return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, bankrupt ? (Double)0.0 : exit1m);
             changed = true;
         }
         if (today.isAfter(pickDate.plusYears(1)) && pick.getReturn1y() == null) {
             Double exit1y = floor(usdPrices, pickDate.plusYears(1));
             Double spyExit1y = floor(spyPrices, pickDate.plusYears(1));
-            Double ret = pctReturn(entry, exit1y);
+            Double ret = bankrupt ? (Double)(-100.0) : pctReturn(entry, exit1y);
             Double spyRet = pctReturn(spyEntry, spyExit1y);
             pick.setReturn1y(ret);
             pick.setAlpha1y(alpha(ret, spyRet));
-            log.info("Pick id={} '{}': 1Y return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, exit1y);
+            log.info("Pick id={} '{}': 1Y return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, bankrupt ? (Double)0.0 : exit1y);
             changed = true;
         }
         if (today.isAfter(pickDate.plusYears(3)) && pick.getReturn3y() == null) {
             Double exit3y = floor(usdPrices, pickDate.plusYears(3));
             Double spyExit3y = floor(spyPrices, pickDate.plusYears(3));
-            Double ret = pctReturn(entry, exit3y);
+            Double ret = bankrupt ? (Double)(-100.0) : pctReturn(entry, exit3y);
             Double spyRet = pctReturn(spyEntry, spyExit3y);
             pick.setReturn3y(ret);
             pick.setAlpha3y(alpha(ret, spyRet));
-            log.info("Pick id={} '{}': 3Y return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, exit3y);
+            log.info("Pick id={} '{}': 3Y return={} alpha={} (entry={} exit={})", pickId, ticker, ret, alpha(ret, spyRet), entry, bankrupt ? (Double)0.0 : exit3y);
             changed = true;
         }
 

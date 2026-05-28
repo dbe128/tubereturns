@@ -15,5 +15,6 @@
     <include file="db/changelog/008-null-unknown-stock-returns.sql"/>
     <include file="db/changelog/009-rename-resolution-attempts.sql"/>
     <include file="db/changelog/010-mark-fb-unknown.sql"/>
+    <include file="db/changelog/011-mark-arax-bankrupt.sql"/>
 
 </databaseChangeLog>
