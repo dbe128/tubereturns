@@ -108,7 +108,7 @@ tubereturns:
     stock-resolution:
       enabled: false
       cron: "0 45 2,8,14,20 * * *"
-      max-items: 1
+      max-items: 50
       max-attempts: 3
     notification:
       cron: "0 */2 * * * *"
