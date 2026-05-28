@@ -17,11 +17,13 @@ import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
 import com.tubereturns.service.BlacklistedTickerService;
 import com.tubereturns.service.ChannelListService;
+import com.tubereturns.model.Pick;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.PipelineStatusRegistry;
 import com.tubereturns.service.StockPickExtractionService;
 import com.tubereturns.service.StockPriceService;
+import com.tubereturns.service.PickPerformanceService;
 import com.tubereturns.service.StockResolutionTransaction;
 import com.tubereturns.service.TranscriptDownloadService;
 import com.tubereturns.service.YouTubeDiscoveryService;
@@ -36,7 +38,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -65,6 +66,7 @@ public class AdminController {
     private final BuildProperties buildProperties;
     private final BlacklistedTickerService blacklistedTickerService;
     private final StockResolutionTransaction stockResolutionTransaction;
+    private final PickPerformanceService pickPerformanceService;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
@@ -266,8 +268,31 @@ public class AdminController {
                             ? request.currency().trim().toUpperCase() : null;
                     log.info("Admin fix: attempting to resolve stock id={} '{}' → '{}' (currency: {})",
                             stock.getId(), oldTicker, newTicker, newCurrency);
-                    List<Long> affectedChannelIds = new ArrayList<>(
-                            pickRepository.findDistinctChannelIdsByStockId(stock.getId()));
+
+                    Stock target = stockRepository.findByTickerSymbol(newTicker)
+                            .filter(existing -> !existing.getId().equals(stock.getId()))
+                            .orElse(null);
+
+                    if (target != null) {
+                        log.info("Ticker '{}' already exists as stock id={} — merging stock id={} into it",
+                                newTicker, target.getId(), stock.getId());
+                        List<Pick> picksToRelink = pickRepository.findByStockId(stock.getId());
+                        long pickCount = picksToRelink.size();
+                        pickRepository.relinkPicks(stock, target);
+                        log.info("Re-linked {} pick(s) from stock id={} ('{}') to stock id={} ('{}')",
+                                pickCount, stock.getId(), oldTicker, target.getId(), newTicker);
+                        recomputeRelinkPicks(picksToRelink, target);
+                        stockPriceRepository.deleteAllByStockId(stock.getId());
+                        log.info("Deleted price points for original stock id={}", stock.getId());
+                        stockRepository.delete(stock);
+                        log.info("Deleted original stock id={} ('{}') after merge", stock.getId(), oldTicker);
+                        String msg = "Merged '" + oldTicker + "' into existing '" + newTicker + "' — re-linked "
+                                + pickCount + " pick(s), original record deleted";
+                        log.info("Fix complete: {}", msg);
+                        channelListService.evictAllChannels();
+                        return ResponseEntity.ok(Map.of("message", msg));
+                    }
+
                     try {
                         Map<LocalDate, Double> prices = StockPriceService.fetchHistoricalClosePrices(
                                 newTicker, LocalDate.now().minusYears(10), LocalDate.now());
@@ -277,50 +302,25 @@ public class AdminController {
                             return ResponseEntity.badRequest().body(
                                     Map.of("message", "No price data found for ticker " + newTicker));
                         }
-
-                        Stock target = stockRepository.findByTickerSymbol(newTicker)
-                                .filter(existing -> !existing.getId().equals(stock.getId()))
-                                .orElse(null);
-
-                        if (target != null) {
-                            log.info("Ticker '{}' already exists as stock id={} — merging stock id={} into it",
-                                    newTicker, target.getId(), stock.getId());
-                            affectedChannelIds.addAll(pickRepository.findDistinctChannelIdsByStockId(target.getId()));
-                            long pickCount = pickRepository.countByStockId(stock.getId());
-                            int relinked = pickRepository.relinkPicks(stock, target);
-                            log.info("Re-linked {} pick(s) from stock id={} ('{}') to stock id={} ('{}')",
-                                    relinked, stock.getId(), oldTicker, target.getId(), newTicker);
-                            for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
-                                stockPriceRepository.upsert(target.getId(), entry.getKey(), entry.getValue());
-                            }
-                            log.info("Merged {} price point(s) into existing stock id={} ('{}')", prices.size(), target.getId(), newTicker);
-                            stockPriceRepository.deleteAllByStockId(stock.getId());
-                            log.info("Deleted any orphan price points for original stock id={}", stock.getId());
-                            stockRepository.delete(stock);
-                            log.info("Deleted original stock id={} ('{}') after merge", stock.getId(), oldTicker);
-                            String msg = "Merged '" + oldTicker + "' into existing '" + newTicker + "' — re-linked "
-                                    + pickCount + " pick(s), added " + prices.size() + " price point(s), original record deleted";
-                            log.info("Fix complete: {}", msg);
-                            channelListService.evictAllChannels();
-                            return ResponseEntity.ok(Map.of("message", msg));
-                        } else {
-                            if (newCurrency != null) {
-                                stock.setCurrency(newCurrency);
-                            }
-                            stock.setTickerSymbol(newTicker);
-                            stock.setUnknown(false);
-                            stockRepository.save(stock);
-                            log.info("Updated stock id={}: '{}' → '{}', currency={}, unknown=false",
-                                    stock.getId(), oldTicker, newTicker, stock.getCurrency());
-                            for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
-                                stockPriceRepository.upsert(stock.getId(), entry.getKey(), entry.getValue());
-                            }
-                            log.info("Saved {} price point(s) for '{}' (stock id={})", prices.size(), newTicker, stock.getId());
-                            String msg = "Resolved '" + oldTicker + "' as '" + newTicker + "' — saved " + prices.size() + " price point(s)";
-                            log.info("Fix complete: {}", msg);
-                            channelListService.evictAllChannels();
-                            return ResponseEntity.ok(Map.of("message", msg));
+                        if (newCurrency != null) {
+                            stock.setCurrency(newCurrency);
                         }
+                        stock.setTickerSymbol(newTicker);
+                        stock.setUnknown(false);
+                        stock.setCorporateAction(null);
+                        stockRepository.save(stock);
+                        log.info("Updated stock id={}: '{}' → '{}', currency={}, unknown=false, corporateAction cleared",
+                                stock.getId(), oldTicker, newTicker, stock.getCurrency());
+                        for (Map.Entry<LocalDate, Double> entry : prices.entrySet()) {
+                            stockPriceRepository.upsert(stock.getId(), entry.getKey(), entry.getValue());
+                        }
+                        log.info("Saved {} price point(s) for '{}' (stock id={})", prices.size(), newTicker, stock.getId());
+                        List<Pick> picksToRecompute = pickRepository.findByStockId(stock.getId());
+                        recomputeRelinkPicks(picksToRecompute, stock);
+                        String msg = "Resolved '" + oldTicker + "' as '" + newTicker + "' — saved " + prices.size() + " price point(s)";
+                        log.info("Fix complete: {}", msg);
+                        channelListService.evictAllChannels();
+                        return ResponseEntity.ok(Map.of("message", msg));
                     } catch (Exception e) {
                         log.error("Admin fix failed for stock id={} '{}' → '{}': {}", stock.getId(), oldTicker, newTicker, e.getMessage(), e);
                         return ResponseEntity.badRequest().body(
@@ -396,6 +396,16 @@ public class AdminController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(Map.of("message", "Ticker '" + ticker.toUpperCase() + "' removed from blacklist"));
+    }
+
+    private void recomputeRelinkPicks(List<Pick> picks, Stock target) {
+        for (Pick pick : picks) {
+            pick.setStock(target);
+            pick.setApproximatedPrices(false);
+            pickRepository.save(pick);
+            pickPerformanceService.computeAndSaveReturns(pick);
+            log.info("Recomputed returns for relinked pick id={}", pick.getId());
+        }
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {
