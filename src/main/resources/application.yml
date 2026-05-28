@@ -93,7 +93,6 @@ tubereturns:
     from-email: ${MAIL_FROM:noreply@tubereturns.com}
 
   pipeline:
-    blacklisted-tickers: "TICKER"
     discovery:
       cron: "0 0 16 * * *"
       max-items: 1500

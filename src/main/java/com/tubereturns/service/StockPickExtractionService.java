@@ -51,17 +51,13 @@ public class StockPickExtractionService {
     private final PickPerformanceService pickPerformanceService;
     private final ChannelListService channelListService;
     private final MeterRegistry meterRegistry;
+    private final BlacklistedTickerService blacklistedTickerService;
 
     @Value("${tubereturns.pipeline.extraction.threads}")
     private int threadCount;
 
     @Value("${tubereturns.ai.max-transcript-chars}")
     private int maxTranscriptChars;
-
-    @Value("${tubereturns.pipeline.blacklisted-tickers}")
-    private String blacklistedTickersRaw;
-
-    private Set<String> blacklistedTickers;
 
     private ExecutorService extractionExecutor;
 
@@ -83,14 +79,6 @@ public class StockPickExtractionService {
 
     @PostConstruct
     public void init() {
-        blacklistedTickers = java.util.Arrays.stream(blacklistedTickersRaw.split(","))
-                .map(String::strip)
-                .map(String::toUpperCase)
-                .filter(s -> !s.isBlank())
-                .collect(java.util.stream.Collectors.toSet());
-        if (!blacklistedTickers.isEmpty()) {
-            log.info("Blacklisted tickers (extraction): {}", blacklistedTickers);
-        }
         extractionExecutor = Executors.newFixedThreadPool(threadCount, r -> {
             Thread t = new Thread(r, "extraction-worker-" + workerCounter.incrementAndGet());
             t.setDaemon(true);
@@ -309,7 +297,7 @@ public class StockPickExtractionService {
 
         for (StockPickExtractionDto.PickExtractionDto pickDto : extraction.extractions()) {
             String upperTicker = pickDto.tickerSymbol().toUpperCase();
-            if (blacklistedTickers.contains(upperTicker)) {
+            if (blacklistedTickerService.isBlacklisted(upperTicker)) {
                 log.info("Skipping blacklisted ticker '{}' in video {}", upperTicker, video.getVideoId());
                 continue;
             }
@@ -364,7 +352,7 @@ public class StockPickExtractionService {
             if (!probed.add(ticker)) {
                 continue;
             }
-            if (blacklistedTickers.contains(ticker)) {
+            if (blacklistedTickerService.isBlacklisted(ticker)) {
                 continue;
             }
             Optional<Stock> existing = stockRepository.findByTickerSymbol(ticker);

@@ -7,7 +7,7 @@ import { switchMap } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ChannelStoreService } from '../../services/channel-store.service';
-import type { Channel, ChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock } from '../../api/types';
+import type { Channel, ChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock, BlacklistedTicker } from '../../api/types';
 
 interface UnknownStockRow extends UnknownStock {
   editTicker: string;
@@ -416,6 +416,11 @@ interface UnknownStockRow extends UnknownStock {
                       [disabled]="row.saving"
                       class="flex-1 py-1.5 bg-gray-700 text-white rounded text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors"
                     >Accept</button>
+                    <button
+                      (click)="blacklistStock(row)"
+                      [disabled]="row.saving"
+                      class="flex-1 py-1.5 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 disabled:opacity-40 transition-colors"
+                    >Blacklist</button>
                   </div>
                 </div>
               }
@@ -469,7 +474,71 @@ interface UnknownStockRow extends UnknownStock {
                             [disabled]="row.saving"
                             class="px-2 py-1 bg-gray-700 text-white rounded text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors whitespace-nowrap"
                           >Accept</button>
+                          <button
+                            (click)="blacklistStock(row)"
+                            [disabled]="row.saving"
+                            class="px-2 py-1 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 disabled:opacity-40 transition-colors whitespace-nowrap"
+                          >Blacklist</button>
                         </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
+        <div class="mt-8">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Blacklisted Tickers</h2>
+          </div>
+          <div class="flex gap-2 mb-4">
+            <input
+              [ngModel]="newBlacklistTicker()"
+              (ngModelChange)="newBlacklistTicker.set($event)"
+              (keydown.enter)="addBlacklistedTicker()"
+              placeholder="Ticker (e.g. FAKE)"
+              maxlength="20"
+              class="w-32 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono uppercase"
+            />
+            <input
+              [ngModel]="newBlacklistReason()"
+              (ngModelChange)="newBlacklistReason.set($event)"
+              (keydown.enter)="addBlacklistedTicker()"
+              placeholder="Reason (optional)"
+              class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <button
+              (click)="addBlacklistedTicker()"
+              [disabled]="!newBlacklistTicker().trim()"
+              class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+            >Add</button>
+          </div>
+          @if (blacklistedTickers().length === 0) {
+            <p class="text-xs text-gray-500">No blacklisted tickers.</p>
+          } @else {
+            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max text-xs">
+                <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Ticker</th>
+                    <th class="px-4 py-2 text-left font-medium">Reason</th>
+                    <th class="px-4 py-2 text-left font-medium">Added</th>
+                    <th class="px-4 py-2 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700">
+                  @for (bt of blacklistedTickers(); track bt.id) {
+                    <tr class="hover:bg-gray-800/60">
+                      <td class="px-4 py-2 font-mono font-semibold text-white">{{ bt.tickerSymbol }}</td>
+                      <td class="px-4 py-2 text-gray-400">{{ bt.reason || '—' }}</td>
+                      <td class="px-4 py-2 font-mono text-gray-500">{{ bt.createdAt | date:'dd MMM yyyy' }}</td>
+                      <td class="px-4 py-2">
+                        <button
+                          (click)="removeBlacklistedTicker(bt)"
+                          class="px-2 py-1 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 transition-colors"
+                        >Remove</button>
                       </td>
                     </tr>
                   }
@@ -594,6 +663,9 @@ export class AdminComponent implements OnInit, OnDestroy {
   readonly notificationsStatus = signal<NotificationsStatus>({ nextRunAt: null, lastRunAt: null, items: [] });
   readonly triggeringNotifications = signal(false);
   readonly unknownStockRows = signal<UnknownStockRow[]>([]);
+  readonly blacklistedTickers = signal<BlacklistedTicker[]>([]);
+  readonly newBlacklistTicker = signal('');
+  readonly newBlacklistReason = signal('');
   readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
   readonly userCount = signal<number | null>(null);
   readonly adminAddInput = signal('');
@@ -618,6 +690,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadPipelineStatus();
     this.loadPendingNotifications();
     this.loadUnknownStocks();
+    this.loadBlacklistedTickers();
     this.loadPendingChannelSuggestions();
     this.statusPollSub = interval(15000).subscribe(() => {
       this.loadPipelineStatus();
@@ -858,6 +931,72 @@ export class AdminComponent implements OnInit, OnDestroy {
           },
         });
       },
+    );
+  }
+
+  blacklistStock(row: UnknownStockRow): void {
+    this.confirmBlacklist(row.tickerSymbol, row.pickCount, () => {
+      this.unknownStockRows.update((rows) => rows.map((r) => r.id === row.id ? { ...r, saving: true } : r));
+      this.api.blacklistStock(row.id).subscribe({
+        next: (resp) => {
+          this.showToast(resp.message, 'success');
+          this.loadUnknownStocks();
+          this.loadBlacklistedTickers();
+        },
+        error: () => {
+          this.showToast(`Failed to blacklist "${row.tickerSymbol}". Please try again.`, 'error');
+          this.unknownStockRows.update((rows) => rows.map((r) => r.id === row.id ? { ...r, saving: false } : r));
+        },
+      });
+    });
+  }
+
+  loadBlacklistedTickers(): void {
+    this.api.getBlacklistedTickers().subscribe({
+      next: (tickers) => this.blacklistedTickers.set(tickers),
+      error: () => {},
+    });
+  }
+
+  addBlacklistedTicker(): void {
+    const ticker = this.newBlacklistTicker().trim().toUpperCase();
+    if (!ticker) { return; }
+    const reason = this.newBlacklistReason().trim();
+    this.api.getPickCountByTicker(ticker).subscribe({
+      next: (pickCount) => this.confirmBlacklist(ticker, pickCount, () =>
+        this.api.addBlacklistedTicker(ticker, reason).subscribe({
+          next: (resp) => {
+            this.showToast(resp.message, 'success');
+            this.newBlacklistTicker.set('');
+            this.newBlacklistReason.set('');
+            this.loadBlacklistedTickers();
+            this.loadUnknownStocks();
+          },
+          error: () => this.showToast(`Failed to add "${ticker}" to blacklist.`, 'error'),
+        }),
+      ),
+      error: () => this.showToast(`Failed to look up ticker "${ticker}".`, 'error'),
+    });
+  }
+
+  private confirmBlacklist(ticker: string, pickCount: number, onConfirm: () => void): void {
+    const picksMsg = pickCount > 0
+      ? `All ${pickCount} pick(s) associated with it will be deleted.`
+      : 'No existing picks will be affected.';
+    this.openConfirm(`Blacklist "${ticker}"? It will be added to the blacklist. ${picksMsg}`, true, onConfirm);
+  }
+
+  removeBlacklistedTicker(bt: BlacklistedTicker): void {
+    this.openConfirm(
+      `Remove "${bt.tickerSymbol}" from the blacklist? Future extractions may pick it up again.`,
+      false,
+      () => this.api.removeBlacklistedTicker(bt.tickerSymbol).subscribe({
+        next: (resp) => {
+          this.showToast(resp.message, 'success');
+          this.loadBlacklistedTickers();
+        },
+        error: () => this.showToast(`Failed to remove "${bt.tickerSymbol}".`, 'error'),
+      }),
     );
   }
 

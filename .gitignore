@@ -49,6 +49,8 @@ bin/
 /frontend/.angular/
 /.idea/
 /.claude/
+.agents/
+skills-lock.json
 .env
 /scripts/transcripts/
 /transcripts/

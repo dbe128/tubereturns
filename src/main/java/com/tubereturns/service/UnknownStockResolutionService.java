@@ -3,7 +3,6 @@ package com.tubereturns.service;
 import com.tubereturns.model.Stock;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,10 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,26 +20,10 @@ public class UnknownStockResolutionService {
     private final StockRepository stockRepository;
     private final PickRepository pickRepository;
     private final StockResolutionTransaction transaction;
+    private final BlacklistedTickerService blacklistedTickerService;
 
     @Value("${tubereturns.pipeline.stock-resolution.max-attempts:3}")
     private int maxAttempts;
-
-    @Value("${tubereturns.pipeline.blacklisted-tickers}")
-    private String blacklistedTickersRaw;
-
-    private Set<String> blacklistedTickers;
-
-    @PostConstruct
-    void initBlacklist() {
-        blacklistedTickers = Arrays.stream(blacklistedTickersRaw.split(","))
-                .map(String::strip)
-                .map(String::toUpperCase)
-                .filter(s -> !s.isBlank())
-                .collect(Collectors.toSet());
-        if (!blacklistedTickers.isEmpty()) {
-            log.info("Blacklisted tickers: {}", blacklistedTickers);
-        }
-    }
 
     public int resolveAll(int maxItems) {
         List<Stock> all = stockRepository.findUnknownUnreviewed().stream()
@@ -69,7 +49,7 @@ public class UnknownStockResolutionService {
                 break;
             }
 
-            if (blacklistedTickers.contains(stock.getTickerSymbol())) {
+            if (blacklistedTickerService.isBlacklisted(stock.getTickerSymbol())) {
                 log.info("Stock id={} '{}' is blacklisted — deleting stock, prices, and picks",
                         stock.getId(), stock.getTickerSymbol());
                 transaction.deleteStockAndRelatedData(stock);

@@ -17,5 +17,6 @@
     <include file="db/changelog/010-mark-fb-unknown.sql"/>
     <include file="db/changelog/011-mark-arax-bankrupt.sql"/>
     <include file="db/changelog/012-mark-avdl-unavailable.sql"/>
+    <include file="db/changelog/013-blacklisted-tickers.sql"/>
 
 </databaseChangeLog>

@@ -4,6 +4,7 @@ import com.tubereturns.dto.AiModelStatusDto;
 import com.tubereturns.dto.PipelineStepStatusDto;
 import com.tubereturns.dto.UnknownStockDto;
 import com.tubereturns.dto.YtbsdStatsDto;
+import com.tubereturns.model.BlacklistedTicker;
 import com.tubereturns.model.Stock;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelProcessingNotificationRepository;
@@ -14,12 +15,14 @@ import com.tubereturns.repository.StockRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.AiModelService;
+import com.tubereturns.service.BlacklistedTickerService;
 import com.tubereturns.service.ChannelListService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.PipelineStatusRegistry;
 import com.tubereturns.service.StockPickExtractionService;
 import com.tubereturns.service.StockPriceService;
+import com.tubereturns.service.StockResolutionTransaction;
 import com.tubereturns.service.TranscriptDownloadService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,6 +63,8 @@ public class AdminController {
     private final StockPriceRepository stockPriceRepository;
     private final UserRepository userRepository;
     private final BuildProperties buildProperties;
+    private final BlacklistedTickerService blacklistedTickerService;
+    private final StockResolutionTransaction stockResolutionTransaction;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
@@ -241,6 +246,14 @@ public class AdminController {
                 .toList();
     }
 
+    @GetMapping("/stocks/pick-count")
+    @Operation(summary = "Get pick count for a ticker symbol")
+    public Map<String, Long> getPickCountByTicker(@RequestParam String ticker) {
+        return stockRepository.findByTickerSymbol(ticker.trim().toUpperCase())
+                .map(s -> Map.of("pickCount", pickRepository.countByStockId(s.getId())))
+                .orElse(Map.of("pickCount", 0L));
+    }
+
     @PostMapping("/stocks/{id}/try-ticker")
     @Operation(summary = "Try resolving an unknown stock via Yahoo Finance")
     @Transactional
@@ -327,6 +340,62 @@ public class AdminController {
                     return ResponseEntity.ok(Map.of("message", "Stock " + stock.getTickerSymbol() + " marked as reviewed"));
                 })
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/stocks/{id}/blacklist")
+    @Operation(summary = "Blacklist a stock ticker and delete all its picks")
+    @Transactional
+    public ResponseEntity<Map<String, String>> blacklistStock(@PathVariable Long id) {
+        return stockRepository.findById(id)
+                .map(stock -> {
+                    String ticker = stock.getTickerSymbol();
+                    blacklistedTickerService.add(ticker, "Blacklisted via admin panel");
+                    log.info("Admin blacklisted stock id={} '{}' — deleting all associated data", stock.getId(), ticker);
+                    stockResolutionTransaction.deleteStockAndRelatedData(stock);
+                    return ResponseEntity.ok(Map.of("message", "Ticker '" + ticker + "' blacklisted and all picks deleted"));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/blacklisted-tickers")
+    @Operation(summary = "List all blacklisted tickers")
+    public List<Map<String, Object>> getBlacklistedTickers() {
+        return blacklistedTickerService.getAll().stream()
+                .map(bt -> Map.<String, Object>of(
+                        "id", bt.getId(),
+                        "tickerSymbol", bt.getTickerSymbol(),
+                        "reason", bt.getReason() != null ? bt.getReason() : "",
+                        "createdAt", bt.getCreatedAt().toString()))
+                .toList();
+    }
+
+    public record AddBlacklistedTickerRequest(String ticker, String reason) {}
+
+    @PostMapping("/blacklisted-tickers")
+    @Operation(summary = "Add a ticker to the blacklist")
+    @Transactional
+    public ResponseEntity<Map<String, String>> addBlacklistedTicker(@RequestBody AddBlacklistedTickerRequest request) {
+        if (request.ticker() == null || request.ticker().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Ticker is required"));
+        }
+        BlacklistedTicker bt = blacklistedTickerService.add(request.ticker(), request.reason());
+        String ticker = bt.getTickerSymbol();
+        stockRepository.findByTickerSymbol(ticker)
+                .ifPresent(stock -> {
+                    log.info("Blacklist add: found stock id={} '{}' — deleting all associated data", stock.getId(), ticker);
+                    stockResolutionTransaction.deleteStockAndRelatedData(stock);
+                });
+        return ResponseEntity.ok(Map.of("message", "Ticker '" + ticker + "' added to blacklist"));
+    }
+
+    @DeleteMapping("/blacklisted-tickers/{ticker}")
+    @Operation(summary = "Remove a ticker from the blacklist")
+    public ResponseEntity<Map<String, String>> removeBlacklistedTicker(@PathVariable String ticker) {
+        boolean removed = blacklistedTickerService.remove(ticker);
+        if (!removed) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(Map.of("message", "Ticker '" + ticker.toUpperCase() + "' removed from blacklist"));
     }
 
     private PipelineStepStatusDto toDto(String step, String label, Integer queueSize, YtbsdStatsDto ytbsdStats) {

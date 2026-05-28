@@ -41,6 +41,7 @@ public class PickPerformanceService {
                         pick.getVideo().getPublishedAt(),
                         false,
                         pick.isApproximatedPrices(),
+                        pick.getStock().getCorporateAction(),
                         pick.getReturn1m(), pick.getReturn1y(), pick.getReturn3y(),
                         pick.getAlpha1m(), pick.getAlpha1y(), pick.getAlpha3y()
                 ))
@@ -245,6 +246,7 @@ public class PickPerformanceService {
                 pick.getVideo().getPublishedAt(),
                 true,
                 false,
+                pick.getStock().getCorporateAction(),
                 null, null, null,
                 null, null, null
         );

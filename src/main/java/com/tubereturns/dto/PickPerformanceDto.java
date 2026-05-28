@@ -10,6 +10,7 @@ public record PickPerformanceDto(
     Instant videoPublishedAt,
     boolean unknown,
     boolean approximatedPrices,
+    String corporateAction,
     Double return1m,
     Double return1y,
     Double return3y,

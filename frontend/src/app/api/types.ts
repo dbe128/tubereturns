@@ -66,6 +66,7 @@ export const PickPerformanceSchema = z.object({
   videoPublishedAt: z.string(),
   unknown: z.boolean(),
   approximatedPrices: z.boolean().optional(),
+  corporateAction: z.string().nullable().optional(),
   return1m: z.number().nullable(),
   return1y: z.number().nullable(),
   return3y: z.number().nullable(),
@@ -159,6 +160,14 @@ export const UnknownStockSchema = z.object({
   pickCount: z.number(),
 });
 export type UnknownStock = z.infer<typeof UnknownStockSchema>;
+
+export const BlacklistedTickerSchema = z.object({
+  id: z.number(),
+  tickerSymbol: z.string(),
+  reason: z.string(),
+  createdAt: z.string(),
+});
+export type BlacklistedTicker = z.infer<typeof BlacklistedTickerSchema>;
 
 export const ChannelSuggestionSchema = z.object({
   handle: z.string(),

@@ -19,9 +19,10 @@ import {
   NotificationsStatusSchema,
   TickerDataSchema,
   UnknownStockSchema,
+  BlacklistedTickerSchema,
   ChannelRelevanceSchema,
 } from './types';
-import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, ChannelRelevance } from './types';
+import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, ChannelRelevance } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -174,6 +175,42 @@ export class ApiService {
 
   acceptUnknown(id: number): Observable<unknown> {
     return this.http.post<unknown>(`/api/admin/stocks/${id}/accept-unknown`, null).pipe(catchError((e) => this.handleError(e)));
+  }
+
+  getPickCountByTicker(ticker: string): Observable<number> {
+    const params = new HttpParams().set('ticker', ticker);
+    return this.validated(
+      z.object({ pickCount: z.number() }),
+      this.http.get<unknown>('/api/admin/stocks/pick-count', { params }).pipe(catchError((e) => this.handleError(e))),
+    ).pipe(map((r) => r.pickCount));
+  }
+
+  blacklistStock(id: number): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.post<unknown>(`/api/admin/stocks/${id}/blacklist`, null).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getBlacklistedTickers(): Observable<BlacklistedTicker[]> {
+    return this.validated(
+      z.array(BlacklistedTickerSchema),
+      this.http.get<unknown>('/api/admin/blacklisted-tickers').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  addBlacklistedTicker(ticker: string, reason: string): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.post<unknown>('/api/admin/blacklisted-tickers', { ticker, reason }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  removeBlacklistedTicker(ticker: string): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.delete<unknown>(`/api/admin/blacklisted-tickers/${ticker}`).pipe(catchError((e) => this.handleError(e))),
+    );
   }
 
   reextractVideo(videoId: string): Observable<unknown> {
