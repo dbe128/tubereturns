@@ -95,7 +95,7 @@ tubereturns:
   pipeline:
     blacklisted-tickers: "TICKER"
     discovery:
-      cron: "0 0 * * * *"
+      cron: "0 0 16 * * *"
       max-items: 1500
     transcript:
       cron: "0 15 * * * *"
@@ -104,10 +104,10 @@ tubereturns:
       cron: "0 30 * * * *"
       threads: 10
     price-refresh:
-      cron: "0 0 14,18,22 * * *"
+      cron: "0 0 23 * * MON-FRI"
     stock-resolution:
       enabled: false
-      cron: "0 45 2,8,14,20 * * *"
+      cron: "0 0 22 * * *"
       max-items: 50
       max-attempts: 3
     notification:
