@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -116,7 +116,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
           <div class="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-4 md:py-5 border-b border-gray-700">
             <div class="flex flex-col gap-0.5">
               <span class="text-sm font-bold tracking-[0.18em] uppercase text-green-500">★ Leaderboard</span>
-              <h2 class="text-lg md:text-2xl font-black text-white">Top 5 Finance YouTubers<span class="hidden md:inline"> &middot; Ranked by Alpha</span></h2>
+              <h2 class="text-lg md:text-2xl font-black text-white">Finance YouTubers<span class="hidden md:inline"> &middot; Ranked by Alpha</span></h2>
             </div>
             <div class="flex items-center gap-1 p-1 bg-gray-800 rounded-lg">
               <button (click)="selectedTimeframe.set('1m')"
@@ -179,9 +179,11 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                   }
                 </a>
               }
-              @if (!auth.isAdmin && sortedRows().length > 5) {
-                <div class="px-4 py-3 text-center text-xs text-gray-500 bg-gray-800 border-t border-gray-700">
-                  {{ sortedRows().length - 5 }} more channel{{ sortedRows().length - 5 === 1 ? '' : 's' }} not shown
+              @if (!auth.isAdmin && !auth.isAuthenticated && sortedRows().length > 5) {
+                <div class="px-4 py-3 text-center bg-gray-800 border-t border-gray-700">
+                  <button (click)="loginToShowAll()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-green-800 text-white hover:bg-green-700 transition-colors">
+                    Show {{ sortedRows().length - 5 }} more ↓
+                  </button>
                 </div>
               }
             }
@@ -297,10 +299,12 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                     }
                   </tr>
                 }
-                @if (!auth.isAdmin && sortedRows().length > 5) {
+                @if (!auth.isAdmin && !auth.isAuthenticated && sortedRows().length > 5) {
                   <tr>
-                    <td [attr.colspan]="auth.isAdmin ? 6 : 5" class="px-6 py-3 text-center text-xs text-gray-500 bg-gray-800 border-t border-gray-700">
-                      {{ sortedRows().length - 5 }} more channel{{ sortedRows().length - 5 === 1 ? '' : 's' }} not shown
+                    <td [attr.colspan]="5" class="px-6 py-3 text-center bg-gray-800 border-t border-gray-700">
+                      <button (click)="loginToShowAll()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-green-800 text-white hover:bg-green-700 transition-colors">
+                        Show {{ sortedRows().length - 5 }} more ↓
+                      </button>
                     </td>
                   </tr>
                 }
@@ -416,6 +420,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   private readonly recovery = inject(BackendRecoveryService);
   private readonly channelStore = inject(ChannelStoreService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   readonly rows = signal<Channel[]>([]);
 
@@ -438,7 +443,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     });
   });
 
-  readonly visibleRows = computed(() => this.auth.isAdmin ? this.sortedRows() : this.sortedRows().slice(0, 5));
+  readonly visibleRows = computed(() =>
+    (this.auth.isAdmin || this.auth.isAuthenticated) ? this.sortedRows() : this.sortedRows().slice(0, 5)
+  );
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -579,6 +586,10 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
 
   channelSlug(channelName: string): string {
     return channelName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-returns';
+  }
+
+  loginToShowAll(): void {
+    this.router.navigate(['/login'], { queryParams: { returnUrl: '/?scrollTo=leaderboard' } });
   }
 
   scrollToLeaderboard(): void {
