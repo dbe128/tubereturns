@@ -14,7 +14,7 @@ tubereturns:
 
   pipeline:
     stock-resolution:
-      enabled: false
+      enabled: true
 
 logging:
   level:
