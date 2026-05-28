@@ -22,7 +22,7 @@ public class UnknownStockResolutionService {
     private final StockResolutionTransaction transaction;
     private final BlacklistedTickerService blacklistedTickerService;
 
-    @Value("${tubereturns.pipeline.stock-resolution.max-attempts:3}")
+    @Value("${tubereturns.pipeline.stock-resolution.max-attempts}")
     private int maxAttempts;
 
     public int resolveAll(int maxItems) {
