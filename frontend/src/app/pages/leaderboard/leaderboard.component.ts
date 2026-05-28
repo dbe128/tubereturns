@@ -182,7 +182,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
               @if (!auth.isAdmin && !auth.isAuthenticated && sortedRows().length > 5) {
                 <div class="px-4 py-3 text-center bg-gray-800 border-t border-gray-700">
                   <button (click)="loginToShowAll()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-green-800 text-white hover:bg-green-700 transition-colors">
-                    Show {{ sortedRows().length - 5 }} more ↓
+                    ↓ Show {{ sortedRows().length - 5 }} more ↓
                   </button>
                 </div>
               }
@@ -303,7 +303,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                   <tr>
                     <td [attr.colspan]="5" class="px-6 py-3 text-center bg-gray-800 border-t border-gray-700">
                       <button (click)="loginToShowAll()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-green-800 text-white hover:bg-green-700 transition-colors">
-                        Show {{ sortedRows().length - 5 }} more ↓
+                        ↓ Show {{ sortedRows().length - 5 }} more ↓
                       </button>
                     </td>
                   </tr>
