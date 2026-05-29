@@ -120,17 +120,17 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
             </div>
             <div class="flex items-center gap-1 p-1 bg-gray-800 rounded-lg">
               <button (click)="selectedTimeframe.set('1m')"
-                      class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
+                      class="px-2 py-1.5 md:px-4 text-xs font-bold rounded-md transition-colors"
                       [class]="selectedTimeframe() === '1m' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'">
                 1M
               </button>
               <button (click)="selectedTimeframe.set('1y')"
-                      class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
+                      class="px-2 py-1.5 md:px-4 text-xs font-bold rounded-md transition-colors"
                       [class]="selectedTimeframe() === '1y' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'">
                 1Y
               </button>
               <button (click)="selectedTimeframe.set('3y')"
-                      class="px-4 py-1.5 text-xs font-bold rounded-md transition-colors"
+                      class="px-2 py-1.5 md:px-4 text-xs font-bold rounded-md transition-colors"
                       [class]="selectedTimeframe() === '3y' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'">
                 3Y
               </button>
@@ -406,8 +406,8 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
 
       }
 
-      <div class="mx-4 mt-8 mb-2 rounded-xl border border-gray-700 bg-gray-800/60 px-5 py-3 text-center text-sm text-gray-300">
-        ⚠️ Not financial advice. Data may be incomplete — picks from deleted or private videos are not reflected in the rankings.
+      <div class="mx-4 mt-8 mb-2 text-center text-xs text-gray-300">
+        Some data might be AI-generated and may contain inaccuracies. Picks from deleted or private videos are not reflected in the rankings. Not financial advice.
       </div>
 
     </div>
