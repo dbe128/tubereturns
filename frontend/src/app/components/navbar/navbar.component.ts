@@ -28,7 +28,7 @@ import type { ChannelSearchResult } from '../../api/types';
     <header class="bg-gray-100 border-b border-gray-200">
       <div class="px-6 h-[3.33rem] flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
-          <a routerLink="/" class="flex-shrink-0">
+          <a routerLink="/" class="flex-shrink-0 md:self-start">
             <img src="logo.webp" alt="TubeReturns" class="h-36 rounded hidden md:block" />
             <img src="logo-mobile.webp" alt="TubeReturns" class="h-[38px] rounded md:hidden" />
           </a>
