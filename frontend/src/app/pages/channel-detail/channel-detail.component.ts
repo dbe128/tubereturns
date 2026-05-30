@@ -148,6 +148,22 @@ interface IndexedVideo {
                   <div class="text-2xl font-bold text-white">{{ channel()!.totalVideos === 0 ? '?' : channel()!.totalVideos }}</div>
                   <div class="text-xs uppercase tracking-wide">Videos</div>
                 </div>
+                <div class="text-center">
+                  @if (channel()!.archivarixDeletedCount == null) {
+                    <div class="relative group/del inline-block">
+                      <div class="text-2xl font-bold text-gray-500 cursor-default">?</div>
+                      <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity z-10">Not yet scanned</span>
+                    </div>
+                  } @else if (channel()!.archivarixDeletedCount === 0) {
+                    <div class="text-2xl font-bold text-gray-400">0</div>
+                  } @else {
+                    <div class="text-2xl font-bold flex items-center justify-center gap-1"
+                         [class]="channel()!.archivarixDeletedCount! >= 10 ? 'text-red-400' : 'text-amber-400'">
+                      <span>💀</span>{{ channel()!.archivarixDeletedCount }}+
+                    </div>
+                  }
+                  <div class="text-xs uppercase tracking-wide">Deleted</div>
+                </div>
                 @if (auth.isAdmin || !channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
                   <div class="text-center">
                     <div class="text-2xl font-bold text-primary-600">{{ channel()?.processedVideos ?? '—' }}</div>
