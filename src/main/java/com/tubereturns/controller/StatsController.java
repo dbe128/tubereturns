@@ -50,6 +50,7 @@ public class StatsController {
                 "totalStocks", stockRepository.count(),
                 "totalCurrencies", currencyRepository.count(),
                 "totalLlmModels", (long) aiModelService.getModelCount(),
+                "totalDeletedVideos", channelRepository.sumArchivarixDeletedCount(),
                 "version", buildProperties.getVersion()
         );
     }

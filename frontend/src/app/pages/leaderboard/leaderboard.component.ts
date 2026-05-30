@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
+import { DeletedCountComponent } from '../../components/deleted-count/deleted-count.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
@@ -12,7 +13,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
 @Component({
   selector: 'app-leaderboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, DeletedCountComponent],
   template: `
     @if (toast()) {
       <div class="fixed top-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
@@ -50,7 +51,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
           <span class="text-gray-700">·</span>
           <span class="text-gray-500">vs. S&amp;P 500</span>
         </div>
-        <h1 class="text-4xl sm:text-7xl md:text-8xl font-black text-white leading-none tracking-tight mb-3">
+        <h1 class="text-5xl sm:text-7xl md:text-8xl font-black text-white leading-none tracking-tight mb-3">
           Which finance YouTuber is<br>
           <span class="text-green-400">actually beating the stock market?</span>
         </h1>
@@ -61,30 +62,30 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
         <p class="text-gray-500 text-base mb-12 max-w-xl mx-auto">
           No self-reporting. No guesswork. <span class="text-gray-300 font-medium">Updated daily</span> for the most accurate results possible.
         </p>
-        <div class="flex flex-wrap items-center justify-center gap-y-8 gap-x-0 mb-12">
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-0 mb-12 w-full max-w-3xl mx-auto">
           <div class="text-center px-8">
             <div class="text-5xl font-black text-white tabular-nums tracking-tight">{{ picksCount() | number }}</div>
             <div class="text-xs text-gray-500 uppercase tracking-widest mt-2 font-semibold">predictions analyzed</div>
           </div>
-          <div class="w-px h-14 bg-gray-800 hidden sm:block"></div>
           <div class="text-center px-8">
             <div class="text-5xl font-black text-white tabular-nums tracking-tight">{{ youTubersCount() | number }}</div>
             <div class="text-xs text-gray-500 uppercase tracking-widest mt-2 font-semibold">YouTubers analyzed</div>
           </div>
-          <div class="w-px h-14 bg-gray-800 hidden sm:block"></div>
           <div class="text-center px-8">
             <div class="text-5xl font-black text-white tabular-nums tracking-tight">{{ stocksCount() | number }}</div>
             <div class="text-xs text-gray-500 uppercase tracking-widest mt-2 font-semibold">stocks tracked</div>
           </div>
-          <div class="w-px h-14 bg-gray-800 hidden sm:block"></div>
           <div class="text-center px-8">
             <div class="text-5xl font-black text-white tabular-nums tracking-tight">{{ currenciesCount() | number }}</div>
             <div class="text-xs text-gray-500 uppercase tracking-widest mt-2 font-semibold">currencies supported</div>
           </div>
-          <div class="w-px h-14 bg-gray-800 hidden sm:block"></div>
           <div class="text-center px-8">
             <div class="text-5xl font-black text-white tabular-nums tracking-tight">{{ llmModelsCount() | number }}</div>
             <div class="text-xs text-gray-500 uppercase tracking-widest mt-2 font-semibold">cutting-edge LLM models used</div>
+          </div>
+          <div class="text-center px-8">
+            <div class="text-5xl font-black tabular-nums tracking-tight text-white">{{ deletedVideosCount() | number }}</div>
+            <div class="text-xs text-gray-500 uppercase tracking-widest mt-2 font-semibold">deleted videos detected 💀</div>
           </div>
         </div>
         <button (click)="scrollToLeaderboard()"
@@ -169,11 +170,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                     }
                   </div>
                   <span class="flex-1 font-semibold text-white truncate text-sm">{{ row.channelName }}</span>
-                  @if (row.archivarixDeletedCount != null && row.archivarixDeletedCount > 0) {
-                    <span class="flex-shrink-0 text-xs font-mono"
-                          [class]="row.archivarixDeletedCount >= 10 ? 'text-red-400' : 'text-amber-400'"
-                          title="Deleted videos not reflected in rankings"><span class="text-base">💀</span>{{ row.archivarixDeletedCount }}+</span>
-                  }
+                  <app-deleted-count [count]="row.archivarixDeletedCount" size="sm" class="flex-shrink-0" />
                   @if (scoreForRow(row) !== null) {
                     <span class="inline-flex items-center px-2 py-0.5 rounded-lg font-black font-mono text-xs flex-shrink-0"
                           [class]="scoreForRow(row)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
@@ -283,19 +280,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                       {{ row.totalVideos }}
                     </td>
                     <td class="px-6 py-4 text-right font-mono text-sm">
-                      @if (row.archivarixDeletedCount == null) {
-                        <span class="relative group/del inline-block cursor-default text-gray-600">?
-                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity">
-                            Not yet scanned
-                          </span>
-                        </span>
-                      } @else if (row.archivarixDeletedCount === 0) {
-                        <span class="text-gray-600">0</span>
-                      } @else if (row.archivarixDeletedCount >= 10) {
-                        <span class="text-red-400">{{ row.archivarixDeletedCount }}+</span>
-                      } @else {
-                        <span class="text-amber-400">{{ row.archivarixDeletedCount }}+</span>
-                      }
+                      <app-deleted-count [count]="row.archivarixDeletedCount" size="sm" />
                     </td>
                     @if (auth.isAdmin) {
                     <td class="px-6 py-4">
@@ -487,6 +472,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly stocksCount = signal(0);
   readonly currenciesCount = signal(0);
   readonly llmModelsCount = signal(0);
+  readonly deletedVideosCount = signal(0);
 
   private suggestionRefreshSub?: Subscription;
 
@@ -500,6 +486,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
           this.animateCount(stats.totalStocks, (v) => this.stocksCount.set(v));
           this.animateCount(stats.totalCurrencies, (v) => this.currenciesCount.set(v));
           this.animateCount(stats.totalLlmModels, (v) => this.llmModelsCount.set(v));
+          if (stats.totalDeletedVideos) {
+            this.animateCount(stats.totalDeletedVideos, (v) => this.deletedVideosCount.set(v));
+          }
         }, 300);
       },
       error: () => {},

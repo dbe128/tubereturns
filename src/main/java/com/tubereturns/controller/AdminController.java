@@ -33,6 +33,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.info.BuildProperties;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -67,6 +68,7 @@ public class AdminController {
     private final BlacklistedTickerService blacklistedTickerService;
     private final StockResolutionTransaction stockResolutionTransaction;
     private final PickPerformanceService pickPerformanceService;
+    private final CacheManager cacheManager;
 
     public record PendingNotificationDto(String channelName, String channelHandle, String userEmail, String requestedAt) {}
 
@@ -398,6 +400,20 @@ public class AdminController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(Map.of("message", "Ticker '" + ticker.toUpperCase() + "' removed from blacklist"));
+    }
+
+    @PostMapping("/caches/clear")
+    @Operation(summary = "Clear all caches")
+    public ResponseEntity<Map<String, Object>> clearAllCaches() {
+        List<String> cleared = cacheManager.getCacheNames().stream().sorted().toList();
+        cleared.forEach(name -> {
+            var cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
+            }
+        });
+        log.info("Admin: manually cleared {} cache(s): {}", cleared.size(), cleared);
+        return ResponseEntity.ok(Map.of("cleared", cleared));
     }
 
     private void recomputeRelinkPicks(List<Pick> picks, Stock target) {

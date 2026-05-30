@@ -159,6 +159,10 @@ export class ApiService {
     return this.http.post<unknown>('/api/admin/notifications/trigger', null).pipe(catchError((e) => this.handleError(e)));
   }
 
+  clearAllCaches(): Observable<{ cleared: string[] }> {
+    return this.http.post<{ cleared: string[] }>('/api/admin/caches/clear', null).pipe(catchError((e) => this.handleError(e)));
+  }
+
   getUnknownStocks(): Observable<UnknownStock[]> {
     return this.validated(
       z.array(UnknownStockSchema),

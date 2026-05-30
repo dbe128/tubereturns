@@ -17,6 +17,7 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import type { Channel, VideoSummary, PickPerformance } from '../../api/types';
+import { DeletedCountComponent } from '../../components/deleted-count/deleted-count.component';
 
 type SortKey = 'index' | 'publishedAt' | 'viewCount' | 'transcriptStatus' | 'extractionStatus';
 type PickSortKey = 'date' | 'company' | 'ticker' | '1m' | '1y' | '3y';
@@ -62,7 +63,7 @@ interface IndexedVideo {
 @Component({
   selector: 'app-channel-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule, DeletedCountComponent],
   template: `
     @if (loading()) {
       <div class="flex justify-center py-20">
@@ -149,19 +150,9 @@ interface IndexedVideo {
                   <div class="text-xs uppercase tracking-wide">Videos</div>
                 </div>
                 <div class="text-center">
-                  @if (channel()!.archivarixDeletedCount == null) {
-                    <div class="relative group/del inline-block">
-                      <div class="text-2xl font-bold text-gray-500 cursor-default">?</div>
-                      <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity z-10">Not yet scanned</span>
-                    </div>
-                  } @else if (channel()!.archivarixDeletedCount === 0) {
-                    <div class="text-2xl font-bold text-gray-400">0</div>
-                  } @else {
-                    <div class="text-2xl font-bold flex items-center justify-center gap-1"
-                         [class]="channel()!.archivarixDeletedCount! >= 10 ? 'text-red-400' : 'text-amber-400'">
-                      <span>💀</span>{{ channel()!.archivarixDeletedCount }}+
-                    </div>
-                  }
+                  <div class="text-2xl font-bold flex items-center justify-center">
+                    <app-deleted-count [count]="channel()!.archivarixDeletedCount" size="lg" />
+                  </div>
                   <div class="text-xs uppercase tracking-wide">Deleted</div>
                 </div>
                 @if (auth.isAdmin || !channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {

@@ -43,4 +43,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     @Transactional
     @Query(value = "UPDATE channels SET youtube_channel_id = :youtubeChannelId WHERE id = :id", nativeQuery = true)
     void updateYoutubeChannelId(@Param("id") Long id, @Param("youtubeChannelId") String youtubeChannelId);
+
+    @Query(value = "SELECT COALESCE(SUM(archivarix_deleted_count), 0) FROM channels WHERE deleted_at IS NULL AND archivarix_deleted_count IS NOT NULL", nativeQuery = true)
+    long sumArchivarixDeletedCount();
 }

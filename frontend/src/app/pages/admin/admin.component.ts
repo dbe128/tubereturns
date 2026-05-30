@@ -374,6 +374,15 @@ interface UnknownStockRow extends UnknownStock {
           }
         </div>
 
+        <div class="mt-8 flex items-center justify-between">
+          <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Caches</h2>
+          <button
+            (click)="clearCaches()"
+            [disabled]="clearingCaches()"
+            class="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-xs font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors"
+          >Clear All</button>
+        </div>
+
         <div class="mt-8">
           <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Unknown Stocks</h2>
           @if (unknownStockRows().length === 0) {
@@ -662,6 +671,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   readonly disabledSteps = signal<Set<string>>(new Set());
   readonly notificationsStatus = signal<NotificationsStatus>({ nextRunAt: null, lastRunAt: null, items: [] });
   readonly triggeringNotifications = signal(false);
+  readonly clearingCaches = signal(false);
   readonly unknownStockRows = signal<UnknownStockRow[]>([]);
   readonly blacklistedTickers = signal<BlacklistedTicker[]>([]);
   readonly newBlacklistTicker = signal('');
@@ -765,6 +775,20 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.api.getPendingNotifications().subscribe({
       next: (status) => this.notificationsStatus.set(status),
       error: () => {},
+    });
+  }
+
+  clearCaches(): void {
+    this.clearingCaches.set(true);
+    this.api.clearAllCaches().subscribe({
+      next: (res) => {
+        this.showToast(`Cleared: ${res.cleared.join(', ')}`, 'success');
+        this.clearingCaches.set(false);
+      },
+      error: () => {
+        this.showToast('Failed to clear caches', 'error');
+        this.clearingCaches.set(false);
+      },
     });
   }
 

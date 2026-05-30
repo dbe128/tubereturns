@@ -9,6 +9,7 @@ import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -36,6 +37,7 @@ public class ArchivarixService {
 
     private final ChannelRepository channelRepository;
     private final ArchivarixDeletedVideoRepository deletedVideoRepository;
+    private final CacheManager cacheManager;
 
     private volatile Playwright playwright;
     private volatile Browser browser;
@@ -131,6 +133,7 @@ public class ArchivarixService {
                 channel.setArchivarixDeletedCount(0);
                 channel.setArchivarixCheckedAt(Instant.now());
                 channelRepository.save(channel);
+                evictAllCaches();
                 return;
             }
 
@@ -193,11 +196,22 @@ public class ArchivarixService {
             channel.setArchivarixDeletedCount(totalDeleted);
             channel.setArchivarixCheckedAt(Instant.now());
             channelRepository.save(channel);
+            evictAllCaches();
             log.info("Archivarix sync: '{}' complete — deleted_count={}, checked_at={}",
                     channel.getChannelName(), totalDeleted, channel.getArchivarixCheckedAt());
         } finally {
             context.close();
         }
+    }
+
+    private void evictAllCaches() {
+        cacheManager.getCacheNames().forEach(name -> {
+            var cache = cacheManager.getCache(name);
+            if (cache != null) {
+                cache.clear();
+            }
+        });
+        log.debug("Archivarix sync: all caches evicted");
     }
 
     private List<DeletedVideo> extractDeletedVideos(Page page, String channelName) {
