@@ -17,6 +17,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - transcripts_data:/app/transcripts
+      - playwright_browsers:/root/.cache/ms-playwright
     restart: unless-stopped
 
   frontend:
@@ -30,3 +31,4 @@ services:
 
 volumes:
   transcripts_data:
+  playwright_browsers:

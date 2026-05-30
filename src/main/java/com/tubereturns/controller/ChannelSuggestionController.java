@@ -153,7 +153,7 @@ public class ChannelSuggestionController {
     public ResponseEntity<Void> addSuggestion(@PathVariable String handle) {
         return suggestionRepository.findById(handle).map(s -> {
             var channel = discoveryService.createOrUpdateChannel(s.getHandle(), s.getChannelName(),
-                    s.getChannelUrl(), s.getThumbnailUrl(), s.getDescription(), s.getSubscriberCount());
+                    s.getChannelUrl(), s.getThumbnailUrl(), s.getDescription(), s.getSubscriberCount(), null);
             subscriberRepository.findByHandle(handle).stream()
                     .filter(ChannelSuggestionSubscriber::isNotifyOnComplete)
                     .forEach(sub -> userRepository.findById(sub.getUserId())

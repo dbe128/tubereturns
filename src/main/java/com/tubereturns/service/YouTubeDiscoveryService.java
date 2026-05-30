@@ -5,9 +5,12 @@ import com.tubereturns.model.Channel;
 import com.tubereturns.model.Video;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.VideoRepository;
+import com.tubereturns.dto.ChannelSearchResultDto;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -187,7 +190,7 @@ public class YouTubeDiscoveryService {
     }
 
     @Transactional
-    public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description, Long subscriberCount) {
+    public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description, Long subscriberCount, String youtubeChannelId) {
         return channelRepository.findByHandleIncludingDeleted(handle)
             .map(existing -> {
                 existing.setChannelName(channelName);
@@ -202,17 +205,51 @@ public class YouTubeDiscoveryService {
                 if (subscriberCount != null) {
                     existing.setSubscriberCount(subscriberCount);
                 }
+                if (youtubeChannelId != null && !youtubeChannelId.isBlank() && existing.getYoutubeChannelId() == null) {
+                    existing.setYoutubeChannelId(youtubeChannelId);
+                }
                 return channelRepository.save(existing);
             })
             .orElseGet(() -> {
                 Channel newChannel = new Channel(handle, channelName);
                 newChannel.setDescription(description);
                 newChannel.setSubscriberCount(subscriberCount);
+                if (youtubeChannelId != null && !youtubeChannelId.isBlank()) {
+                    newChannel.setYoutubeChannelId(youtubeChannelId);
+                }
                 if (thumbnailUrl != null && !thumbnailUrl.isBlank()) {
                     downloadThumbnail(thumbnailUrl, newChannel);
                 }
                 return channelRepository.save(newChannel);
             });
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void backfillYoutubeChannelIds() {
+        discoveryExecutor.submit(() -> {
+            List<Channel> channels = channelRepository.findChannelsWithoutYoutubeChannelId();
+            if (channels.isEmpty()) {
+                log.debug("No channels need YouTube channel ID backfill");
+                return;
+            }
+            log.info("Backfilling YouTube channel IDs for {} channel(s)", channels.size());
+            int filled = 0;
+            for (Channel channel : channels) {
+                try {
+                    ChannelSearchResultDto result = youTubeApiService.resolveChannelByHandle(channel.getHandle());
+                    if (result != null && result.channelId() != null && !result.channelId().isBlank()) {
+                        channelRepository.updateYoutubeChannelId(channel.getId(), result.channelId());
+                        filled++;
+                        log.info("Backfilled YouTube channel ID for '{}': {}", channel.getChannelName(), result.channelId());
+                    } else {
+                        log.warn("Could not resolve YouTube channel ID for '{}'", channel.getChannelName());
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to backfill YouTube channel ID for '{}': {}", channel.getChannelName(), e.getMessage());
+                }
+            }
+            log.info("YouTube channel ID backfill complete: {}/{} filled", filled, channels.size());
+        });
     }
 
     @PreDestroy

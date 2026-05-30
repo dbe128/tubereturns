@@ -64,6 +64,15 @@ public class Channel {
     @Column(name = "approval_source", length = 20)
     private String approvalSource;
 
+    @Column(name = "archivarix_deleted_count")
+    private Integer archivarixDeletedCount;
+
+    @Column(name = "archivarix_checked_at")
+    private Instant archivarixCheckedAt;
+
+    @Column(name = "youtube_channel_id", length = 24)
+    private String youtubeChannelId;
+
     @NotBlank
     @Size(max = 255)
     @Column(name = "name_slug", unique = true, nullable = false)

@@ -145,7 +145,7 @@ public class YouTubeApiService {
 
                 results.add(new ChannelSearchResultDto(
                         handle, item.getSnippet().getTitle(), channelUrl, thumbnailUrl, description,
-                        subscriberCount, videoCount, channelCreatedAt));
+                        subscriberCount, videoCount, channelCreatedAt, channelId));
             }
             return results;
         } catch (Exception e) {
@@ -250,7 +250,7 @@ public class YouTubeApiService {
                         .toString().substring(0, 10);
             }
             return new ChannelSearchResultDto(resolvedHandle, item.getSnippet().getTitle(), channelUrl,
-                    thumbnailUrl, item.getSnippet().getDescription(), subscriberCount, videoCount, channelCreatedAt);
+                    thumbnailUrl, item.getSnippet().getDescription(), subscriberCount, videoCount, channelCreatedAt, item.getId());
         } catch (Exception e) {
             meterRegistry.counter("tubereturns.youtube.api.errors", "method", "resolveChannelByHandle").increment();
             log.error("Failed to resolve channel for handle @{}: {}", handle, e.getMessage(), e);

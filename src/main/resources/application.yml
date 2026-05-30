@@ -66,6 +66,9 @@ tubereturns:
     relevance-threshold: 2
     relevance-max-retries: 5
 
+  archivarix:
+    enabled: true
+
   transcript:
     ytbsd-path: /app/scripts/ytbsd.py
     transcripts-dir: /app/transcripts
@@ -109,6 +112,9 @@ tubereturns:
       cron: "0 0 22 * * *"
       max-items: 50
       max-attempts: 3
+    archivarix-sync:
+      cron: "0 0 */4 * * *"
+      max-items: 1
     notification:
       cron: "0 */2 * * * *"
 

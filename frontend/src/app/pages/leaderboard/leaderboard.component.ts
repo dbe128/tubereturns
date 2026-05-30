@@ -169,6 +169,11 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                     }
                   </div>
                   <span class="flex-1 font-semibold text-white truncate text-sm">{{ row.channelName }}</span>
+                  @if (row.archivarixDeletedCount != null && row.archivarixDeletedCount > 0) {
+                    <span class="flex-shrink-0 text-xs font-mono"
+                          [class]="row.archivarixDeletedCount >= 10 ? 'text-red-400' : 'text-amber-400'"
+                          title="Deleted videos not reflected in rankings"><span class="text-base">💀</span>{{ row.archivarixDeletedCount }}+</span>
+                  }
                   @if (scoreForRow(row) !== null) {
                     <span class="inline-flex items-center px-2 py-0.5 rounded-lg font-black font-mono text-xs flex-shrink-0"
                           [class]="scoreForRow(row)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
@@ -205,6 +210,14 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                 <th class="px-6 py-4">Channel</th>
                 <th class="px-6 py-4 text-right">Subscribers</th>
                 <th class="px-6 py-4 text-right">Videos</th>
+                <th class="px-6 py-4 text-right">
+                  <span class="relative group/tip cursor-default">
+                    # Deleted <span class="text-base">💀</span>
+                    <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-64 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10 normal-case tracking-normal font-normal">
+                      Deleted videos not reflected in rankings — high count may indicate cherry-picked results.
+                    </span>
+                  </span>
+                </th>
                 @if (auth.isAdmin) {
                   <th class="px-6 py-4">Actions</th>
                 }
@@ -213,7 +226,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
             <tbody>
               @if (processedChannels().length === 0) {
                 <tr>
-                  <td [attr.colspan]="auth.isAdmin ? 6 : 5" class="px-6 py-16 text-center text-gray-400 text-sm">
+                  <td [attr.colspan]="auth.isAdmin ? 7 : 6" class="px-6 py-16 text-center text-gray-400 text-sm">
                     No fully processed channels yet.
                   </td>
                 </tr>
@@ -269,6 +282,21 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                     <td class="px-6 py-4 text-right text-gray-500 font-mono text-sm">
                       {{ row.totalVideos }}
                     </td>
+                    <td class="px-6 py-4 text-right font-mono text-sm">
+                      @if (row.archivarixDeletedCount == null) {
+                        <span class="relative group/del inline-block cursor-default text-gray-600">?
+                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity">
+                            Not yet scanned
+                          </span>
+                        </span>
+                      } @else if (row.archivarixDeletedCount === 0) {
+                        <span class="text-gray-600">0</span>
+                      } @else if (row.archivarixDeletedCount >= 10) {
+                        <span class="text-red-400">{{ row.archivarixDeletedCount }}+</span>
+                      } @else {
+                        <span class="text-amber-400">{{ row.archivarixDeletedCount }}+</span>
+                      }
+                    </td>
                     @if (auth.isAdmin) {
                     <td class="px-6 py-4">
                       <div class="flex items-center gap-2">
@@ -301,7 +329,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
                 }
                 @if (!auth.isAdmin && !auth.isAuthenticated && sortedRows().length > 5) {
                   <tr>
-                    <td [attr.colspan]="5" class="px-6 py-3 text-center bg-gray-800 border-t border-gray-700">
+                    <td [attr.colspan]="6" class="px-6 py-3 text-center bg-gray-800 border-t border-gray-700">
                       <button (click)="loginToShowAll()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-green-800 text-white hover:bg-green-700 transition-colors">
                         ↓ Show {{ sortedRows().length - 5 }} more ↓
                       </button>
@@ -407,7 +435,7 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
       }
 
       <div class="mx-4 mt-8 mb-2 text-center text-xs text-gray-300">
-        Some data might be AI-generated and may contain inaccuracies. Picks from deleted or private videos are not reflected in the rankings. Not financial advice.
+        Some data might be AI-generated and may contain inaccuracies. Not financial advice.
       </div>
 
     </div>

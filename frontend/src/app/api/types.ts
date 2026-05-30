@@ -31,6 +31,7 @@ export const ChannelSchema = z.object({
   score3y: z.number().nullable(),
   eligible3y: z.number(),
   unresolved3y: z.number(),
+  archivarixDeletedCount: z.number().int().nullable().optional(),
 });
 
 export const VideoSummarySchema = z.object({
@@ -84,6 +85,7 @@ export const ChannelSearchResultSchema = z.object({
   subscriberCount: z.number().nullable(),
   videoCount: z.number().nullable(),
   channelCreatedAt: z.string().nullable(),
+  channelId: z.string().nullable().optional(),
 });
 
 export const TickerDataSchema = z.object({

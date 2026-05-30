@@ -410,7 +410,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   private proceedWithAdd(result: ChannelSearchResult, approvalSource: string = 'AUTO'): void {
     const notify = this.auth.user()?.notifyOnChannelProcessed ?? true;
-    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, notify, approvalSource).subscribe({
+    this.api.addChannel(result.handle, result.channelName, result.channelUrl, result.thumbnailUrl ?? '', result.description ?? '', result.subscriberCount, notify, approvalSource, result.channelId ?? '').subscribe({
       next: () => {
         this.addingHandle.set(null);
         this.searchQuery.set('');

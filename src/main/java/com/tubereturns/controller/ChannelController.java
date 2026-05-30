@@ -224,10 +224,11 @@ public class ChannelController {
             @RequestParam(required = false, defaultValue = "") String thumbnailUrl,
             @RequestParam(required = false, defaultValue = "") String description,
             @RequestParam(required = false) Long subscriberCount,
+            @RequestParam(required = false, defaultValue = "") String youtubeChannelId,
             @RequestParam(defaultValue = "false") boolean notifyOnComplete,
             @RequestParam(required = false, defaultValue = "ADMIN") String approvalSource,
             Authentication authentication) {
-        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount);
+        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount, youtubeChannelId);
         channel.setApprovalSource(approvalSource);
         channelRepository.save(channel);
         meterRegistry.counter("tubereturns.channels.added", "source", approvalSource).increment();
@@ -268,7 +269,8 @@ public class ChannelController {
             processedVideos,
             score.score1m(), score.eligible1m(), score.unresolved1m(),
             score.score1y(), score.eligible1y(), score.unresolved1y(),
-            score.score3y(), score.eligible3y(), score.unresolved3y()
+            score.score3y(), score.eligible3y(), score.unresolved3y(),
+            channel.getArchivarixDeletedCount()
         );
     }
 

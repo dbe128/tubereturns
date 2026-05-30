@@ -234,14 +234,15 @@ export class ApiService {
     return this.http.post<unknown>(`/api/admin/channels/${handle}/reprocess`, null).pipe(catchError((e) => this.handleError(e)));
   }
 
-  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean, approvalSource: string = 'ADMIN'): Observable<unknown> {
+  addChannel(handle: string, channelName: string, channelUrl: string, thumbnailUrl: string, description: string, subscriberCount: number | null, notifyOnComplete: boolean, approvalSource: string = 'ADMIN', youtubeChannelId: string = ''): Observable<unknown> {
     let params = new HttpParams()
       .set('channelName', channelName)
       .set('channelUrl', channelUrl)
       .set('thumbnailUrl', thumbnailUrl)
       .set('description', description)
       .set('notifyOnComplete', notifyOnComplete)
-      .set('approvalSource', approvalSource);
+      .set('approvalSource', approvalSource)
+      .set('youtubeChannelId', youtubeChannelId);
     if (subscriberCount != null) {
       params = params.set('subscriberCount', subscriberCount);
     }

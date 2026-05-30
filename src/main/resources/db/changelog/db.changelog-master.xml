@@ -19,5 +19,7 @@
     <include file="db/changelog/012-mark-avdl-unavailable.sql"/>
     <include file="db/changelog/013-blacklisted-tickers.sql"/>
     <include file="db/changelog/014-clear-ttsh-returns.sql"/>
+    <include file="db/changelog/015-archivarix.sql"/>
+    <include file="db/changelog/016-youtube-channel-id.sql"/>
 
 </databaseChangeLog>

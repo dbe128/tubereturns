@@ -16,5 +16,6 @@ public record ChannelResponseDto(
     long processedVideos,
     Double score1m, int eligible1m, int unresolved1m,
     Double score1y, int eligible1y, int unresolved1y,
-    Double score3y, int eligible3y, int unresolved3y
+    Double score3y, int eligible3y, int unresolved3y,
+    Integer archivarixDeletedCount
 ) {}

@@ -103,6 +103,7 @@ public class ChannelListService {
                 processedVideos,
                 score.score1m(), score.eligible1m(), score.unresolved1m(),
                 score.score1y(), score.eligible1y(), score.unresolved1y(),
-                score.score3y(), score.eligible3y(), score.unresolved3y());
+                score.score3y(), score.eligible3y(), score.unresolved3y(),
+                channel.getArchivarixDeletedCount());
     }
 }

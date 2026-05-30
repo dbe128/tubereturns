@@ -824,7 +824,7 @@ export class AdminComponent implements OnInit, OnDestroy {
           this.showToast(`No YouTube channel found for "${handle}".`, 'error');
           return;
         }
-        this.api.addChannel(channel.handle, channel.channelName, channel.channelUrl, channel.thumbnailUrl ?? '', channel.description ?? '', channel.subscriberCount, false, 'ADMIN').subscribe({
+        this.api.addChannel(channel.handle, channel.channelName, channel.channelUrl, channel.thumbnailUrl ?? '', channel.description ?? '', channel.subscriberCount, false, 'ADMIN', channel.channelId ?? '').subscribe({
           next: () => {
             this.adminAdding.set(false);
             this.adminAddInput.set('');

@@ -29,6 +29,7 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
     volumes:
       - transcripts_data:/app/transcripts
+      - playwright_browsers:/root/.cache/ms-playwright
     depends_on:
       db:
         condition: service_healthy
@@ -44,3 +45,4 @@ services:
 volumes:
   postgres_data:
   transcripts_data:
+  playwright_browsers:

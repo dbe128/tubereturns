@@ -38,6 +38,12 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.stock-resolution.enabled}")
     private boolean stockResolutionEnabled;
 
+    @Value("${tubereturns.pipeline.archivarix-sync.cron}")
+    private String archivarixSyncCron;
+
+    @Value("${tubereturns.pipeline.archivarix-sync.max-items}")
+    private int archivarixSyncMaxItems;
+
     @Value("${tubereturns.pipeline.discovery.max-items}")
     private int discoveryMaxItems;
 
@@ -54,6 +60,7 @@ public class PipelineSchedulerService {
     private final ExchangeRateService exchangeRateService;
     private final PickPerformanceService pickPerformanceService;
     private final UnknownStockResolutionService stockResolutionService;
+    private final ArchivarixService archivarixService;
     private final PipelineStatusRegistry registry;
     private final VideoRepository videoRepository;
 
@@ -64,6 +71,7 @@ public class PipelineSchedulerService {
         registry.registerStep("extraction", extractionCron, 1);
         registry.registerStep("price-refresh", priceRefreshCron, null);
         registry.registerStep("stock-resolution", stockResolutionCron, stockResolutionMaxItems);
+        registry.registerStep("archivarix-sync", archivarixSyncCron, archivarixSyncMaxItems);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -157,6 +165,16 @@ public class PipelineSchedulerService {
     @Async
     public void triggerStockResolution() {
         runStep("stock-resolution", () -> stockResolutionService.resolveAll(stockResolutionMaxItems));
+    }
+
+    @Scheduled(cron = "${tubereturns.pipeline.archivarix-sync.cron}")
+    public void runArchivarixSync() {
+        runStep("archivarix-sync", () -> archivarixService.syncNextBatch(archivarixSyncMaxItems));
+    }
+
+    @Async
+    public void triggerArchivarixSync() {
+        runStep("archivarix-sync", () -> archivarixService.syncNextBatch(archivarixSyncMaxItems));
     }
 
     private void runStep(String step, IntSupplier task) {
