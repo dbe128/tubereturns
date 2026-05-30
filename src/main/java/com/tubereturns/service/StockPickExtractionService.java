@@ -285,7 +285,14 @@ public class StockPickExtractionService {
         log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResult.content());
 
         try {
-            return new ExtractionWithModel(objectMapper.readValue(aiResult.content(), StockPickExtractionDto.class), aiResult.model());
+            StockPickExtractionDto parsed = objectMapper.readValue(aiResult.content(), StockPickExtractionDto.class);
+            if (parsed == null) {
+                log.error("AI returned null for {} ({}). Response: {}", videoTitle, videoUrl, aiResult.content());
+                throw new RuntimeException("AI returned null for video " + videoId);
+            }
+            return new ExtractionWithModel(parsed, aiResult.model());
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
             log.error("Failed to parse AI response for {} ({}): {}\nResponse: {}", videoTitle, videoUrl, e.getMessage(), aiResult.content());
             throw new RuntimeException("Failed to parse AI response for video " + videoId, e);
