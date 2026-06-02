@@ -22,6 +22,9 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -109,7 +112,6 @@ public class AiModelService {
                 java.net.http.HttpClient.newBuilder()
                         .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
                         .build());
-        factory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
         restClient = RestClient.builder().requestFactory(factory).build();
         log.info("OpenRouter HTTP client configured: connectTimeout={}s readTimeout={}s timeoutRetries={}",
                 connectTimeoutSeconds, readTimeoutSeconds, timeoutRetries);
@@ -395,13 +397,28 @@ public class AiModelService {
             String response = null;
             try {
                 Instant callStart = Instant.now();
-                response = restClient.post()
+                var callTask = new FutureTask<>(() -> restClient.post()
                     .uri("https://openrouter.ai/api/v1/chat/completions")
                     .header("Authorization", "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
-                    .body(String.class);
+                    .body(String.class));
+                var callThread = Thread.ofVirtual().start(callTask);
+                try {
+                    response = callTask.get(readTimeoutSeconds, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    callThread.interrupt();
+                    callTask.cancel(true);
+                    throw new ResourceAccessException("OpenRouter read timeout after " + readTimeoutSeconds + "s");
+                } catch (java.util.concurrent.ExecutionException e) {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof RuntimeException re) { throw re; }
+                    throw new RuntimeException(cause);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new ResourceAccessException("Interrupted while waiting for OpenRouter");
+                }
                 lastCallDurationMs = Duration.between(callStart, Instant.now()).toMillis();
 
                 if (response == null) {

@@ -32,7 +32,7 @@ public interface VideoRepository extends JpaRepository<Video, Long> {
           AND (:hideUnprocessed = false OR (
                   v.transcriptStatus NOT IN ('PENDING', 'DOWNLOADING')
                   AND NOT (v.transcriptStatus = 'DOWNLOADED'
-                           AND v.extractionStatus <> 'EXTRACTED')))
+                           AND v.extractionStatus NOT IN ('EXTRACTED', 'EXTRACTING'))))
           AND (:transcriptStatus IS NULL OR v.transcriptStatus = :transcriptStatus)
           AND (:extractionStatus IS NULL OR v.extractionStatus = :extractionStatus)
           AND (:requirePicks = false
