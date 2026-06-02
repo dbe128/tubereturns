@@ -7,11 +7,8 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
@@ -102,16 +99,17 @@ public class AiModelService {
     private volatile Instant lastModel0AttemptAt = null;
     private volatile Long lastCallDurationMs = null;
 
+    private java.net.http.HttpClient httpClient;
     private RestClient restClient;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
 
     @PostConstruct
     public void loadModels() {
-        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(
-                java.net.http.HttpClient.newBuilder()
-                        .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
-                        .build());
+        httpClient = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+                .build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
         restClient = RestClient.builder().requestFactory(factory).build();
         log.info("OpenRouter HTTP client configured: connectTimeout={}s readTimeout={}s timeoutRetries={}",
                 connectTimeoutSeconds, readTimeoutSeconds, timeoutRetries);
@@ -397,28 +395,44 @@ public class AiModelService {
             String response = null;
             try {
                 Instant callStart = Instant.now();
-                var callTask = new FutureTask<>(() -> restClient.post()
-                    .uri("https://openrouter.ai/api/v1/chat/completions")
+                String bodyJson = objectMapper.writeValueAsString(body);
+                var request = java.net.http.HttpRequest.newBuilder()
+                    .uri(java.net.URI.create("https://openrouter.ai/api/v1/chat/completions"))
                     .header("Authorization", "Bearer " + apiKey)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(body)
-                    .retrieve()
-                    .body(String.class));
+                    .header("Content-Type", "application/json")
+                    .POST(java.net.http.HttpRequest.BodyPublishers.ofString(bodyJson))
+                    .build();
+                var callTask = new FutureTask<>(() ->
+                    httpClient.send(request, java.net.http.HttpResponse.BodyHandlers.ofString()));
                 var callThread = Thread.ofVirtual().start(callTask);
+                java.net.http.HttpResponse<String> httpResponse;
                 try {
-                    response = callTask.get(readTimeoutSeconds, TimeUnit.SECONDS);
+                    httpResponse = callTask.get(readTimeoutSeconds, TimeUnit.SECONDS);
                 } catch (TimeoutException e) {
                     callThread.interrupt();
                     callTask.cancel(true);
                     throw new ResourceAccessException("OpenRouter read timeout after " + readTimeoutSeconds + "s");
                 } catch (java.util.concurrent.ExecutionException e) {
                     Throwable cause = e.getCause();
+                    if (cause instanceof java.io.IOException io) { throw new ResourceAccessException(io.getMessage(), io); }
                     if (cause instanceof RuntimeException re) { throw re; }
                     throw new RuntimeException(cause);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new ResourceAccessException("Interrupted while waiting for OpenRouter");
                 }
+                int statusCode = httpResponse.statusCode();
+                if (statusCode == 429) { throw new RateLimitedException(model); }
+                if (statusCode == 402) { throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits"); }
+                if (statusCode == 403 || statusCode == 404) {
+                    log.error("OpenRouter returned {} for model {} — will try next model", statusCode, model);
+                    throw new ForbiddenException(model);
+                }
+                if (statusCode >= 400) {
+                    log.error("OpenRouter returned {} for model {} — will try next model", statusCode, model);
+                    throw new BadResponseException(model);
+                }
+                response = httpResponse.body();
                 lastCallDurationMs = Duration.between(callStart, Instant.now()).toMillis();
 
                 if (response == null) {
@@ -456,25 +470,6 @@ public class AiModelService {
                 }
                 return new ExtractionResult(stripped, actualModel);
 
-            } catch (HttpClientErrorException e) {
-                if (e.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
-                    throw new RateLimitedException(model);
-                }
-                if (e.getStatusCode() == HttpStatus.FORBIDDEN) {
-                    log.error("OpenRouter returned 403 Forbidden for model {} — will try next model", model);
-                    throw new ForbiddenException(model);
-                }
-                if (e.getStatusCode() == HttpStatus.PAYMENT_REQUIRED) {
-                    log.error("OpenRouter returned 402 Payment Required — insufficient credits");
-                    throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits");
-                }
-                if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                    log.warn("OpenRouter returned 404 for model {} — provider routing issue, will try next model", model);
-                    throw new ForbiddenException(model);
-                }
-            } catch (HttpStatusCodeException e) {
-                log.error("OpenRouter returned {} for model {} — will try next model: {}", e.getStatusCode().value(), model, e.getMessage());
-                throw new BadResponseException(model);
             } catch (ResourceAccessException e) {
                 attemptsLeft--;
                 if (attemptsLeft > 0) {
