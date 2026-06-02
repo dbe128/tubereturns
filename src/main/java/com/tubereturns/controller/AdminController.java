@@ -231,9 +231,14 @@ public class AdminController {
     }
 
     @GetMapping("/user-count")
-    @Operation(summary = "Get total registered user count")
-    public ResponseEntity<Map<String, Long>> getUserCount() {
-        return ResponseEntity.ok(Map.of("count", userRepository.count()));
+    @Operation(summary = "Get total registered user count with breakdown by auth provider")
+    public ResponseEntity<Map<String, Object>> getUserCount() {
+        Map<String, Long> byProvider = new java.util.LinkedHashMap<>();
+        for (Object[] row : userRepository.countByProvider()) {
+            byProvider.put((String) row[0], (Long) row[1]);
+        }
+        long total = byProvider.values().stream().mapToLong(Long::longValue).sum();
+        return ResponseEntity.ok(Map.of("count", total, "byProvider", byProvider));
     }
 
     @GetMapping("/stocks/unknown")
@@ -248,7 +253,7 @@ public class AdminController {
                         s.getCreatedAt().toString(),
                         pickRepository.countByStockId(s.getId())))
                 .filter(dto -> dto.pickCount() > 0)
-                .sorted((a, b) -> Long.compare(b.pickCount(), a.pickCount()))
+                .sorted((a, b) -> a.tickerSymbol().compareToIgnoreCase(b.tickerSymbol()))
                 .toList();
     }
 

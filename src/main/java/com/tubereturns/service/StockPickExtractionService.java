@@ -282,7 +282,7 @@ public class StockPickExtractionService {
         String videoUrl = "https://youtu.be/" + videoId;
         log.info("Sending transcript to AI for extraction: {} ({})", videoTitle, videoUrl);
         AiModelService.ExtractionResult aiResult = aiModelService.extractStockPicks(videoId, videoTitle, transcriptText);
-        log.info("AI response for {} ({}): {}", videoTitle, videoUrl, aiResult.content());
+        log.info("AI response for {} ({}) [model={}]: {}", videoTitle, videoUrl, aiResult.model(), aiResult.content());
 
         try {
             StockPickExtractionDto parsed = objectMapper.readValue(aiResult.content(), StockPickExtractionDto.class);

@@ -44,9 +44,11 @@ interface UnknownStockRow extends UnknownStock {
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-2xl font-black text-gray-900">Admin Dashboard</h1>
           <div class="flex items-center gap-4 text-xs text-gray-400 font-mono">
-            <span>{{ userCount() }} users</span>
-            @if (unknownStockRows().length > 0) {
-              <span class="text-amber-500 font-semibold">{{ unknownStockRows().length }} unknown stock{{ unknownStockRows().length === 1 ? '' : 's' }}</span>
+            @if (userStats(); as stats) {
+              <span>{{ stats.count }} users</span>
+              @for (entry of objectEntries(stats.byProvider); track entry[0]) {
+                <span class="text-gray-500">{{ entry[0] }}: {{ entry[1] }}</span>
+              }
             }
           </div>
         </div>
@@ -384,13 +386,30 @@ interface UnknownStockRow extends UnknownStock {
         </div>
 
         <div class="mt-8">
-          <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Unknown Stocks</h2>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div class="flex items-center gap-2">
+              <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Unknown Stocks</h2>
+              @if (unknownStockRows().length > 0) {
+                <span class="text-amber-500 font-semibold text-xs">{{ unknownStockRows().length }}</span>
+              }
+            </div>
+            @if (unknownStockRows().length > 0) {
+              <input
+                [ngModel]="unknownStockFilter()"
+                (ngModelChange)="unknownStockFilter.set($event)"
+                placeholder="Filter by ticker or company…"
+                class="w-full sm:w-64 border border-gray-700 bg-gray-800 text-white placeholder-gray-500 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            }
+          </div>
           @if (unknownStockRows().length === 0) {
             <p class="text-xs text-gray-500">No unreviewed unknown stocks.</p>
+          } @else if (filteredUnknownStockRows().length === 0) {
+            <p class="text-xs text-gray-500">No stocks match "{{ unknownStockFilter() }}".</p>
           } @else {
             <!-- mobile cards -->
             <div class="md:hidden flex flex-col gap-3">
-              @for (row of unknownStockRows(); track row.id) {
+              @for (row of filteredUnknownStockRows(); track row.id) {
                 @let hasChanges = stockHasChanges(row);
                 <div class="bg-gray-900 border border-gray-700 rounded-xl p-4 text-xs">
                   <div class="flex items-center gap-3 mb-3">
@@ -448,7 +467,7 @@ interface UnknownStockRow extends UnknownStock {
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-100">
-                  @for (row of unknownStockRows(); track row.id) {
+                  @for (row of filteredUnknownStockRows(); track row.id) {
                     @let hasChanges = stockHasChanges(row);
                     <tr class="hover:bg-gray-800/60">
                       <td class="px-4 py-2">
@@ -647,6 +666,7 @@ interface UnknownStockRow extends UnknownStock {
   `,
 })
 export class AdminComponent implements OnInit, OnDestroy {
+  readonly objectEntries = Object.entries;
   private readonly api = inject(ApiService);
   readonly auth = inject(AuthService);
   private readonly channelStore = inject(ChannelStoreService);
@@ -673,11 +693,20 @@ export class AdminComponent implements OnInit, OnDestroy {
   readonly triggeringNotifications = signal(false);
   readonly clearingCaches = signal(false);
   readonly unknownStockRows = signal<UnknownStockRow[]>([]);
+  readonly unknownStockFilter = signal('');
+  readonly filteredUnknownStockRows = computed(() => {
+    const q = this.unknownStockFilter().trim().toLowerCase();
+    if (!q) { return this.unknownStockRows(); }
+    return this.unknownStockRows().filter(r =>
+      r.tickerSymbol.toLowerCase().includes(q) ||
+      (r.companyName ?? '').toLowerCase().includes(q)
+    );
+  });
   readonly blacklistedTickers = signal<BlacklistedTicker[]>([]);
   readonly newBlacklistTicker = signal('');
   readonly newBlacklistReason = signal('');
   readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
-  readonly userCount = signal<number | null>(null);
+  readonly userStats = signal<{ count: number; byProvider: Record<string, number> } | null>(null);
   readonly adminAddInput = signal('');
   readonly adminAdding = signal(false);
   readonly toast = signal<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -694,7 +723,7 @@ export class AdminComponent implements OnInit, OnDestroy {
       this.router.navigate(['/']);
       return;
     }
-    this.api.getAdminUserCount().subscribe({ next: (n) => this.userCount.set(n), error: () => {} });
+    this.api.getAdminUserCount().subscribe({ next: (r) => this.userStats.set(r), error: () => {} });
     this.load();
     this.loadMyNotifications();
     this.loadPipelineStatus();

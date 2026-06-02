@@ -375,9 +375,8 @@ export class ApiService {
     );
   }
 
-  getAdminUserCount(): Observable<number> {
-    return this.http.get<{ count: number }>('/api/admin/user-count').pipe(
-      map((r) => r.count),
+  getAdminUserCount(): Observable<{ count: number; byProvider: Record<string, number> }> {
+    return this.http.get<{ count: number; byProvider: Record<string, number> }>('/api/admin/user-count').pipe(
       catchError((e) => this.handleError(e)),
     );
   }

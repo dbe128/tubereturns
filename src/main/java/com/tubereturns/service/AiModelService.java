@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
@@ -133,6 +134,7 @@ public class AiModelService {
             meterRegistry.counter("tubereturns.ai.timeouts", "model", model);
             meterRegistry.counter("tubereturns.ai.payment.required", "model", model);
             meterRegistry.counter("tubereturns.ai.forbidden", "model", model);
+            meterRegistry.counter("tubereturns.ai.bad.responses", "model", model);
             meterRegistry.timer("tubereturns.ai.call", "model", model);
         }
     }
@@ -348,6 +350,7 @@ public class AiModelService {
                     log.error("Timed out on model {} — all {} models exhausted", model, models.size());
                 }
             } catch (BadResponseException e) {
+                meterRegistry.counter("tubereturns.ai.bad.responses", "model", model).increment();
                 int nextIdx = (idx + 1) % models.size();
                 currentModelIndex.set(nextIdx);
                 lastKnownModelIndex = nextIdx;
@@ -452,8 +455,9 @@ public class AiModelService {
                     log.warn("OpenRouter returned 404 for model {} — provider routing issue, will try next model", model);
                     throw new ForbiddenException(model);
                 }
-                log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
-                throw new RuntimeException("OpenRouter API call failed: " + e.getMessage(), e);
+            } catch (HttpStatusCodeException e) {
+                log.error("OpenRouter returned {} for model {} — will try next model: {}", e.getStatusCode().value(), model, e.getMessage());
+                throw new BadResponseException(model);
             } catch (ResourceAccessException e) {
                 attemptsLeft--;
                 if (attemptsLeft > 0) {

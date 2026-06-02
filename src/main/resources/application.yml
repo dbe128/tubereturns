@@ -97,8 +97,8 @@ tubereturns:
 
   pipeline:
     discovery:
-      cron: "0 0 16 * * *"
-      max-items: 1500
+      cron: "0 0 0,8,16 * * *"
+      max-items: 3000
     transcript:
       cron: "0 15 * * * *"
       batch-size: 300
