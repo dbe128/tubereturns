@@ -57,10 +57,10 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
         </h1>
         <div class="w-14 h-px bg-green-700 mx-auto my-8"></div>
         <p class="text-gray-400 text-xl leading-relaxed mb-4 max-w-2xl mx-auto">
-          Our AI reads every transcript, extracts each stock pick, and measures real returns vs. the S&amp;P 500.
+          Every transcript analyzed. Every stock pick tracked. Every return measured against the S&amp;P 500. Deleted videos tracked. You see the truth.
         </p>
         <p class="text-gray-500 text-base mb-12 max-w-xl mx-auto">
-          No self-reporting. No guesswork. <span class="text-gray-300 font-medium">Updated daily</span> for the most accurate results possible.
+          <span class="text-gray-300 font-medium">Updated daily</span> for the most accurate results possible.
         </p>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-0 mb-12 w-full max-w-3xl mx-auto">
           <div class="text-center px-8">
