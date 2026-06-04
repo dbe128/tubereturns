@@ -196,6 +196,22 @@ export const MyChannelSuggestionSchema = z.object({
 });
 export type MyChannelSuggestion = z.infer<typeof MyChannelSuggestionSchema>;
 
+export const FeatureFlagSchema = z.object({
+  key: z.string(),
+  enabled: z.boolean(),
+  description: z.string().nullable(),
+});
+export const FeatureFlagsSchema = z.array(FeatureFlagSchema);
+export type FeatureFlag = z.infer<typeof FeatureFlagSchema>;
+
+export const TrendingPickSchema = z.object({
+  tickerSymbol: z.string(),
+  companyName: z.string(),
+  pickCount: z.number(),
+});
+export const TrendingPicksSchema = z.array(TrendingPickSchema);
+export type TrendingPick = z.infer<typeof TrendingPickSchema>;
+
 export const PendingNotificationSchema = z.object({
   channelName: z.string(),
   channelHandle: z.string(),

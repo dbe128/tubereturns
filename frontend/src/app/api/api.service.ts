@@ -22,7 +22,8 @@ import {
   BlacklistedTickerSchema,
   ChannelRelevanceSchema,
 } from './types';
-import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, ChannelRelevance } from './types';
+import { TrendingPicksSchema, FeatureFlagsSchema } from './types';
+import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, ChannelRelevance, TrendingPick, FeatureFlag } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -373,6 +374,18 @@ export class ApiService {
       AuthResponseSchema,
       this.http.get<unknown>('/api/auth/me').pipe(catchError((e) => this.handleError(e))),
     );
+  }
+
+  getTrendingPicks(): Observable<TrendingPick[]> {
+    return this.validated(TrendingPicksSchema, this.http.get('/api/trending-picks'));
+  }
+
+  getFeatureFlags(): Observable<FeatureFlag[]> {
+    return this.validated(FeatureFlagsSchema, this.http.get('/api/feature-flags'));
+  }
+
+  setFeatureFlag(key: string, enabled: boolean): Observable<FeatureFlag> {
+    return this.validated(FeatureFlagsSchema.element, this.http.put(`/api/admin/feature-flags/${key}`, { enabled }));
   }
 
   getAdminUserCount(): Observable<{ count: number; byProvider: Record<string, number> }> {

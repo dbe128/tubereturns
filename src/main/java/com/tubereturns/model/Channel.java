@@ -7,8 +7,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.SQLRestriction;
-
 import java.time.Instant;
 import java.util.List;
 
@@ -17,7 +15,6 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "channels")
-@SQLRestriction("deleted_at IS NULL")
 public class Channel {
 
     @Id
@@ -51,9 +48,6 @@ public class Channel {
 
     @Column(name = "last_processed_at")
     private Instant lastProcessedAt;
-
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
 
     @Column(name = "subscriber_count")
     private Long subscriberCount;

@@ -21,15 +21,11 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     @Query("SELECT c FROM Channel c WHERE LOWER(c.handle) = LOWER(:slug) OR LOWER(REPLACE(c.handle, '_', '-')) = LOWER(:slug)")
     Optional<Channel> findBySlugOrHandle(@Param("slug") String slug);
 
-    @Query(value = "SELECT * FROM channels WHERE handle = :handle", nativeQuery = true)
-    Optional<Channel> findByHandleIncludingDeleted(@Param("handle") String handle);
-
     boolean existsByHandle(String handle);
 
     @Query(value = """
             SELECT * FROM channels
-            WHERE deleted_at IS NULL
-              AND archivarix_checked_at IS NULL
+            WHERE archivarix_checked_at IS NULL
               AND handle NOT LIKE 'mock-%'
             ORDER BY subscriber_count DESC NULLS LAST
             LIMIT :limit
@@ -44,6 +40,6 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     @Query(value = "UPDATE channels SET youtube_channel_id = :youtubeChannelId WHERE id = :id", nativeQuery = true)
     void updateYoutubeChannelId(@Param("id") Long id, @Param("youtubeChannelId") String youtubeChannelId);
 
-    @Query(value = "SELECT COALESCE(SUM(archivarix_deleted_count), 0) FROM channels WHERE deleted_at IS NULL AND archivarix_deleted_count IS NOT NULL", nativeQuery = true)
+    @Query(value = "SELECT COALESCE(SUM(archivarix_deleted_count), 0) FROM channels WHERE archivarix_deleted_count IS NOT NULL", nativeQuery = true)
     long sumArchivarixDeletedCount();
 }

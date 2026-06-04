@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface PickRepository extends JpaRepository<Pick, Long> {
@@ -57,6 +58,15 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
         ORDER BY v.publishedAt ASC
         """)
     List<PickScoringData> findPickScoringDataForChannel(@Param("channelId") Long channelId);
+
+    @Query("""
+        SELECT p.stock.tickerSymbol, p.stock.companyName, COUNT(p)
+        FROM Pick p JOIN p.video v
+        WHERE v.publishedAt >= :since AND v.excluded = false
+        GROUP BY p.stock.tickerSymbol, p.stock.companyName
+        ORDER BY COUNT(p) DESC
+        """)
+    List<Object[]> findTrendingPicks(@Param("since") Instant since, Pageable pageable);
 
     @Query("SELECT DISTINCT p.video.channel.id FROM Pick p WHERE p.stock.id = :stockId")
     List<Long> findDistinctChannelIdsByStockId(@Param("stockId") Long stockId);

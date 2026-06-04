@@ -182,23 +182,14 @@ public class YouTubeDiscoveryService {
     }
 
     @Transactional
-    public void softDeleteChannel(String handle) {
-        channelRepository.findByHandle(handle).ifPresent(channel -> {
-            channel.setDeletedAt(java.time.Instant.now());
-            channelRepository.save(channel);
-        });
-    }
-
-    @Transactional
     public Channel createOrUpdateChannel(String handle, String channelName, String channelUrl, String thumbnailUrl, String description, Long subscriberCount, String youtubeChannelId) {
-        return channelRepository.findByHandleIncludingDeleted(handle)
+        return channelRepository.findByHandle(handle)
             .map(existing -> {
                 existing.setChannelName(channelName);
                 existing.setNameSlug(Channel.nameSlugFor(channelName));
                 if (description != null && !description.isBlank()) {
                     existing.setDescription(description);
                 }
-                existing.setDeletedAt(null);
                 if (existing.getThumbnailData() == null && thumbnailUrl != null && !thumbnailUrl.isBlank()) {
                     downloadThumbnail(thumbnailUrl, existing);
                 }

@@ -7,6 +7,7 @@ import { switchMap } from 'rxjs/operators';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ChannelStoreService } from '../../services/channel-store.service';
+import { FeatureFlagService } from '../../services/feature-flag.service';
 import type { Channel, ChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock, BlacklistedTicker } from '../../api/types';
 
 interface UnknownStockRow extends UnknownStock {
@@ -576,6 +577,31 @@ interface UnknownStockRow extends UnknownStock {
           }
         </div>
 
+        <div class="mt-8">
+          <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Feature Flags</h2>
+          @if (featureFlags.getAll().length === 0) {
+            <p class="text-xs text-gray-500">No feature flags defined.</p>
+          } @else {
+            <div class="flex flex-col gap-3">
+              @for (flag of featureFlags.getAll(); track flag.key) {
+                <div class="flex items-center justify-between gap-4 bg-gray-900 border border-gray-700 rounded-xl px-4 py-3">
+                  <div class="flex flex-col gap-0.5 min-w-0">
+                    <span class="font-mono text-xs font-semibold text-white">{{ flag.key }}</span>
+                    @if (flag.description) {
+                      <span class="text-xs text-gray-500 truncate">{{ flag.description }}</span>
+                    }
+                  </div>
+                  <button
+                    (click)="featureFlags.set(flag.key, !flag.enabled)"
+                    class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                    [class]="flag.enabled ? 'bg-green-700 text-white hover:bg-green-600' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'"
+                  >{{ flag.enabled ? 'Enabled' : 'Disabled' }}</button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+
         <div class="mt-8 pb-10">
           <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Channel Suggestions</h2>
           @if (pendingChannelSuggestions().length === 0) {
@@ -669,6 +695,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   readonly objectEntries = Object.entries;
   private readonly api = inject(ApiService);
   readonly auth = inject(AuthService);
+  readonly featureFlags = inject(FeatureFlagService);
   private readonly channelStore = inject(ChannelStoreService);
   private readonly router = inject(Router);
 

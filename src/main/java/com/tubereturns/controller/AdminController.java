@@ -107,11 +107,16 @@ public class AdminController {
     }
 
     @DeleteMapping("/channels/{handle}")
-    @Operation(summary = "Soft-delete a channel")
+    @Operation(summary = "Permanently delete a channel and all its videos, picks, and related data")
     public ResponseEntity<Map<String, String>> deleteChannel(@PathVariable String handle) {
-        discoveryService.softDeleteChannel(handle);
-        channelListService.evictAllChannels();
-        return ResponseEntity.ok(Map.of("message", "Channel deleted: " + handle));
+        return channelRepository.findByHandle(handle)
+                .map(channel -> {
+                    channelRepository.delete(channel);
+                    channelListService.evictAllChannels();
+                    log.info("Hard-deleted channel @{} and all associated data", handle);
+                    return ResponseEntity.ok(Map.of("message", "Channel permanently deleted: " + handle));
+                })
+                .orElse(ResponseEntity.notFound().<Map<String, String>>build());
     }
 
     @PostMapping("/channels/{handle}/reprocess")

@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NavbarComponent } from './components/navbar/navbar.component';
+import { FeatureFlagService } from './services/feature-flag.service';
 
 @Component({
   selector: 'app-root',
@@ -18,4 +19,10 @@ import { NavbarComponent } from './components/navbar/navbar.component';
     </div>
   `,
 })
-export class AppComponent {}
+export class AppComponent implements OnInit {
+  private readonly featureFlags = inject(FeatureFlagService);
+
+  ngOnInit(): void {
+    this.featureFlags.load();
+  }
+}

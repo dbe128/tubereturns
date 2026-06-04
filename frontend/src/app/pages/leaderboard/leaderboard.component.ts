@@ -8,7 +8,8 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
 import { ChannelStoreService } from '../../services/channel-store.service';
-import type { Channel, MyChannelSuggestion } from '../../api/types';
+import { FeatureFlagService } from '../../services/feature-flag.service';
+import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types';
 
 @Component({
   selector: 'app-leaderboard',
@@ -109,6 +110,49 @@ import type { Channel, MyChannelSuggestion } from '../../api/types';
       @if (error()) {
         <div class="bg-danger-50 border border-danger-500 text-danger-500 rounded-xl p-4 text-sm">
           {{ error() }}
+        </div>
+      }
+
+      @if ((auth.isAdmin || featureFlags.isEnabled('trending_stocks')) && trendingPicks().length > 0) {
+        <div class="mb-6 bg-gray-900 border border-gray-700 rounded-xl overflow-hidden">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-4 md:py-5 border-b border-gray-700">
+            <div class="flex flex-col gap-0.5">
+              <span class="text-sm font-bold tracking-[0.18em] uppercase text-green-500">🔥 Trending today</span>
+              <h2 class="text-lg md:text-2xl font-black text-white">Top stocks in the last 24hrs<span class="hidden md:inline"> &middot; By pick count</span></h2>
+            </div>
+          </div>
+          <!-- desktop -->
+          <table class="hidden md:table w-full">
+            <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
+              <tr>
+                <th class="px-6 py-2 text-left text-xs font-medium">#</th>
+                <th class="px-6 py-2 text-left text-xs font-medium">Ticker</th>
+                <th class="px-6 py-2 text-left text-xs font-medium">Company</th>
+                <th class="px-6 py-2 text-right text-xs font-medium">Picks</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-800">
+              @for (pick of trendingPicks(); track pick.tickerSymbol; let i = $index) {
+                <tr class="hover:bg-gray-800/40">
+                  <td class="px-6 py-4 text-gray-500 text-sm">{{ i + 1 }}</td>
+                  <td class="px-6 py-4 font-semibold text-white text-sm">{{ pick.tickerSymbol }}</td>
+                  <td class="px-6 py-4 text-white text-sm">{{ pick.companyName }}</td>
+                  <td class="px-6 py-4 text-right text-white font-semibold text-sm">{{ pick.pickCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <!-- mobile -->
+          <div class="md:hidden flex flex-col divide-y divide-gray-800">
+            @for (pick of trendingPicks(); track pick.tickerSymbol; let i = $index) {
+              <div class="flex items-center gap-3 px-4 py-3">
+                <span class="text-gray-600 text-sm w-4">{{ i + 1 }}</span>
+                <span class="font-semibold text-white text-sm">{{ pick.tickerSymbol }}</span>
+                <span class="text-white text-sm flex-1 truncate">{{ pick.companyName }}</span>
+                <span class="text-white font-semibold text-sm">{{ pick.pickCount }}</span>
+              </div>
+            }
+          </div>
         </div>
       }
 
@@ -432,6 +476,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly recovery = inject(BackendRecoveryService);
   private readonly channelStore = inject(ChannelStoreService);
+  readonly featureFlags = inject(FeatureFlagService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -473,6 +518,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly currenciesCount = signal(0);
   readonly llmModelsCount = signal(0);
   readonly deletedVideosCount = signal(0);
+  readonly trendingPicks = signal<TrendingPick[]>([]);
 
   private suggestionRefreshSub?: Subscription;
 
@@ -493,6 +539,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
       },
       error: () => {},
     });
+    this.api.getTrendingPicks().subscribe({ next: (picks) => this.trendingPicks.set(picks), error: () => {} });
     if (this.auth.isAuthenticated && !this.auth.isAdmin) {
       this.loadMyChannelSuggestions();
       this.suggestionRefreshSub = this.api.suggestionRefresh$.subscribe(() => this.loadMyChannelSuggestions());

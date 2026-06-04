@@ -21,5 +21,7 @@
     <include file="db/changelog/014-clear-ttsh-returns.sql"/>
     <include file="db/changelog/015-archivarix.sql"/>
     <include file="db/changelog/016-youtube-channel-id.sql"/>
+    <include file="db/changelog/017-feature-flags.sql"/>
+    <include file="db/changelog/018-hard-delete-channels.sql"/>
 
 </databaseChangeLog>
