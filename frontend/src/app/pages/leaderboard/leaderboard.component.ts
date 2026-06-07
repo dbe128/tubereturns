@@ -15,6 +15,13 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
   selector: 'app-leaderboard',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink, DeletedCountComponent],
+  styles: [`
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    .wiggle { animation: wiggle 0.7s ease-in-out infinite; display: inline-block; }
+  `],
   template: `
     @if (toast()) {
       <div class="fixed top-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
@@ -154,6 +161,25 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
             }
           </div>
         </div>
+      }
+
+      @if (auth.isAdmin || featureFlags.isEnabled('ibkr_banner')) {
+      <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
+         class="hidden md:flex items-center gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
+        <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+          <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
+        </div>
+        <div class="flex-1 min-w-0 text-sm font-semibold text-white truncate">Ready to act on what you discover? Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
+        <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+      </a>
+      <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
+         class="flex md:hidden items-center gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
+        <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+          <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
+        </div>
+        <div class="flex-1 min-w-0 text-sm font-semibold text-white">Ready to act on what you discover?<br>Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
+        <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+      </a>
       }
 
       @if (!loading() && !error()) {
@@ -464,7 +490,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
       }
 
       <div class="mx-4 mt-8 mb-2 text-center text-xs text-gray-300">
-        Some data might be AI-generated and may contain inaccuracies. Not financial advice.
+        Some data might be AI-generated and may contain inaccuracies. TubeReturns is not a registered investment advisor — this site is for entertainment purposes only, not financial advice. We may earn a referral fee from broker links.
       </div>
 
     </div>

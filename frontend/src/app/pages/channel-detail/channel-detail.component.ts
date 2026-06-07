@@ -16,6 +16,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
+import { FeatureFlagService } from '../../services/feature-flag.service';
 import type { Channel, VideoSummary, PickPerformance } from '../../api/types';
 import { DeletedCountComponent } from '../../components/deleted-count/deleted-count.component';
 
@@ -64,6 +65,13 @@ interface IndexedVideo {
   selector: 'app-channel-detail',
   standalone: true,
   imports: [CommonModule, RouterLink, FormsModule, DeletedCountComponent],
+  styles: [`
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-2deg); }
+      50% { transform: rotate(2deg); }
+    }
+    .wiggle { animation: wiggle 0.7s ease-in-out infinite; display: inline-block; }
+  `],
   template: `
     @if (loading()) {
       <div class="flex justify-center py-20">
@@ -544,6 +552,20 @@ interface IndexedVideo {
           }
         </div>
         }
+        @if (auth.isAdmin || featureFlags.isEnabled('fastgraphs_banner')) {
+        <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
+           class="flex flex-row items-center justify-between gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-3 transition-colors group">
+          <div class="flex items-center gap-4 min-w-0">
+            <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+              <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
+            </div>
+            <div class="text-sm font-semibold text-white">Dig deeper into these picks on <span class="text-green-400">FAST</span><span class="text-blue-400">graphs</span> — <span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400">AFFILIATE25</span>.</div>
+          </div>
+          <div class="flex-shrink-0 ml-3 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">
+            Analyze →
+          </div>
+        </a>
+        }
         <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
           @if (picksLoading()) {
             <div class="flex justify-center py-12">
@@ -726,6 +748,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly recovery = inject(BackendRecoveryService);
+  readonly featureFlags = inject(FeatureFlagService);
   private readonly injector = inject(Injector);
 
   private channelHandle = '';
