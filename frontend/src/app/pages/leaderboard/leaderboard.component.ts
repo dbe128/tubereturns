@@ -169,16 +169,22 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
         <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
           <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
         </div>
-        <div class="flex-1 min-w-0 text-sm font-semibold text-white truncate">Ready to act on what you discover? Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
+        <div class="flex-shrink-0 text-2xl font-black text-white">Interactive Brokers</div>
+        <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Ready to act on what you discover? Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
         <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
       </a>
       <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
-         class="flex md:hidden items-center gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
-        <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
-          <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
+         class="flex md:hidden flex-col gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+              <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
+            </div>
+            <div class="text-2xl font-black text-white">Interactive Brokers</div>
+          </div>
+          <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
         </div>
-        <div class="flex-1 min-w-0 text-sm font-semibold text-white">Ready to act on what you discover?<br>Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
-        <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+        <div class="text-sm font-semibold text-white">Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
       </a>
       }
 

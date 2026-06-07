@@ -554,16 +554,26 @@ interface IndexedVideo {
         }
         @if (auth.isAdmin || featureFlags.isEnabled('fastgraphs_banner')) {
         <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
-           class="flex flex-row items-center justify-between gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-3 transition-colors group">
-          <div class="flex items-center gap-4 min-w-0">
-            <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
-              <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
+           class="hidden md:flex items-center gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
+          <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+            <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
+          </div>
+          <div class="flex-shrink-0 text-2xl font-black text-white">FASTgraphs</div>
+          <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Dig deeper into these picks — <span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400 select-all cursor-text" (click)="$event.preventDefault(); $event.stopPropagation()">AFFILIATE25</span>.</div>
+          <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
+        </a>
+        <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
+           class="flex md:hidden flex-col gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+                <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
+              </div>
+              <div class="text-2xl font-black text-white">FASTgraphs</div>
             </div>
-            <div class="text-sm font-semibold text-white">Dig deeper into these picks on <span class="text-green-400">FAST</span><span class="text-blue-400">graphs</span> — <span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400">AFFILIATE25</span>.</div>
+            <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
           </div>
-          <div class="flex-shrink-0 ml-3 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">
-            Analyze →
-          </div>
+          <div class="text-sm text-gray-400"><span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400 select-all cursor-text" (click)="$event.preventDefault(); $event.stopPropagation()">AFFILIATE25</span>.</div>
         </a>
         }
         <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
