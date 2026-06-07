@@ -360,6 +360,18 @@ public class AiModelService {
                 } else {
                     log.error("Bad response from model {} — all {} models exhausted", model, models.size());
                 }
+            } catch (NotFoundException e) {
+                models.remove(idx);
+                if (models.isEmpty()) {
+                    log.error("Model {} not found (404) — no more models available", model);
+                    throw new RuntimeException("All AI models removed (404) for video " + videoId);
+                }
+                int safeIdx = idx % models.size();
+                currentModelIndex.set(safeIdx);
+                lastKnownModelIndex = safeIdx;
+                maxAttempts = models.size();
+                attemptsWithoutRemoval = 0;
+                log.warn("Model {} not found (404) — removed from list, {} remaining: {}", model, models.size(), models);
             } catch (PaymentRequiredException e) {
                 meterRegistry.counter("tubereturns.ai.payment.required", "model", model).increment();
                 models.remove(idx);
@@ -424,8 +436,12 @@ public class AiModelService {
                 int statusCode = httpResponse.statusCode();
                 if (statusCode == 429) { throw new RateLimitedException(model); }
                 if (statusCode == 402) { throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits"); }
-                if (statusCode == 403 || statusCode == 404) {
-                    log.error("OpenRouter returned {} for model {} — will try next model", statusCode, model);
+                if (statusCode == 404) {
+                    log.error("OpenRouter returned 404 for model {} — model does not exist, removing from list", model);
+                    throw new NotFoundException(model);
+                }
+                if (statusCode == 403) {
+                    log.error("OpenRouter returned 403 for model {} — forbidden, will try next model", model);
                     throw new ForbiddenException(model);
                 }
                 if (statusCode >= 400) {
@@ -478,7 +494,7 @@ public class AiModelService {
                     log.error("OpenRouter timed out with model {} — no retries left", model);
                     throw new TimedOutException(model);
                 }
-            } catch (RateLimitedException | ForbiddenException | PaymentRequiredException | TimedOutException | BadResponseException e) {
+            } catch (RateLimitedException | ForbiddenException | NotFoundException | PaymentRequiredException | TimedOutException | BadResponseException e) {
                 throw e;
             } catch (Exception e) {
                 log.error("OpenRouter API call failed with model {}: {}\nResponse: {}", model, e.getMessage(), response != null ? response.strip() : null, e);
@@ -527,6 +543,12 @@ public class AiModelService {
     private static final class ForbiddenException extends RuntimeException {
         ForbiddenException(String model) {
             super("Forbidden on model: " + model);
+        }
+    }
+
+    private static final class NotFoundException extends RuntimeException {
+        NotFoundException(String model) {
+            super("Model not found (404): " + model);
         }
     }
 
