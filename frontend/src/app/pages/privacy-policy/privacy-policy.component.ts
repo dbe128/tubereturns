@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-privacy-policy',
@@ -79,4 +80,6 @@ import { RouterLink } from '@angular/router';
     </div>
   `,
 })
-export class PrivacyPolicyComponent {}
+export class PrivacyPolicyComponent {
+  constructor() { inject(Title).setTitle('Privacy Policy | TubeReturns'); }
+}

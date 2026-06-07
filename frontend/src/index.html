@@ -17,6 +17,43 @@
     <meta name="twitter:title" content="TubeReturns — Stock-Picking YouTubers Ranked by Returns" />
     <meta name="twitter:description" content="TubeReturns tracks and ranks finance YouTubers by their real stock-pick performance — 1-month, 1-year, and 3-year returns vs the S&P 500. See who actually beats the market." />
     <meta name="twitter:image" content="https://tubereturns.com/logo.webp" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://tubereturns.com/#website",
+          "name": "TubeReturns",
+          "url": "https://tubereturns.com",
+          "description": "TubeReturns tracks and ranks finance YouTubers by their real stock-pick performance — 22,609 picks from 35 channels measured against the S&P 500."
+        },
+        {
+          "@type": "Dataset",
+          "@id": "https://tubereturns.com/#dataset",
+          "name": "Finance YouTuber Stock Pick Performance Database",
+          "description": "22,609 stock picks from 35 finance YouTube channels. Each pick is extracted from video transcripts using AI, then measured from the video's publication date against the S&P 500 (SPY) over 1-month, 1-year, and 3-year windows. Covers 2,593 unique stocks across 21 currencies.",
+          "url": "https://tubereturns.com",
+          "creator": { "@type": "Organization", "name": "TubeReturns", "url": "https://tubereturns.com" },
+          "measurementTechnique": "Historical stock prices from Yahoo Finance compared to S&P 500 returns over the identical period starting from each pick's video publication date. Non-USD stocks are converted using historical exchange rates.",
+          "variableMeasured": ["1-month alpha vs S&P 500", "1-year alpha vs S&P 500", "3-year alpha vs S&P 500"],
+          "temporalCoverage": "2014/..",
+          "spatialCoverage": "Global"
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://tubereturns.com/faq#faqpage",
+          "mainEntity": [
+            { "@type": "Question", "name": "What is TubeReturns?", "acceptedAnswer": { "@type": "Answer", "text": "TubeReturns is the first platform that objectively measures the real-money performance of finance YouTubers' stock picks. We automatically discover videos, download transcripts, extract every stock recommendation using AI, and calculate actual returns from the day each pick was made — so you can see who is genuinely beating the market." } },
+            { "@type": "Question", "name": "How is alpha calculated?", "acceptedAnswer": { "@type": "Answer", "text": "Alpha is the excess return a YouTuber's picks generated compared to simply buying the S&P 500 on the same day. For each pick we calculate the return from the video's publish date to today, then subtract the S&P 500's return over the same period. All picks within a channel are equally weighted to produce a single channel alpha score." } },
+            { "@type": "Question", "name": "What counts as a stock pick?", "acceptedAnswer": { "@type": "Answer", "text": "Only explicit BUY recommendations for individual publicly-traded stocks are tracked. Crypto, ETFs, bonds, general market commentary, and vague mentions are excluded. The AI extracts the ticker symbol, company name, and uses the video publication date as the entry date." } },
+            { "@type": "Question", "name": "How often is the data updated?", "acceptedAnswer": { "@type": "Answer", "text": "New videos are discovered daily. Stock prices and exchange rates are refreshed three times daily so return figures always reflect current market values." } },
+            { "@type": "Question", "name": "Is TubeReturns affiliated with any YouTubers it tracks?", "acceptedAnswer": { "@type": "Answer", "text": "No. TubeReturns is fully independent. We do not accept sponsorships from creators, do not receive compensation for rankings, and have no commercial relationships with any tracked channel." } }
+          ]
+        }
+      ]
+    }
+    </script>
     <base href="/" />
     <link rel="icon" type="image/x-icon" href="favicon.ico" />
     <link rel="icon" type="image/png" sizes="256x256" href="favicon.png" />

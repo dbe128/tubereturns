@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { Title } from '@angular/platform-browser';
 
 @Component({
   selector: 'app-faq',
@@ -43,6 +44,7 @@ import { RouterLink } from '@angular/router';
   `,
 })
 export class FaqComponent {
+  constructor() { inject(Title).setTitle('FAQ | TubeReturns'); }
   readonly items: { q: string; a: string; open: boolean }[] = [
     {
       q: 'What is TubeReturns?',

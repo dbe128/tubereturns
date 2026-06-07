@@ -13,6 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { toObservable } from '@angular/core/rxjs-interop';
+import { Title, Meta } from '@angular/platform-browser';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { BackendRecoveryService } from '../../services/backend-recovery.service';
@@ -103,8 +104,21 @@ interface IndexedVideo {
               />
             }
             <div class="flex-1 min-w-0">
-              <h1 class="text-xl font-bold text-white flex items-center gap-2">
+              <h1 class="text-xl font-bold text-white flex items-center gap-3 flex-wrap">
                 {{ channel()!.channelName }}
+                <button
+                  (click)="copyLink()"
+                  class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition-colors"
+                  [class]="linkCopied() ? 'border-green-700 text-green-400 bg-green-900/30' : 'border-gray-600 text-gray-300 hover:border-gray-400 hover:text-white'"
+                >
+                  @if (linkCopied()) {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    Copied!
+                  } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                    Share
+                  }
+                </button>
                 @if (!channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
                   <span class="relative group/tip flex-shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -760,10 +774,14 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   private readonly recovery = inject(BackendRecoveryService);
   readonly featureFlags = inject(FeatureFlagService);
   private readonly injector = inject(Injector);
+  private readonly titleService = inject(Title);
+  private readonly metaService = inject(Meta);
 
   private channelHandle = '';
   private videoSub?: Subscription;
+  private copyResetTimer?: number;
   private readonly transcriptCache = new Map<string, string>();
+  readonly linkCopied = signal(false);
 
   readonly channelUrl = computed(() => {
     const name = this.channel()?.channelName;
@@ -890,7 +908,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
     const checkDone = (): void => { if (channelLoaded && firstVideoLoaded) { this.loading.set(false); } };
 
     this.api.getChannel(channelHandle).subscribe({
-      next: (channel) => { this.channel.set(channel); channelLoaded = true; checkDone(); },
+      next: (channel) => { this.channel.set(channel); channelLoaded = true; checkDone(); this.setPageMeta(channel); },
       error: (_err: unknown) => {
         this.error.set('A deployment is probably in progress. Please try again shortly.');
         this.loading.set(false);
@@ -921,6 +939,8 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.recovery.stopPolling();
     this.videoSub?.unsubscribe();
+    window.clearTimeout(this.copyResetTimer);
+    this.resetPageMeta();
   }
 
   private loadChannel(handle: string): void {
@@ -1007,6 +1027,49 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   onPickTickerFilterChange(val: string): void {
     this.picksPage.set(0);
     this.pickTickerFilter.set(val);
+  }
+
+  copyLink(): void {
+    const url = `https://tubereturns.com/channel/${this.channelHandle}`;
+    const name = this.channel()?.channelName ?? this.channelHandle;
+    if (navigator.share) {
+      navigator.share({ title: `${name} Stock Picks | TubeReturns`, url }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(url).then(() => {
+        this.linkCopied.set(true);
+        this.copyResetTimer = window.setTimeout(() => this.linkCopied.set(false), 2000);
+      });
+    }
+  }
+
+  private setPageMeta(channel: Channel): void {
+    const alpha = channel.score1y != null ? `${channel.score1y >= 0 ? '+' : ''}${channel.score1y.toFixed(1)}% alpha` : null;
+    const picks = channel.eligible1y > 0 ? `${channel.eligible1y} picks` : null;
+    const stats = [picks, alpha].filter(Boolean).join(', ');
+    const desc = stats
+      ? `${channel.channelName} on TubeReturns — ${stats} vs the S&P 500 over 1 year. See every stock pick and real return.`
+      : `Track ${channel.channelName}'s stock pick performance on TubeReturns — every recommendation measured against the S&P 500.`;
+    const title = `${channel.channelName} Stock Picks | TubeReturns`;
+    const url = `https://tubereturns.com/channel/${this.channelHandle}`;
+    this.titleService.setTitle(title);
+    this.metaService.updateTag({ name: 'description', content: desc });
+    this.metaService.updateTag({ property: 'og:title', content: title });
+    this.metaService.updateTag({ property: 'og:description', content: desc });
+    this.metaService.updateTag({ property: 'og:url', content: url });
+    this.metaService.updateTag({ name: 'twitter:title', content: title });
+    this.metaService.updateTag({ name: 'twitter:description', content: desc });
+  }
+
+  private resetPageMeta(): void {
+    const title = 'TubeReturns — Stock-Picking YouTubers Ranked by Returns';
+    const desc = 'TubeReturns tracks and ranks finance YouTubers by their real stock-pick performance — 1-month, 1-year, and 3-year returns vs the S&P 500. See who actually beats the market.';
+    this.titleService.setTitle(title);
+    this.metaService.updateTag({ name: 'description', content: desc });
+    this.metaService.updateTag({ property: 'og:title', content: title });
+    this.metaService.updateTag({ property: 'og:description', content: desc });
+    this.metaService.updateTag({ property: 'og:url', content: 'https://tubereturns.com/' });
+    this.metaService.updateTag({ name: 'twitter:title', content: title });
+    this.metaService.updateTag({ name: 'twitter:description', content: desc });
   }
 
   formatPickReturn(value: number | null | undefined): string {

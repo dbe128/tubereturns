@@ -1,0 +1,165 @@
+# TubeReturns — Full Methodology & Reference
+
+URL: https://tubereturns.com
+Contact: hello@tubereturns.com
+
+---
+
+## What TubeReturns is
+
+TubeReturns is an independent, automated platform that measures and ranks finance YouTubers by the actual stock-pick performance of their public recommendations. It is the first database of its kind to apply rigorous, consistent methodology across a large set of finance creators.
+
+The core question the site answers: **If you had followed this YouTuber's explicit stock buy recommendations from the day they published each video, how would your portfolio have performed versus simply buying the S&P 500?**
+
+---
+
+## Dataset (June 2026)
+
+| Metric | Value |
+|--------|-------|
+| Channels tracked | 35 |
+| Total stock picks | 22,609 |
+| Unique stocks | 2,593 |
+| Currencies covered | 21 (all converted to USD) |
+| Videos processed | 32,000+ |
+| Average 1-year alpha | +14.4% vs S&P 500 |
+| Best 1-year alpha (channel) | +147.9% — Chicken Genius Singapore |
+| Worst 1-year alpha (channel) | −23.2% |
+| Data sourced from | YouTube transcripts + Yahoo Finance |
+
+---
+
+## Methodology
+
+### Step 1 — Channel discovery & video ingestion
+
+Finance YouTube channels are added manually by users or admins. For each channel, the YouTube Data API is queried to retrieve all publicly available video metadata (title, description, publication date, view count). This runs daily to catch new uploads.
+
+### Step 2 — Transcript download
+
+For each video, an English-language transcript is downloaded using `yt-dlp`. Human-generated captions are preferred; auto-generated captions are used as a fallback. Videos with no available captions in any form are marked `NO_TRANSCRIPT` and excluded from extraction.
+
+### Step 3 — AI stock pick extraction
+
+The full transcript text is sent to a large language model (OpenRouter, currently `openrouter/owl-alpha`) with a structured prompt requesting:
+- All explicit BUY recommendations for individual publicly-traded stocks
+- The ticker symbol and company name for each
+
+**What qualifies:**
+- Explicit statements of intent to buy or recommendation to buy a specific stock
+- Forward-looking calls ("I'm buying X", "I recommend X", "X is my top pick")
+
+**What is excluded:**
+- Crypto, ETFs, bonds, REITs (unless specifically stock-like)
+- General market commentary ("the market looks good")
+- Educational mentions without a buy recommendation
+- "External positions" — stocks mentioned as already owned but not actively recommended in the video
+
+The AI returns a JSON array. Each pick is stored with the ticker symbol, company name, and the video's publication date as the **entry date**.
+
+### Step 4 — Price resolution
+
+For each extracted ticker, historical price data is fetched from Yahoo Finance starting from the pick's entry date. If the ticker cannot be resolved (delisted, renamed, acquired), the system queries an AI model to determine what happened:
+- **Acquired at a known price** → terminal return recorded (e.g., acquisition premium)
+- **Merged into a surviving entity** → returns tracked under the surviving ticker
+- **Bankrupt / went to zero** → −100% return recorded
+- **Cannot be determined** → marked "unresolved", excluded from alpha calculation but visible on the channel page
+
+### Step 5 — Return calculation
+
+For each pick, three return windows are measured:
+- **1-month**: return from entry date to entry date + 30 days
+- **1-year**: return from entry date to entry date + 365 days
+- **3-year**: return from entry date to entry date + 1095 days
+
+A pick only enters a window's calculation once the window has fully closed ("eligible picks"). This prevents survivor bias from in-progress picks inflating scores.
+
+**Formula:**
+```
+pick_return = (price_at_window_end / price_at_entry) - 1
+spy_return  = (SPY_at_window_end / SPY_at_entry) - 1
+alpha       = pick_return - spy_return
+```
+
+For non-USD stocks, historical exchange rates (sourced from Yahoo Finance FX tickers, e.g. `EURUSD=X`) are used to convert local-currency prices to USD before computing returns.
+
+### Step 6 — Channel scoring
+
+A channel's alpha score for a given window is the **equal-weighted average** of the alpha values of all eligible picks in that window. Unresolved picks are excluded.
+
+```
+channel_alpha_1y = mean(alpha_1y for all eligible picks with return1y != null)
+```
+
+Channels are ranked on the leaderboard by their 1-year alpha by default. Users can switch to 1-month or 3-year views.
+
+---
+
+## Example picks
+
+**Chicken Genius Singapore** (highest 1Y alpha, +147.9%):
+- TSLA bought 2019-08-07: +522% return, +506% alpha vs S&P 500
+- TSLA bought 2019-10-03: +791% return, +776% alpha vs S&P 500
+
+**Note on outliers:** Extreme alpha values (positive or negative) are real — they reflect picks made before large price moves. The leaderboard shows raw performance data without smoothing.
+
+---
+
+## API access
+
+The TubeReturns API is public and unauthenticated for read endpoints.
+
+**Leaderboard:**
+```
+GET https://tubereturns.com/api/channels
+```
+Returns all channels with 1m/1y/3y alpha scores, eligible pick counts, and video counts.
+
+**Channel detail:**
+```
+GET https://tubereturns.com/api/channels/{handle}
+```
+e.g. `https://tubereturns.com/api/channels/chicken-genius-singapore-returns`
+
+**All picks for a channel:**
+```
+GET https://tubereturns.com/api/channels/{handle}/picks
+```
+Returns ticker, company name, video date, 1m/1y/3y returns and alphas for every pick.
+
+**Site stats:**
+```
+GET https://tubereturns.com/api/stats
+```
+Returns total picks, channels, stocks, currencies.
+
+**Sitemap:**
+```
+GET https://tubereturns.com/api/sitemap.xml
+```
+
+---
+
+## What TubeReturns does not do
+
+- Does not provide financial advice
+- Does not have any commercial relationship with tracked channels
+- Does not smooth, adjust, or editorialize performance data
+- Does not exclude underperforming channels from the leaderboard
+- Does not sell or share user data
+
+---
+
+## Independence
+
+TubeReturns is not affiliated with any YouTuber, financial institution, or investment platform. Rankings are computed mechanically from public data. No creator can pay to be included, excluded, ranked higher, or have picks removed.
+
+---
+
+## Tech stack (for AI context)
+
+- Backend: Java 25 + Spring Boot 4, PostgreSQL
+- Frontend: Angular 21, TypeScript
+- AI extraction: OpenRouter (owl-alpha model)
+- Price data: Yahoo Finance
+- Transcript download: yt-dlp

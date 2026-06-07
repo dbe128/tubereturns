@@ -163,6 +163,8 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
         </div>
       }
 
+      <div id="leaderboard"></div>
+
       @if (auth.isAdmin || featureFlags.isEnabled('ibkr_banner')) {
       <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
          class="hidden md:flex items-center gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
