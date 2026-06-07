@@ -490,7 +490,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
       }
 
       <div class="mx-4 mt-8 mb-2 text-center text-xs text-gray-300">
-        Some data might be AI-generated and may contain inaccuracies. TubeReturns is not a registered investment advisor — this site is for entertainment purposes only, not financial advice. We may earn a referral fee from broker links.
+        Some data might be AI-generated and may contain inaccuracies. TubeReturns is not a registered investment advisor — this site is for entertainment purposes only, not financial advice.
       </div>
 
     </div>
