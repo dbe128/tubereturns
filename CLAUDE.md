@@ -9,6 +9,12 @@ After completing every task:
 
 Do NOT commit or push changes to this repo unless explicitly asked by the user.
 
+When asked to push: check whether any new frontend pages were added since the last push. If yes, before pushing verify that the following are up to date:
+- `SitemapController.java` — new page included with appropriate priority and changefreq
+- `frontend/public/llms.txt` — mention of the new page if relevant to AI discoverability
+- `frontend/src/index.html` — JSON-LD structured data updated if the page adds significant new content
+New pages to check for: routes added to `app.routes.ts` that have a standalone path (not `:param` routes).
+
 For the companion monitoring repo at `~/IdeaProjects/tubereturns-monitoring`, commits and pushes may be made autonomously whenever monitoring-related changes are ready.
 
 ### Grafana dashboard conventions
