@@ -68,7 +68,11 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
           Every transcript analyzed. Every stock pick tracked. Every return measured against the S&amp;P 500. Deleted videos tracked. You see the truth.
         </p>
         <p class="text-gray-500 text-base mb-12 max-w-xl mx-auto">
-          <span class="text-gray-300 font-medium">Updated daily</span> for the most accurate results possible.
+          @if (pricesLastUpdated()) {
+            Returns as of <span class="text-gray-300 font-medium">{{ pricesLastUpdated() }}</span> · Updated daily.
+          } @else {
+            <span class="text-gray-300 font-medium">Updated daily</span> for the most accurate results possible.
+          }
         </p>
         <div class="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-0 mb-12 w-full max-w-3xl mx-auto">
           <div class="text-center px-8">
@@ -562,6 +566,7 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   readonly currenciesCount = signal(0);
   readonly llmModelsCount = signal(0);
   readonly deletedVideosCount = signal(0);
+  readonly pricesLastUpdated = signal<string | null>(null);
   readonly trendingPicks = signal<TrendingPick[]>([]);
 
   private suggestionRefreshSub?: Subscription;
@@ -578,6 +583,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
           this.animateCount(stats.totalLlmModels, (v) => this.llmModelsCount.set(v));
           if (stats.totalDeletedVideos) {
             this.animateCount(stats.totalDeletedVideos, (v) => this.deletedVideosCount.set(v));
+          }
+          if (stats.pricesLastUpdated) {
+            this.pricesLastUpdated.set(new Date(stats.pricesLastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
           }
         }, 300);
       },

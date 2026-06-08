@@ -8,6 +8,7 @@ export const SiteStatsSchema = z.object({
   totalLlmModels: z.number(),
   totalDeletedVideos: z.number().optional(),
   version: z.string(),
+  pricesLastUpdated: z.string().nullable().optional(),
 });
 export type SiteStats = z.infer<typeof SiteStatsSchema>;
 
