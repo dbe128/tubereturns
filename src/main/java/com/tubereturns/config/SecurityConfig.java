@@ -1,6 +1,7 @@
 package com.tubereturns.config;
 
 import com.tubereturns.security.JwtAuthFilter;
+import com.tubereturns.security.RateLimitFilter;
 import com.tubereturns.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -25,6 +26,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
 
@@ -53,6 +55,7 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(rateLimitFilter, JwtAuthFilter.class)
                 .build();
     }
 

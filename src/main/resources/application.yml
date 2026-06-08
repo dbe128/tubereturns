@@ -87,6 +87,18 @@ tubereturns:
   google:
     client-id: 869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com
 
+  rate-limit:
+    enabled: true
+    auth:
+      capacity: 10
+      refill-seconds: 60
+    standard:
+      capacity: 60
+      refill-seconds: 60
+    authenticated:
+      capacity: 300
+      refill-seconds: 60
+
   security:
     jwt-secret: ${JWT_SECRET}
     jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}

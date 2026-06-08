@@ -21,6 +21,8 @@ tubereturns:
   transcript:
     ytbsd-path: scripts/ytbsd.py
     transcripts-dir: transcripts
+  rate-limit:
+    enabled: true
 
 springdoc:
   api-docs:
