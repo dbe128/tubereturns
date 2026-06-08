@@ -172,7 +172,17 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
           <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
         </div>
         <div class="flex-shrink-0 text-2xl font-black text-white">Interactive Brokers</div>
-        <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Ready to act on what you discover? Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
+        <div class="flex-1 min-w-0 text-sm text-gray-400 flex items-center gap-1">
+          <span class="truncate">Ready to act on what you discover? Get</span>
+          <span class="relative group/tip inline-flex items-center gap-0.5 cursor-default flex-shrink-0">
+            <span class="text-green-400">up to $1,000 bonus</span>
+            <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-gray-800 border border-gray-700 text-gray-300 text-xs leading-relaxed rounded-lg px-3 py-2.5 hidden group-hover/tip:block pointer-events-none z-20 shadow-xl font-normal whitespace-normal">
+              $1 in IBKR Class A stock for every $300 deposited in the first year.
+            </span>
+          </span>
+          <span class="flex-shrink-0">on deposits.</span>
+        </div>
         <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
       </a>
       <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
@@ -186,7 +196,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
           </div>
           <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
         </div>
-        <div class="text-sm font-semibold text-white">Get <span class="text-green-400">up to 1% bonus</span> on deposits.</div>
+        <div class="text-sm font-semibold text-white">Get <span class="text-green-400">up to $1,000 bonus</span> on deposits.</div>
       </a>
       }
 
