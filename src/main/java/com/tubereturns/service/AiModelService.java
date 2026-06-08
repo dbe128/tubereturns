@@ -434,7 +434,10 @@ public class AiModelService {
                     throw new ResourceAccessException("Interrupted while waiting for OpenRouter");
                 }
                 int statusCode = httpResponse.statusCode();
-                if (statusCode == 429) { throw new RateLimitedException(model); }
+                if (statusCode == 429) {
+                    log.warn("429 rate limit headers from OpenRouter for model {}: {}", model, httpResponse.headers().map());
+                    throw new RateLimitedException(model);
+                }
                 if (statusCode == 402) { throw new PaymentRequiredException("OpenRouter API returned 402: insufficient credits"); }
                 if (statusCode == 404) {
                     log.error("OpenRouter returned 404 for model {} — model does not exist, removing from list", model);

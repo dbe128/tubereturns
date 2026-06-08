@@ -93,10 +93,10 @@ tubereturns:
       capacity: 10
       refill-seconds: 60
     standard:
-      capacity: 60
+      capacity: 50
       refill-seconds: 60
     authenticated:
-      capacity: 300
+      capacity: 100
       refill-seconds: 60
 
   security:
