@@ -104,9 +104,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
+        String cfConnectingIp = request.getHeader("CF-Connecting-IP");
+        if (cfConnectingIp != null && !cfConnectingIp.isBlank()) {
+            return cfConnectingIp.trim();
+        }
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+            String[] hops = forwarded.split(",");
+            return hops[hops.length - 1].trim();
         }
         return request.getRemoteAddr();
     }

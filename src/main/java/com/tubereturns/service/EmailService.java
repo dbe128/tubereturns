@@ -52,7 +52,7 @@ public class EmailService {
                   <p style="margin:32px 0 0;color:#9ca3af;font-size:12px;">If you didn't create an account, you can ignore this email.</p>
                 </body>
                 </html>
-                """.formatted(firstName, link);
+                """.formatted(escapeHtml(firstName), link);
         trySend(toEmail, "Verify your TubeReturns account", html);
     }
 
@@ -78,7 +78,7 @@ public class EmailService {
                   <p style="margin:32px 0 0;color:#9ca3af;font-size:12px;">If you didn't request a password reset, you can ignore this email.</p>
                 </body>
                 </html>
-                """.formatted(firstName, link);
+                """.formatted(escapeHtml(firstName), link);
         trySend(toEmail, "Reset your TubeReturns password", html);
     }
 
@@ -102,7 +102,7 @@ public class EmailService {
                   <p style="margin:32px 0 0;color:#9ca3af;font-size:12px;">— TubeReturns</p>
                 </body>
                 </html>
-                """.formatted(channelName, baseUrl);
+                """.formatted(escapeHtml(channelName), baseUrl);
         try {
             trySend(toEmail, "TubeReturns — " + channelName + " is ready", html);
             log.info("Channel processed email sent to {} for channel {}", toEmail, channelHandle);
@@ -119,7 +119,9 @@ public class EmailService {
             log.warn("Mail not configured — contact message from {}: {}", senderEmail, message);
             return;
         }
-        String escapedMessage = message.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>");
+        String escapedMessage = escapeHtml(message).replace("\n", "<br>");
+        String escapedName = escapeHtml(senderName);
+        String escapedEmail = escapeHtml(senderEmail);
         String html = """
                 <!DOCTYPE html>
                 <html>
@@ -134,7 +136,7 @@ public class EmailService {
                   <p style="margin:24px 0 0;color:#9ca3af;font-size:12px;">— TubeReturns</p>
                 </body>
                 </html>
-                """.formatted(senderName, senderEmail, escapedMessage);
+                """.formatted(escapedName, escapedEmail, escapedMessage);
         trySend("feedback@tubereturns.com", "TubeReturns feedback", html);
 
         String copyHtml = """
@@ -152,8 +154,12 @@ public class EmailService {
                   <p style="margin:0 0 0;color:#9ca3af;font-size:12px;">We'll get back to you as soon as we can. — TubeReturns</p>
                 </body>
                 </html>
-                """.formatted(senderName, escapedMessage);
+                """.formatted(escapedName, escapedMessage);
         trySend(senderEmail, "TubeReturns feedback — your message", copyHtml);
+    }
+
+    private String escapeHtml(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     private void trySend(String toEmail, String subject, String html) {
