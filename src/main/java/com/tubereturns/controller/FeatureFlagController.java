@@ -44,7 +44,7 @@ public class FeatureFlagController {
     }
 
     @GetMapping("/api/trending-picks")
-    @Operation(summary = "Top 5 most picked stocks from videos published in the last 5 days")
+    @Operation(summary = "Top 5 most picked stocks from videos published in the last 24 hours")
     public List<Map<String, Object>> getTrendingPicks() {
         return pickRepository.findTrendingPicks(Instant.now().minus(24, ChronoUnit.HOURS), PageRequest.of(0, 5))
                 .stream()
