@@ -1,6 +1,7 @@
 package com.tubereturns.repository;
 
 import com.tubereturns.dto.PickScoringData;
+import com.tubereturns.dto.StockPickEntryDto;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Stock;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -110,16 +111,21 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
     );
 
     @Query("""
-        SELECT p FROM Pick p
-        JOIN FETCH p.video v
-        JOIN FETCH v.channel
-        JOIN FETCH p.stock s
+        SELECT new com.tubereturns.dto.StockPickEntryDto(
+            c.channelName, c.nameSlug, v.videoId, v.title, v.publishedAt,
+            p.approximatedPrices, p.return1m, p.return1y, p.return3y,
+            p.alpha1m, p.alpha1y, p.alpha3y
+        )
+        FROM Pick p
+        JOIN p.video v
+        JOIN v.channel c
+        JOIN p.stock s
         WHERE UPPER(s.tickerSymbol) = UPPER(:ticker)
           AND s.unknown = false
           AND v.excluded = false
         ORDER BY v.publishedAt DESC
         """)
-    List<Pick> findByTickerWithChannel(@Param("ticker") String ticker);
+    List<StockPickEntryDto> findPickEntriesByTicker(@Param("ticker") String ticker);
 
     @Query("""
         SELECT DISTINCT s.tickerSymbol FROM Pick p

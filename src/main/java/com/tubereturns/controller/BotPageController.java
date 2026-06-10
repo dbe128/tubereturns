@@ -2,8 +2,8 @@ package com.tubereturns.controller;
 
 import com.tubereturns.dto.ChannelResponseDto;
 import com.tubereturns.dto.PickPerformanceDto;
+import com.tubereturns.dto.StockPickEntryDto;
 import com.tubereturns.model.Channel;
-import com.tubereturns.model.Pick;
 import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockRepository;
@@ -137,8 +137,8 @@ public class BotPageController {
         return stockRepository.findByTickerSymbol(ticker.toUpperCase())
                 .filter(stock -> !stock.isUnknown())
                 .map(stock -> {
-                    List<Pick> picks = pickRepository.findByTickerWithChannel(stock.getTickerSymbol());
-                    long channelCount = picks.stream().map(p -> p.getVideo().getChannel().getId()).distinct().count();
+                    List<StockPickEntryDto> picks = pickRepository.findPickEntriesByTicker(stock.getTickerSymbol());
+                    long channelCount = picks.stream().map(StockPickEntryDto::channelSlug).distinct().count();
                     String name = stock.getCompanyName() != null ? stock.getCompanyName() : stock.getTickerSymbol();
 
                     StringBuilder body = new StringBuilder();
@@ -148,15 +148,15 @@ public class BotPageController {
                             .append(" finance YouTube channel").append(channelCount == 1 ? "" : "s")
                             .append(", with the actual return of each pick measured from the video's publication date.</p>\n");
                     body.append("<table>\n<thead><tr><th>Channel</th><th>Video</th><th>Date</th><th>1M Return</th><th>1Y Return</th><th>3Y Return</th><th>1Y Alpha</th></tr></thead>\n<tbody>\n");
-                    for (Pick p : picks) {
-                        body.append("<tr><td><a href=\"/channel/").append(esc(p.getVideo().getChannel().getNameSlug()))
-                                .append("\">").append(esc(p.getVideo().getChannel().getChannelName())).append("</a></td><td><a href=\"https://youtu.be/")
-                                .append(esc(p.getVideo().getVideoId())).append("\">").append(esc(nullable(p.getVideo().getTitle()))).append("</a></td><td>")
-                                .append(date(p.getVideo().getPublishedAt())).append("</td><td>")
-                                .append(pct(p.getReturn1m())).append("</td><td>")
-                                .append(pct(p.getReturn1y())).append("</td><td>")
-                                .append(pct(p.getReturn3y())).append("</td><td>")
-                                .append(pct(p.getAlpha1y())).append("</td></tr>\n");
+                    for (StockPickEntryDto p : picks) {
+                        body.append("<tr><td><a href=\"/channel/").append(esc(p.channelSlug()))
+                                .append("\">").append(esc(p.channelName())).append("</a></td><td><a href=\"https://youtu.be/")
+                                .append(esc(p.videoId())).append("\">").append(esc(nullable(p.videoTitle()))).append("</a></td><td>")
+                                .append(date(p.videoPublishedAt())).append("</td><td>")
+                                .append(pct(p.return1m())).append("</td><td>")
+                                .append(pct(p.return1y())).append("</td><td>")
+                                .append(pct(p.return3y())).append("</td><td>")
+                                .append(pct(p.alpha1y())).append("</td></tr>\n");
                     }
                     body.append("</tbody>\n</table>\n");
                     body.append("<p><a href=\"/\">Back to the full leaderboard</a></p>\n");

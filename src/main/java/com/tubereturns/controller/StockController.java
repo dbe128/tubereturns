@@ -1,7 +1,7 @@
 package com.tubereturns.controller;
 
 import com.tubereturns.dto.StockDetailDto;
-import com.tubereturns.model.Pick;
+import com.tubereturns.dto.StockPickEntryDto;
 import com.tubereturns.repository.PickRepository;
 import com.tubereturns.repository.StockRepository;
 import io.swagger.v3.oas.annotations.Operation;
@@ -32,29 +32,18 @@ public class StockController {
         return stockRepository.findByTickerSymbol(ticker.toUpperCase())
                 .filter(stock -> !stock.isUnknown())
                 .map(stock -> {
-                    List<Pick> picks = pickRepository.findByTickerWithChannel(stock.getTickerSymbol());
-                    List<StockDetailDto.StockPickEntry> entries = picks.stream()
-                            .map(p -> new StockDetailDto.StockPickEntry(
-                                    p.getVideo().getChannel().getChannelName(),
-                                    p.getVideo().getChannel().getNameSlug(),
-                                    p.getVideo().getVideoId(),
-                                    p.getVideo().getTitle(),
-                                    p.getVideo().getPublishedAt(),
-                                    p.isApproximatedPrices(),
-                                    p.getReturn1m(), p.getReturn1y(), p.getReturn3y(),
-                                    p.getAlpha1m(), p.getAlpha1y(), p.getAlpha3y()))
-                            .toList();
+                    List<StockPickEntryDto> picks = pickRepository.findPickEntriesByTicker(stock.getTickerSymbol());
                     long channelCount = picks.stream()
-                            .map(p -> p.getVideo().getChannel().getId())
+                            .map(StockPickEntryDto::channelSlug)
                             .distinct()
                             .count();
                     return ResponseEntity.ok(new StockDetailDto(
                             stock.getTickerSymbol(),
                             stock.getCompanyName(),
                             stock.getCurrency(),
-                            entries.size(),
+                            picks.size(),
                             channelCount,
-                            entries));
+                            picks));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
