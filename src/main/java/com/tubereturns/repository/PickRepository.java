@@ -109,4 +109,25 @@ public interface PickRepository extends JpaRepository<Pick, Long> {
         @Param("cutoff3y") Instant cutoff3y
     );
 
+    @Query("""
+        SELECT p FROM Pick p
+        JOIN FETCH p.video v
+        JOIN FETCH v.channel
+        JOIN FETCH p.stock s
+        WHERE UPPER(s.tickerSymbol) = UPPER(:ticker)
+          AND s.unknown = false
+          AND v.excluded = false
+        ORDER BY v.publishedAt DESC
+        """)
+    List<Pick> findByTickerWithChannel(@Param("ticker") String ticker);
+
+    @Query("""
+        SELECT DISTINCT s.tickerSymbol FROM Pick p
+        JOIN p.stock s
+        JOIN p.video v
+        WHERE s.unknown = false AND v.excluded = false
+        ORDER BY s.tickerSymbol ASC
+        """)
+    List<String> findDistinctPickedTickers();
+
 }

@@ -93,17 +93,10 @@ import type { ChannelSearchResult } from '../../api/types';
               class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
               FAQ
             </a>
-            @if (auth.isAuthenticated) {
-              <a routerLink="/contact"
-                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
-                Contact us
-              </a>
-            } @else {
-              <a href="mailto:feedback@tubereturns.com"
-                class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
-                Contact us
-              </a>
-            }
+            <a routerLink="/contact"
+              class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
+              Contact us
+            </a>
             @if (auth.isAdmin) {
               <a routerLink="/admin"
                 class="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors">
@@ -227,17 +220,10 @@ import type { ChannelSearchResult } from '../../api/types';
               class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
               FAQ
             </a>
-            @if (auth.isAuthenticated) {
-              <a routerLink="/contact" (click)="closeMobileMenu()"
-                class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                Contact us
-              </a>
-            } @else {
-              <a href="mailto:feedback@tubereturns.com"
-                class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
-                Contact us
-              </a>
-            }
+            <a routerLink="/contact" (click)="closeMobileMenu()"
+              class="flex items-center px-3 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+              Contact us
+            </a>
           </div>
           @if (auth.isAuthenticated) {
             <div class="mt-2 pt-2 border-t border-gray-100">

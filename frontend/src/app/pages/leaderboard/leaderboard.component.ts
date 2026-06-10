@@ -146,8 +146,8 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
               @for (pick of trendingPicks(); track pick.tickerSymbol; let i = $index) {
                 <tr class="hover:bg-gray-800/40">
                   <td class="px-6 py-4 text-gray-500 text-sm">{{ i + 1 }}</td>
-                  <td class="px-6 py-4 font-semibold text-white text-sm">{{ pick.tickerSymbol }}</td>
-                  <td class="px-6 py-4 text-white text-sm">{{ pick.companyName }}</td>
+                  <td class="px-6 py-4 font-semibold text-sm"><a [routerLink]="['/stock', pick.tickerSymbol]" class="text-white hover:text-green-400 transition-colors">{{ pick.tickerSymbol }}</a></td>
+                  <td class="px-6 py-4 text-sm"><a [routerLink]="['/stock', pick.tickerSymbol]" class="text-white hover:text-green-400 transition-colors">{{ pick.companyName }}</a></td>
                   <td class="px-6 py-4 text-right text-white font-semibold text-sm">{{ pick.pickCount }}</td>
                 </tr>
               }
@@ -158,8 +158,8 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
             @for (pick of trendingPicks(); track pick.tickerSymbol; let i = $index) {
               <div class="flex items-center gap-3 px-4 py-3">
                 <span class="text-gray-600 text-sm w-4">{{ i + 1 }}</span>
-                <span class="font-semibold text-white text-sm">{{ pick.tickerSymbol }}</span>
-                <span class="text-white text-sm flex-1 truncate">{{ pick.companyName }}</span>
+                <a [routerLink]="['/stock', pick.tickerSymbol]" class="font-semibold text-white hover:text-green-400 text-sm transition-colors">{{ pick.tickerSymbol }}</a>
+                <a [routerLink]="['/stock', pick.tickerSymbol]" class="text-white hover:text-green-400 text-sm flex-1 truncate transition-colors">{{ pick.companyName }}</a>
                 <span class="text-white font-semibold text-sm">{{ pick.pickCount }}</span>
               </div>
             }

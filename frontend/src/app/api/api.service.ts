@@ -21,9 +21,10 @@ import {
   UnknownStockSchema,
   BlacklistedTickerSchema,
   ChannelRelevanceSchema,
+  StockDetailSchema,
 } from './types';
 import { TrendingPicksSchema, FeatureFlagsSchema } from './types';
-import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, ChannelRelevance, TrendingPick, FeatureFlag } from './types';
+import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, ChannelRelevance, TrendingPick, FeatureFlag, StockDetail } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -113,6 +114,13 @@ export class ApiService {
     return this.validated(
       z.array(PickPerformanceSchema),
       this.http.get<unknown>(`/api/channels/${handle}/picks`).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getStock(ticker: string): Observable<StockDetail> {
+    return this.validated(
+      StockDetailSchema,
+      this.http.get<unknown>(`/api/stocks/${encodeURIComponent(ticker)}`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

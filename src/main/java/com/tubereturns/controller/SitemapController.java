@@ -1,6 +1,7 @@
 package com.tubereturns.controller;
 
 import com.tubereturns.repository.ChannelRepository;
+import com.tubereturns.repository.PickRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SitemapController {
 
     private final ChannelRepository channelRepository;
+    private final PickRepository pickRepository;
 
     @Value("${tubereturns.app.base-url}")
     private String baseUrl;
@@ -24,9 +26,13 @@ public class SitemapController {
         xml.append("  <url><loc>").append(baseUrl).append("/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>\n");
         xml.append("  <url><loc>").append(baseUrl).append("/faq</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>\n");
         xml.append("  <url><loc>").append(baseUrl).append("/privacy</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>\n");
+        xml.append("  <url><loc>").append(baseUrl).append("/contact</loc><changefreq>monthly</changefreq><priority>0.3</priority></url>\n");
         channelRepository.findAll().forEach(c ->
                 xml.append("  <url><loc>").append(baseUrl).append("/channel/")
                         .append(c.getNameSlug()).append("</loc><changefreq>daily</changefreq><priority>0.8</priority></url>\n"));
+        pickRepository.findDistinctPickedTickers().forEach(ticker ->
+                xml.append("  <url><loc>").append(baseUrl).append("/stock/")
+                        .append(ticker).append("</loc><changefreq>daily</changefreq><priority>0.6</priority></url>\n"));
         xml.append("</urlset>");
         return xml.toString();
     }

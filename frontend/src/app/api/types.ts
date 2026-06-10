@@ -96,6 +96,32 @@ export const TickerDataSchema = z.object({
 });
 export type TickerData = z.infer<typeof TickerDataSchema>;
 
+export const StockPickEntrySchema = z.object({
+  channelName: z.string(),
+  channelSlug: z.string(),
+  videoId: z.string(),
+  videoTitle: z.string().nullable(),
+  videoPublishedAt: z.string(),
+  approximatedPrices: z.boolean(),
+  return1m: z.number().nullable(),
+  return1y: z.number().nullable(),
+  return3y: z.number().nullable(),
+  alpha1m: z.number().nullable(),
+  alpha1y: z.number().nullable(),
+  alpha3y: z.number().nullable(),
+});
+export type StockPickEntry = z.infer<typeof StockPickEntrySchema>;
+
+export const StockDetailSchema = z.object({
+  tickerSymbol: z.string(),
+  companyName: z.string().nullable(),
+  currency: z.string().nullable(),
+  totalPicks: z.number(),
+  totalChannels: z.number(),
+  picks: z.array(StockPickEntrySchema),
+});
+export type StockDetail = z.infer<typeof StockDetailSchema>;
+
 export const AiModelStatusSchema = z.object({
   currentIndex: z.number(),
   currentModel: z.string(),

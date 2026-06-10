@@ -611,15 +611,21 @@ interface IndexedVideo {
                 <div class="px-4 py-3">
                   <div class="flex items-start justify-between gap-2 mb-1">
                     <div class="min-w-0">
-                      <span class="font-mono font-semibold text-gray-200 text-sm">{{ pick.tickerSymbol }}</span>
                       @if (pick.unknown) {
+                        <span class="font-mono font-semibold text-gray-200 text-sm">{{ pick.tickerSymbol }}</span>
                         <span class="text-yellow-500 font-normal text-lg leading-none ml-0.5">⚠</span>
+                      } @else {
+                        <a [routerLink]="['/stock', pick.tickerSymbol]" class="font-mono font-semibold text-gray-200 hover:text-green-400 text-sm transition-colors">{{ pick.tickerSymbol }}</a>
                       }
                       @if (pick.approximatedPrices) {
                         <span class="text-blue-400 font-normal text-base ml-0.5" title="Return estimated using AI-approximated price data{{ pick.corporateAction ? ' · ' + pick.corporateAction : '' }}">~</span>
                       }
                       @if (pick.companyName) {
-                        <span class="text-xs text-gray-400 ml-2">{{ pick.companyName }}</span>
+                        @if (pick.unknown) {
+                          <span class="text-xs text-gray-400 ml-2">{{ pick.companyName }}</span>
+                        } @else {
+                          <a [routerLink]="['/stock', pick.tickerSymbol]" class="text-xs text-gray-400 hover:text-green-400 ml-2 transition-colors">{{ pick.companyName }}</a>
+                        }
                       }
                     </div>
                     <span class="text-xs text-gray-500 flex-shrink-0">{{ pick.videoPublishedAt | date: 'shortDate' }}</span>
@@ -681,10 +687,19 @@ interface IndexedVideo {
                       {{ pick.videoPublishedAt | date: 'shortDate' }}
                     </td>
                     <td class="px-4 py-3 max-w-0">
-                      <span class="text-white block truncate">{{ pick.companyName ?? '—' }}</span>
+                      @if (pick.companyName && !pick.unknown) {
+                        <a [routerLink]="['/stock', pick.tickerSymbol]" class="text-white hover:text-green-400 block truncate transition-colors">{{ pick.companyName }}</a>
+                      } @else {
+                        <span class="text-white block truncate">{{ pick.companyName ?? '—' }}</span>
+                      }
                     </td>
                     <td class="px-4 py-3 font-mono font-medium">
-                      <span class="inline-flex items-center gap-0.5 text-gray-200">{{ pick.tickerSymbol }}
+                      <span class="inline-flex items-center gap-0.5 text-gray-200">
+                        @if (pick.unknown) {
+                          {{ pick.tickerSymbol }}
+                        } @else {
+                          <a [routerLink]="['/stock', pick.tickerSymbol]" class="hover:text-green-400 transition-colors">{{ pick.tickerSymbol }}</a>
+                        }
                         @if (pick.unknown) {
                           <span class="relative group/unk inline-block text-yellow-500 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unresolved ticker — excluded from returns</span></span>
                         }
