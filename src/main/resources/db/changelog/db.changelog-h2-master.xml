@@ -33,5 +33,6 @@
 
     <include file="db/changelog/019-ibkr-banner-flag.sql"/>
     <include file="db/changelog/020-fastgraphs-banner-flag.sql"/>
+    <include file="db/changelog/021-lightyear-banner-flag.sql"/>
 
 </databaseChangeLog>

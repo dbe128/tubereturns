@@ -754,20 +754,19 @@ interface IndexedVideo {
           }
         </div>
         }
-      </div>
 
       @if (auth.isAdmin || featureFlags.isEnabled('lightyear_banner')) {
       <a href="https://lightyear.com/profile/bal%C3%A0zs" target="_blank" rel="noopener sponsored"
-         class="hidden md:flex items-center gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-yellow-700 rounded-xl px-5 py-4 transition-colors group">
+         class="hidden md:flex items-center gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
         <div class="flex-shrink-0 bg-black rounded-lg p-1.5">
           <img src="https://www.google.com/s2/favicons?sz=64&domain=lightyear.com" alt="Lightyear" class="w-8 h-8">
         </div>
         <div class="flex-shrink-0 text-2xl font-black text-white">Lightyear</div>
-        <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Commission-free investing in stocks, ETFs and more. Start investing today.</div>
-        <div class="flex-shrink-0 bg-yellow-600 group-hover:bg-yellow-500 text-black text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+        <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Start investing commission-free — get <span class="text-green-400">up to $100 bonus</span> when you sign up with my link.</div>
+        <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
       </a>
       <a href="https://lightyear.com/profile/bal%C3%A0zs" target="_blank" rel="noopener sponsored"
-         class="flex md:hidden flex-col gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-yellow-700 rounded-xl px-5 py-4 transition-colors group">
+         class="flex md:hidden flex-col gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="flex-shrink-0 bg-black rounded-lg p-1.5">
@@ -775,11 +774,12 @@ interface IndexedVideo {
             </div>
             <div class="text-2xl font-black text-white">Lightyear</div>
           </div>
-          <div class="flex-shrink-0 bg-yellow-600 group-hover:bg-yellow-500 text-black text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+          <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
         </div>
-        <div class="text-sm text-gray-400">Commission-free investing in stocks, ETFs and more.</div>
+        <div class="text-sm text-gray-400">Start investing commission-free — <span class="text-green-400">up to $100 bonus</span> when you sign up with my link.</div>
       </a>
       }
+      </div>
       </div>
 
       @if (transcriptPopup() !== null || transcriptLoading()) {

@@ -79,7 +79,7 @@ TubeReturns ranks finance YouTubers by their historical stock pick performance. 
 - **Java 25 + Spring Boot 4** (Kotlin DSL Gradle: `build.gradle.kts`)
 - **Lombok** — `@Getter @Setter @NoArgsConstructor(access = AccessLevel.PROTECTED)` on JPA entities; `@Slf4j @RequiredArgsConstructor` on services/controllers; always `log.xxx` not `logger.xxx`
 - **Spring Data JPA + PostgreSQL** (prod) / **H2 in-memory** (dev)
-- **Liquibase** — all schema changes as new numbered SQL files in `src/main/resources/db/changelog/`; add an `<include>` entry in `db.changelog-master.xml`; **never edit or delete existing migration files or changesets** — exception: migration files that have not yet been committed to git may be freely modified, as they have not been applied to any environment
+- **Liquibase** — all schema changes as new numbered SQL files in `src/main/resources/db/changelog/`; add an `<include>` entry in **both** `db.changelog-master.xml` (prod) and `db.changelog-h2-master.xml` (dev/H2); **never edit or delete existing migration files or changesets** — exception: migration files that have not yet been committed to git may be freely modified, as they have not been applied to any environment
 - **OpenAPI** via springdoc — annotate all new endpoints with `@Operation`
 - **`@Value` fields** for config injection (not constructor-injected via Lombok)
 
@@ -124,7 +124,11 @@ YouTubeDiscoveryService → TranscriptDownloadService → StockPickExtractionSer
 - Pages use `signal<T>()` and `forkJoin` for parallel data loading; no RxJS subjects except `searchSubject` in leaderboard
 
 ### Adding a database migration
-Create a new file `src/main/resources/db/changelog/NNN-description.sql` and add an `<include>` entry in `db.changelog-master.xml`. Use standard PostgreSQL DDL; Liquibase runs it on startup. **Never modify or delete existing migration files or changesets** — they may already be applied to production.
+Create a new file `src/main/resources/db/changelog/NNN-description.sql` and add an `<include>` entry in **both**:
+- `db.changelog-master.xml` (PostgreSQL / prod)
+- `db.changelog-h2-master.xml` (H2 / dev) — if the SQL is H2-incompatible, add an inline `<changeSet>` block instead of an `<include>`
+
+Use standard PostgreSQL DDL; Liquibase runs it on startup. **Never modify or delete existing migration files or changesets** — they may already be applied to production.
 
 ### Multi-currency returns (USD-denominated)
 Stock prices are stored in their local currency (the `currency` column on `Stock`). Portfolio returns are shown in USD by converting each price point via historical exchange rates.
