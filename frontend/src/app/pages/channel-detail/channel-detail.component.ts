@@ -759,7 +759,7 @@ interface IndexedVideo {
       <a href="https://lightyear.com/profile/bal%C3%A0zs" target="_blank" rel="noopener sponsored"
          class="hidden md:flex items-center gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
         <div class="flex-shrink-0 bg-black rounded-lg p-1.5">
-          <img src="https://www.google.com/s2/favicons?sz=64&domain=lightyear.com" alt="Lightyear" class="w-8 h-8">
+          <img src="/lightyear-logo.png" alt="Lightyear" class="w-8 h-8">
         </div>
         <div class="flex-shrink-0 text-2xl font-black text-white">Lightyear</div>
         <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Start investing commission-free — get <span class="text-green-400">up to $100 bonus</span> when you sign up with my link.</div>
@@ -770,7 +770,7 @@ interface IndexedVideo {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
             <div class="flex-shrink-0 bg-black rounded-lg p-1.5">
-              <img src="https://www.google.com/s2/favicons?sz=64&domain=lightyear.com" alt="Lightyear" class="w-8 h-8">
+              <img src="/lightyear-logo.png" alt="Lightyear" class="w-8 h-8">
             </div>
             <div class="text-2xl font-black text-white">Lightyear</div>
           </div>
