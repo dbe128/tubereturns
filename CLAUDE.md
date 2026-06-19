@@ -9,6 +9,12 @@ After completing every task:
 
 Do NOT commit or push changes to this repo unless explicitly asked by the user.
 
+When asked to push: if `frontend/package.json` is among the changed files, verify that all `@angular/*` framework packages resolve to the same version in the lock file. Run:
+```bash
+for pkg in common core forms platform-browser platform-browser-dynamic router compiler compiler-cli; do echo -n "@angular/$pkg: "; node -e "try{console.log(require('./frontend/node_modules/@angular/$pkg/package.json').version)}catch(e){console.log('not found')}"; done
+```
+If any version differs from the others, align all `@angular/*` entries in `frontend/package.json` to the highest version, delete `frontend/node_modules` and `frontend/package-lock.json`, run `npm install`, and re-verify before committing.
+
 When asked to push: check whether any new frontend pages were added since the last push. If yes, before pushing verify that the following are up to date:
 - `SitemapController.java` — new page included with appropriate priority and changefreq
 - `frontend/public/llms.txt` — mention of the new page if relevant to AI discoverability
