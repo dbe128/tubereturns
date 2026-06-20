@@ -374,7 +374,7 @@ public class YouTubeApiService {
             for (PlaylistItem item : response.getItems()) {
                 Instant publishedAt = Instant.ofEpochMilli(
                         item.getContentDetails().getVideoPublishedAt().getValue());
-                if (since != null && !publishedAt.isAfter(since)) {
+                if (since != null && publishedAt.isBefore(since)) {
                     reachedOlderVideos = true;
                     break;
                 }
