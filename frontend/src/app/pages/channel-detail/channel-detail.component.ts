@@ -853,7 +853,7 @@ export class ChannelDetailComponent implements OnInit, OnDestroy {
   readonly filterProcessing = signal<VideoSummary['extractionStatus'] | ''>('');
   readonly filterPick = signal('');
   readonly showExcluded = signal(false);
-  readonly hideNoPicks = signal(true);
+  readonly hideNoPicks = signal(false);
   readonly hideUnprocessed = signal(!this.auth.isAdmin);
 
   readonly transcriptPopup = signal<string | null>(null);
