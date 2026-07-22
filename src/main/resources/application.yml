@@ -82,7 +82,7 @@ tubereturns:
     connect-timeout-seconds: 10
     read-timeout-seconds: 180
     timeout-retries: 5
-    stock-resolution-model: google/gemini-3.1-flash-lite
+    stock-resolution-model: meta-llama/llama-3.3-70b-instruct
 
   google:
     client-id: 869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com
