@@ -23,7 +23,7 @@
     "zone.js": "^0.16.2"
   },
   "devDependencies": {
-    "@angular/build": "^21.2.19",
+    "@angular/build": "^21.2.22",
     "@angular/cli": "^21.2.19",
     "@angular/compiler-cli": "^21.2.18",
     "autoprefixer": "^10.5.4",
