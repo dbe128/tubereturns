@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@angular/build": "^21.2.23",
-    "@angular/cli": "^21.2.23",
+    "@angular/cli": "^21.2.24",
     "@angular/compiler-cli": "^21.2.23",
     "autoprefixer": "^10.5.5",
     "postcss": "^8.5.28",
