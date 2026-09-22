@@ -83,6 +83,10 @@ tubereturns:
     read-timeout-seconds: 180
     timeout-retries: 5
     stock-resolution-model: meta-llama/llama-3.3-70b-instruct
+    model-refresh:
+      catalog-url: https://openrouter.ai/api/v1/models
+      min-context-tokens: 131072
+      exclude-keywords: "content-safety,guard,embed"
 
   google:
     client-id: 869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com
@@ -129,6 +133,8 @@ tubereturns:
       max-items: 1
     notification:
       cron: "0 */2 * * * *"
+    model-refresh:
+      cron: "0 0 6 * * MON"
 
 logging:
   pattern:

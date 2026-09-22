@@ -44,6 +44,9 @@ public class PipelineSchedulerService {
     @Value("${tubereturns.pipeline.archivarix-sync.max-items}")
     private int archivarixSyncMaxItems;
 
+    @Value("${tubereturns.pipeline.model-refresh.cron}")
+    private String modelRefreshCron;
+
     @Value("${tubereturns.pipeline.discovery.max-items}")
     private int discoveryMaxItems;
 
@@ -61,6 +64,7 @@ public class PipelineSchedulerService {
     private final PickPerformanceService pickPerformanceService;
     private final UnknownStockResolutionService stockResolutionService;
     private final ArchivarixService archivarixService;
+    private final OpenRouterModelCatalogService modelCatalogService;
     private final PipelineStatusRegistry registry;
     private final VideoRepository videoRepository;
 
@@ -72,6 +76,7 @@ public class PipelineSchedulerService {
         registry.registerStep("price-refresh", priceRefreshCron, null);
         registry.registerStep("stock-resolution", stockResolutionCron, stockResolutionMaxItems);
         registry.registerStep("archivarix-sync", archivarixSyncCron, archivarixSyncMaxItems);
+        registry.registerStep("model-refresh", modelRefreshCron, null);
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -175,6 +180,18 @@ public class PipelineSchedulerService {
     @Async
     public void triggerArchivarixSync() {
         runStep("archivarix-sync", () -> archivarixService.syncNextBatch(archivarixSyncMaxItems));
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Order(40)
+    @Scheduled(cron = "${tubereturns.pipeline.model-refresh.cron}")
+    public void runModelRefresh() {
+        runStep("model-refresh", modelCatalogService::refreshModels);
+    }
+
+    @Async
+    public void triggerModelRefresh() {
+        runStep("model-refresh", modelCatalogService::refreshModels);
     }
 
     private void runStep(String step, IntSupplier task) {

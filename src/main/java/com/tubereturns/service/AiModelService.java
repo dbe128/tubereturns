@@ -2,6 +2,7 @@ package com.tubereturns.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -93,7 +94,8 @@ public class AiModelService {
     @Value("${tubereturns.channel.relevance-max-retries}")
     private int channelRelevanceMaxRetries;
 
-    private List<String> models;
+    private volatile List<String> configuredModels;
+    private volatile List<String> models;
     private final ThreadLocal<Integer> currentModelIndex = ThreadLocal.withInitial(() -> 0);
     private volatile int lastKnownModelIndex = 0;
     private volatile Instant lastModel0AttemptAt = null;
@@ -127,8 +129,13 @@ public class AiModelService {
             }
         } else {
             log.warn("Models file not found at {} — using default model", modelsFilePath);
-            models = List.of("openrouter/owl-alpha");
+            models = new CopyOnWriteArrayList<>(List.of("openrouter/owl-alpha"));
         }
+        if (models.isEmpty()) {
+            models.add("openrouter/owl-alpha");
+        }
+        configuredModels = List.copyOf(models);
+        Gauge.builder("tubereturns.ai.models.active", this, AiModelService::getModelCount).register(meterRegistry);
         for (String model : models) {
             meterRegistry.counter("tubereturns.ai.rate.limits", "model", model);
             meterRegistry.counter("tubereturns.ai.timeouts", "model", model);
@@ -270,6 +277,22 @@ public class AiModelService {
         throw new RuntimeException("All AI models failed for raw call");
     }
 
+    public List<String> getModels() {
+        return List.copyOf(models);
+    }
+
+    public synchronized void replaceModels(List<String> refreshed) {
+        if (refreshed.isEmpty()) {
+            return;
+        }
+        configuredModels = List.copyOf(refreshed);
+        models = new CopyOnWriteArrayList<>(refreshed);
+        currentModelIndex.set(0);
+        lastKnownModelIndex = 0;
+        lastModel0AttemptAt = null;
+        log.info("AI model list replaced with {} model(s): {}", refreshed.size(), refreshed);
+    }
+
     public int getModelCount() {
         return models == null ? 0 : models.size();
     }
@@ -283,12 +306,12 @@ public class AiModelService {
     }
 
     public void advanceModel() {
-        int size = models.size();
-        if (size > 1) {
-            int next = (currentModelIndex.get() + 1) % size;
+        List<String> current = List.copyOf(models);
+        if (current.size() > 1) {
+            int next = (currentModelIndex.get() + 1) % current.size();
             currentModelIndex.set(next);
             lastKnownModelIndex = next;
-            log.info("Advanced AI model to index {} ({})", next, models.get(next));
+            log.info("Advanced AI model to index {} ({})", next, current.get(next));
         }
     }
 
@@ -307,9 +330,11 @@ public class AiModelService {
         int maxAttempts = models.size();
         int attemptsWithoutRemoval = 0;
 
-        while (!models.isEmpty() && attemptsWithoutRemoval < maxAttempts) {
-            int idx = currentModelIndex.get() % models.size();
-            String model = models.get(idx);
+        while (attemptsWithoutRemoval < maxAttempts) {
+            List<String> current = List.copyOf(models);
+            int idx = currentModelIndex.get() % current.size();
+            String model = current.get(idx);
+            int nextIdx = (idx + 1) % current.size();
             lastKnownModelIndex = idx;
             if (idx == 0) {
                 lastModel0AttemptAt = Instant.now();
@@ -318,76 +343,65 @@ public class AiModelService {
                 return callWithModel(model, videoId, videoTitle, transcriptText);
             } catch (RateLimitedException e) {
                 meterRegistry.counter("tubereturns.ai.rate.limits", "model", model).increment();
-                int nextIdx = (idx + 1) % models.size();
-                currentModelIndex.set(nextIdx);
-                lastKnownModelIndex = nextIdx;
-                attemptsWithoutRemoval++;
-                if (attemptsWithoutRemoval < maxAttempts) {
-                    log.warn("Rate limited on model {} — switching to {}", model, models.get(nextIdx));
-                } else {
-                    log.error("Rate limited on model {} — all {} models exhausted", model, models.size());
-                }
+                attemptsWithoutRemoval = switchToNextModel(nextIdx, attemptsWithoutRemoval, maxAttempts,
+                        "Rate limited on model " + model, current.get(nextIdx));
             } catch (ForbiddenException e) {
                 meterRegistry.counter("tubereturns.ai.forbidden", "model", model).increment();
-                int nextIdx = (idx + 1) % models.size();
-                currentModelIndex.set(nextIdx);
-                lastKnownModelIndex = nextIdx;
-                attemptsWithoutRemoval++;
-                if (attemptsWithoutRemoval < maxAttempts) {
-                    log.warn("Forbidden (403) on model {} — switching to {}", model, models.get(nextIdx));
-                } else {
-                    log.error("Forbidden (403) on model {} — all {} models exhausted", model, models.size());
-                }
+                attemptsWithoutRemoval = switchToNextModel(nextIdx, attemptsWithoutRemoval, maxAttempts,
+                        "Forbidden (403) on model " + model, current.get(nextIdx));
             } catch (TimedOutException e) {
                 meterRegistry.counter("tubereturns.ai.timeouts", "model", model).increment();
-                int nextIdx = (idx + 1) % models.size();
-                currentModelIndex.set(nextIdx);
-                lastKnownModelIndex = nextIdx;
-                attemptsWithoutRemoval++;
-                if (attemptsWithoutRemoval < maxAttempts) {
-                    log.warn("Timed out on model {} after {} retries — switching to {}", model, timeoutRetries, models.get(nextIdx));
-                } else {
-                    log.error("Timed out on model {} — all {} models exhausted", model, models.size());
-                }
+                attemptsWithoutRemoval = switchToNextModel(nextIdx, attemptsWithoutRemoval, maxAttempts,
+                        "Timed out on model " + model + " after " + timeoutRetries + " retries", current.get(nextIdx));
             } catch (BadResponseException e) {
                 meterRegistry.counter("tubereturns.ai.bad.responses", "model", model).increment();
-                int nextIdx = (idx + 1) % models.size();
-                currentModelIndex.set(nextIdx);
-                lastKnownModelIndex = nextIdx;
-                attemptsWithoutRemoval++;
-                if (attemptsWithoutRemoval < maxAttempts) {
-                    log.warn("Bad response from model {} — switching to {}", model, models.get(nextIdx));
-                } else {
-                    log.error("Bad response from model {} — all {} models exhausted", model, models.size());
-                }
+                attemptsWithoutRemoval = switchToNextModel(nextIdx, attemptsWithoutRemoval, maxAttempts,
+                        "Bad response from model " + model, current.get(nextIdx));
             } catch (NotFoundException e) {
-                models.remove(idx);
-                if (models.isEmpty()) {
-                    log.error("Model {} not found (404) — no more models available", model);
+                if (!dropModel(model, idx, "not found (404)")) {
                     throw new RuntimeException("All AI models removed (404) for video " + videoId);
                 }
-                int safeIdx = idx % models.size();
-                currentModelIndex.set(safeIdx);
-                lastKnownModelIndex = safeIdx;
                 maxAttempts = models.size();
                 attemptsWithoutRemoval = 0;
-                log.warn("Model {} not found (404) — removed from list, {} remaining: {}", model, models.size(), models);
             } catch (PaymentRequiredException e) {
                 meterRegistry.counter("tubereturns.ai.payment.required", "model", model).increment();
-                models.remove(idx);
-                if (models.isEmpty()) {
-                    log.error("Payment required on model {} — no more models available", model);
+                if (!dropModel(model, idx, "payment required (402)")) {
                     throw new RuntimeException("All AI models have exhausted their credits for video " + videoId);
                 }
-                int safeIdx = idx % models.size();
-                currentModelIndex.set(safeIdx);
-                lastKnownModelIndex = safeIdx;
                 maxAttempts = models.size();
                 attemptsWithoutRemoval = 0;
-                log.warn("Payment required on model {} — removed from model list, {} remaining: {}", model, models.size(), models);
             }
         }
         throw new RuntimeException("All AI models exhausted for video " + videoId);
+    }
+
+    private int switchToNextModel(int nextIdx, int attemptsWithoutRemoval, int maxAttempts, String reason, String nextModel) {
+        currentModelIndex.set(nextIdx);
+        lastKnownModelIndex = nextIdx;
+        int attempts = attemptsWithoutRemoval + 1;
+        if (attempts < maxAttempts) {
+            log.warn("{} — switching to {}", reason, nextModel);
+        } else {
+            log.error("{} — all {} models exhausted", reason, maxAttempts);
+        }
+        return attempts;
+    }
+
+    private synchronized boolean dropModel(String model, int idx, String reason) {
+        if (models.size() <= 1) {
+            log.error("Model {} {} — no more models available, restoring all {} configured models for the next call",
+                    model, reason, configuredModels.size());
+            models.addAll(configuredModels.stream().filter(m -> !models.contains(m)).toList());
+            currentModelIndex.set(0);
+            lastKnownModelIndex = 0;
+            return false;
+        }
+        models.remove(model);
+        int safeIdx = idx % models.size();
+        currentModelIndex.set(safeIdx);
+        lastKnownModelIndex = safeIdx;
+        log.warn("Model {} {} — removed from list, {} remaining: {}", model, reason, models.size(), models);
+        return true;
     }
 
     private ExtractionResult callWithModel(String model, String videoId, String videoTitle, String transcriptText) {
