@@ -199,6 +199,15 @@ export const BlacklistedTickerSchema = z.object({
 });
 export type BlacklistedTicker = z.infer<typeof BlacklistedTickerSchema>;
 
+export const BlockedChannelSchema = z.object({
+  id: z.number(),
+  handle: z.string(),
+  youtubeChannelId: z.string().nullable(),
+  reason: z.string().nullable(),
+  createdAt: z.string(),
+});
+export type BlockedChannel = z.infer<typeof BlockedChannelSchema>;
+
 export const ChannelSuggestionSchema = z.object({
   handle: z.string(),
   channelName: z.string(),

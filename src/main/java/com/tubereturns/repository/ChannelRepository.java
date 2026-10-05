@@ -23,6 +23,8 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
     boolean existsByHandle(String handle);
 
+    boolean existsByHandleIgnoreCase(String handle);
+
     @Query(value = """
             SELECT * FROM channels
             WHERE archivarix_checked_at IS NULL

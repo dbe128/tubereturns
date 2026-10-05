@@ -20,11 +20,12 @@ import {
   TickerDataSchema,
   UnknownStockSchema,
   BlacklistedTickerSchema,
+  BlockedChannelSchema,
   ChannelRelevanceSchema,
   StockDetailSchema,
 } from './types';
 import { TrendingPicksSchema, FeatureFlagsSchema } from './types';
-import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, ChannelRelevance, TrendingPick, FeatureFlag, StockDetail } from './types';
+import type { SiteStats, Channel, PagedVideoResponse, VideoTranscript, PickPerformance, PipelineStepStatus, ChannelSearchResult, ChannelSuggestion, MyChannelSuggestion, RegisterResponse, AuthResponse, MessageResponse, NotificationsStatus, TickerData, UnknownStock, BlacklistedTicker, BlockedChannel, ChannelRelevance, TrendingPick, FeatureFlag, StockDetail } from './types';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -223,6 +224,27 @@ export class ApiService {
     return this.validated(
       MessageResponseSchema,
       this.http.delete<unknown>(`/api/admin/blacklisted-tickers/${ticker}`).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  getBlockedChannels(): Observable<BlockedChannel[]> {
+    return this.validated(
+      z.array(BlockedChannelSchema),
+      this.http.get<unknown>('/api/admin/blocked-channels').pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  addBlockedChannel(handle: string, reason: string): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.post<unknown>('/api/admin/blocked-channels', { handle, reason }).pipe(catchError((e) => this.handleError(e))),
+    );
+  }
+
+  removeBlockedChannel(id: number): Observable<MessageResponse> {
+    return this.validated(
+      MessageResponseSchema,
+      this.http.delete<unknown>(`/api/admin/blocked-channels/${id}`).pipe(catchError((e) => this.handleError(e))),
     );
   }
 

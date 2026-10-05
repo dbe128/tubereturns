@@ -8,7 +8,7 @@ import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
 import { ChannelStoreService } from '../../services/channel-store.service';
 import { FeatureFlagService } from '../../services/feature-flag.service';
-import type { Channel, ChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock, BlacklistedTicker } from '../../api/types';
+import type { Channel, ChannelSuggestion, PipelineStepStatus, NotificationsStatus, UnknownStock, BlacklistedTicker, BlockedChannel } from '../../api/types';
 
 interface UnknownStockRow extends UnknownStock {
   editTicker: string;
@@ -578,6 +578,68 @@ interface UnknownStockRow extends UnknownStock {
         </div>
 
         <div class="mt-8">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Blocked Channels</h2>
+          </div>
+          <div class="flex gap-2 mb-4">
+            <input
+              [ngModel]="newBlockedChannelHandle()"
+              (ngModelChange)="newBlockedChannelHandle.set($event)"
+              (keydown.enter)="addBlockedChannel()"
+              placeholder="@handle or YouTube URL"
+              maxlength="255"
+              class="w-64 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+            />
+            <input
+              [ngModel]="newBlockedChannelReason()"
+              (ngModelChange)="newBlockedChannelReason.set($event)"
+              (keydown.enter)="addBlockedChannel()"
+              placeholder="Reason (optional)"
+              maxlength="500"
+              class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <button
+              (click)="addBlockedChannel()"
+              [disabled]="!newBlockedChannelHandle().trim()"
+              class="px-4 py-2 bg-gray-800 text-white rounded-lg text-sm font-semibold hover:bg-gray-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+            >Block</button>
+          </div>
+          @if (blockedChannels().length === 0) {
+            <p class="text-xs text-gray-500">No blocked channels.</p>
+          } @else {
+            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+              <table class="w-full min-w-max text-xs">
+                <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
+                  <tr>
+                    <th class="px-4 py-2 text-left font-medium">Handle</th>
+                    <th class="px-4 py-2 text-left font-medium">YouTube ID</th>
+                    <th class="px-4 py-2 text-left font-medium">Reason</th>
+                    <th class="px-4 py-2 text-left font-medium">Added</th>
+                    <th class="px-4 py-2 text-left font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-700">
+                  @for (bc of blockedChannels(); track bc.id) {
+                    <tr class="hover:bg-gray-800/60">
+                      <td class="px-4 py-2 font-mono font-semibold text-white">&#64;{{ bc.handle }}</td>
+                      <td class="px-4 py-2 font-mono text-gray-400">{{ bc.youtubeChannelId || '—' }}</td>
+                      <td class="px-4 py-2 text-gray-400">{{ bc.reason || '—' }}</td>
+                      <td class="px-4 py-2 font-mono text-gray-500">{{ bc.createdAt | date:'dd MMM yyyy' }}</td>
+                      <td class="px-4 py-2">
+                        <button
+                          (click)="removeBlockedChannel(bc)"
+                          class="px-2 py-1 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 transition-colors"
+                        >Remove</button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
+        <div class="mt-8">
           <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Feature Flags</h2>
           @if (featureFlags.getAll().length === 0) {
             <p class="text-xs text-gray-500">No feature flags defined.</p>
@@ -732,6 +794,9 @@ export class AdminComponent implements OnInit, OnDestroy {
   readonly blacklistedTickers = signal<BlacklistedTicker[]>([]);
   readonly newBlacklistTicker = signal('');
   readonly newBlacklistReason = signal('');
+  readonly blockedChannels = signal<BlockedChannel[]>([]);
+  readonly newBlockedChannelHandle = signal('');
+  readonly newBlockedChannelReason = signal('');
   readonly pendingChannelSuggestions = signal<ChannelSuggestion[]>([]);
   readonly userStats = signal<{ count: number; byProvider: Record<string, number> } | null>(null);
   readonly adminAddInput = signal('');
@@ -757,6 +822,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.loadPendingNotifications();
     this.loadUnknownStocks();
     this.loadBlacklistedTickers();
+    this.loadBlockedChannels();
     this.loadPendingChannelSuggestions();
     this.statusPollSub = interval(15000).subscribe(() => {
       this.loadPipelineStatus();
@@ -1076,6 +1142,48 @@ export class AdminComponent implements OnInit, OnDestroy {
           this.loadBlacklistedTickers();
         },
         error: () => this.showToast(`Failed to remove "${bt.tickerSymbol}".`, 'error'),
+      }),
+    );
+  }
+
+  loadBlockedChannels(): void {
+    this.api.getBlockedChannels().subscribe({
+      next: (channels) => this.blockedChannels.set(channels),
+      error: () => {},
+    });
+  }
+
+  addBlockedChannel(): void {
+    const raw = this.newBlockedChannelHandle().trim();
+    if (!raw) { return; }
+    const handle = this.parseHandle(raw);
+    const reason = this.newBlockedChannelReason().trim();
+    this.openConfirm(
+      `Block "@${handle}"? Nobody will be able to add or suggest this channel.`,
+      true,
+      () => this.api.addBlockedChannel(handle, reason).subscribe({
+        next: (resp) => {
+          this.showToast(resp.message, 'success');
+          this.newBlockedChannelHandle.set('');
+          this.newBlockedChannelReason.set('');
+          this.loadBlockedChannels();
+          this.loadPendingChannelSuggestions();
+        },
+        error: (err: unknown) => this.showToast(err instanceof Error ? err.message : `Failed to block "@${handle}".`, 'error'),
+      }),
+    );
+  }
+
+  removeBlockedChannel(bc: BlockedChannel): void {
+    this.openConfirm(
+      `Unblock "@${bc.handle}"? It can be added or suggested again.`,
+      false,
+      () => this.api.removeBlockedChannel(bc.id).subscribe({
+        next: (resp) => {
+          this.showToast(resp.message, 'success');
+          this.loadBlockedChannels();
+        },
+        error: () => this.showToast(`Failed to unblock "@${bc.handle}".`, 'error'),
       }),
     );
   }

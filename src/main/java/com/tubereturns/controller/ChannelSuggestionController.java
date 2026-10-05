@@ -7,6 +7,7 @@ import com.tubereturns.repository.ChannelRepository;
 import com.tubereturns.repository.ChannelSuggestionRepository;
 import com.tubereturns.repository.ChannelSuggestionSubscriberRepository;
 import com.tubereturns.repository.UserRepository;
+import com.tubereturns.service.BlockedChannelService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.YouTubeDiscoveryService;
@@ -40,6 +41,7 @@ public class ChannelSuggestionController {
     private final ChannelNotificationService channelNotificationService;
     private final YouTubeDiscoveryService discoveryService;
     private final PipelineSchedulerService scheduler;
+    private final BlockedChannelService blockedChannelService;
 
     @PostMapping("/api/channel-suggestions")
     @Operation(summary = "Suggest a channel for tracking")
@@ -54,6 +56,9 @@ public class ChannelSuggestionController {
             Authentication authentication) {
         if (channelRepository.findByHandle(handle).isPresent()) {
             return ResponseEntity.badRequest().body(Map.of("message", "This channel is already being tracked."));
+        }
+        if (blockedChannelService.isBlocked(handle, null)) {
+            return ResponseEntity.badRequest().body(Map.of("message", BlockedChannelService.BLOCKED_MESSAGE));
         }
         var user = userRepository.findByEmail(authentication.getName()).orElse(null);
         if (user != null && subscriberRepository.existsByHandleAndUserId(handle, user.getId())) {
@@ -151,6 +156,9 @@ public class ChannelSuggestionController {
     @PostMapping("/api/admin/channel-suggestions/{handle}/add")
     @Operation(summary = "Approve and add a suggested channel")
     public ResponseEntity<Void> addSuggestion(@PathVariable String handle) {
+        if (blockedChannelService.isBlocked(handle, null)) {
+            return ResponseEntity.badRequest().build();
+        }
         return suggestionRepository.findById(handle).map(s -> {
             var channel = discoveryService.createOrUpdateChannel(s.getHandle(), s.getChannelName(),
                     s.getChannelUrl(), s.getThumbnailUrl(), s.getDescription(), s.getSubscriberCount(), null);

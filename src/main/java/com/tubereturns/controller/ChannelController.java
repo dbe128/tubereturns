@@ -17,6 +17,7 @@ import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.ChannelRelevanceService;
 import com.tubereturns.service.PickPerformanceService;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.BlockedChannelService;
 import com.tubereturns.service.YouTubeApiService;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.micrometer.core.instrument.Counter;
@@ -57,6 +58,7 @@ public class ChannelController {
     private final PipelineSchedulerService scheduler;
     private final PickPerformanceService pickPerformanceService;
     private final ChannelRelevanceService channelRelevanceService;
+    private final BlockedChannelService blockedChannelService;
     private final MeterRegistry meterRegistry;
 
     @PostConstruct
@@ -196,14 +198,19 @@ public class ChannelController {
     public List<ChannelSearchResultDto> searchChannels(
             @RequestParam String q,
             @RequestParam(defaultValue = "true") boolean filterByKeywords) {
-        return youTubeApiService.searchChannels(q, filterByKeywords);
+        return youTubeApiService.searchChannels(q, filterByKeywords).stream()
+                .filter(result -> !blockedChannelService.isListed(result.handle(), result.channelId()))
+                .toList();
     }
 
     @GetMapping("/resolve")
     @Operation(summary = "Resolve a YouTube channel by handle (1 quota unit)")
     public ResponseEntity<ChannelSearchResultDto> resolveChannel(@RequestParam String handle) {
         ChannelSearchResultDto result = youTubeApiService.resolveChannelByHandle(handle);
-        return result != null ? ResponseEntity.ok(result) : ResponseEntity.notFound().build();
+        if (result == null || blockedChannelService.isListed(result.handle(), result.channelId())) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/assess-relevance")
@@ -228,6 +235,9 @@ public class ChannelController {
             @RequestParam(defaultValue = "false") boolean notifyOnComplete,
             @RequestParam(required = false, defaultValue = "ADMIN") String approvalSource,
             Authentication authentication) {
+        if (blockedChannelService.isBlocked(handle, youtubeChannelId)) {
+            return ResponseEntity.badRequest().body(Map.of("message", BlockedChannelService.BLOCKED_MESSAGE));
+        }
         var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount, youtubeChannelId);
         channel.setApprovalSource(approvalSource);
         channelRepository.save(channel);

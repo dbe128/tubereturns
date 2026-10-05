@@ -7,4 +7,6 @@ import java.util.List;
 
 public interface ChannelSuggestionRepository extends JpaRepository<ChannelSuggestion, String> {
     List<ChannelSuggestion> findByStatusOrderByFirstSuggestedAtDesc(ChannelSuggestion.Status status);
+
+    List<ChannelSuggestion> findByHandleIgnoreCase(String handle);
 }
