@@ -10,11 +10,11 @@ import com.tubereturns.repository.UserRepository;
 import com.tubereturns.service.BlockedChannelService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.PipelineSchedulerService;
+import com.tubereturns.service.SafeImageFetcher;
 import com.tubereturns.service.YouTubeDiscoveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,12 +23,10 @@ import org.springframework.web.bind.annotation.*;
 import com.tubereturns.dto.MyChannelSuggestionDto;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@Slf4j
 @RequiredArgsConstructor
 @RestController
 @Tag(name = "Channel Suggestions", description = "User channel suggestions pending admin review")
@@ -42,6 +40,7 @@ public class ChannelSuggestionController {
     private final YouTubeDiscoveryService discoveryService;
     private final PipelineSchedulerService scheduler;
     private final BlockedChannelService blockedChannelService;
+    private final SafeImageFetcher safeImageFetcher;
 
     @PostMapping("/api/channel-suggestions")
     @Operation(summary = "Suggest a channel for tracking")
@@ -65,11 +64,12 @@ public class ChannelSuggestionController {
             return ResponseEntity.badRequest().body(Map.of("message", "You already suggested this channel."));
         }
         ChannelSuggestion suggestion = suggestionRepository.findById(handle).orElseGet(() -> {
-            byte[] thumbnailData = downloadBytes(thumbnailUrl);
+            SafeImageFetcher.FetchedImage thumbnail = safeImageFetcher.fetch(thumbnailUrl);
             return suggestionRepository.save(new ChannelSuggestion(
                     handle, channelName, channelUrl,
                     thumbnailUrl.isBlank() ? null : thumbnailUrl,
-                    thumbnailData, thumbnailData != null ? "image/jpeg" : null,
+                    thumbnail != null ? thumbnail.data() : null,
+                    thumbnail != null ? thumbnail.contentType() : null,
                     description.isBlank() ? null : description, subscriberCount));
         });
         if (suggestion.getStatus() != ChannelSuggestion.Status.PENDING) {
@@ -201,15 +201,5 @@ public class ChannelSuggestionController {
         return new MyChannelSuggestionDto(
                 s.getHandle(), s.getChannelName(), s.getChannelUrl(), s.getDescription(),
                 s.getSubscriberCount(), sub.isNotifyOnComplete(), sub.getSubscribedAt(), s.getStatus().name());
-    }
-
-    private byte[] downloadBytes(String url) {
-        if (url == null || url.isBlank()) { return null; }
-        try {
-            return URI.create(url).toURL().openStream().readAllBytes();
-        } catch (Exception e) {
-            log.warn("Failed to download suggestion thumbnail: {}", e.getMessage());
-            return null;
-        }
     }
 }

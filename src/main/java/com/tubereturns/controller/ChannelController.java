@@ -27,6 +27,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/channels")
@@ -233,11 +235,25 @@ public class ChannelController {
             @RequestParam(required = false) Long subscriberCount,
             @RequestParam(required = false, defaultValue = "") String youtubeChannelId,
             @RequestParam(defaultValue = "false") boolean notifyOnComplete,
-            @RequestParam(required = false, defaultValue = "ADMIN") String approvalSource,
             Authentication authentication) {
         if (blockedChannelService.isBlocked(handle, youtubeChannelId)) {
             return ResponseEntity.badRequest().body(Map.of("message", BlockedChannelService.BLOCKED_MESSAGE));
         }
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (!isAdmin) {
+            try {
+                if (!channelRelevanceService.assess(channelName, handle).passed()) {
+                    return ResponseEntity.badRequest().body(Map.of("message",
+                            "This channel does not qualify as a stock-picking channel."));
+                }
+            } catch (Exception e) {
+                log.warn("Eligibility check failed for @{}: {}", handle, e.getMessage());
+                return ResponseEntity.badRequest().body(Map.of("message",
+                        "Could not verify channel eligibility. Please try again."));
+            }
+        }
+        String approvalSource = isAdmin ? "ADMIN" : "AUTO";
         var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount, youtubeChannelId);
         channel.setApprovalSource(approvalSource);
         channelRepository.save(channel);

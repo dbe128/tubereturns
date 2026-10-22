@@ -14,12 +14,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
@@ -36,9 +30,7 @@ public class YouTubeDiscoveryService {
     private final YouTubeApiService youTubeApiService;
     private final PipelineStatusRegistry registry;
     private final TranscriptDownloadService transcriptDownloadService;
-    private final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
+    private final SafeImageFetcher safeImageFetcher;
 
     private final ExecutorService discoveryExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "discovery-worker");
@@ -249,19 +241,10 @@ public class YouTubeDiscoveryService {
     }
 
     private void downloadThumbnail(String url, Channel channel) {
-        try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("User-Agent", "Mozilla/5.0")
-                    .timeout(Duration.ofSeconds(30))
-                    .GET()
-                    .build();
-            HttpResponse<byte[]> response = httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray());
-            channel.setThumbnailData(response.body());
-            channel.setThumbnailContentType(
-                    response.headers().firstValue("Content-Type").orElse("image/jpeg"));
-        } catch (IOException | InterruptedException e) {
-            log.warn("Failed to download thumbnail from {}: {}", url, e.getMessage());
+        SafeImageFetcher.FetchedImage thumbnail = safeImageFetcher.fetch(url);
+        if (thumbnail != null) {
+            channel.setThumbnailData(thumbnail.data());
+            channel.setThumbnailContentType(thumbnail.contentType());
         }
     }
 

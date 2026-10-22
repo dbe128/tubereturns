@@ -136,6 +136,8 @@ jobs:
           POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
           POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
@@ -146,7 +148,7 @@ jobs:
           host: ${{ secrets.VM_HOST }}
           username: ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
-          envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,RESEND_API_KEY,MAIL_FROM,GH_TOKEN
+          envs: POSTGRES_HOST,POSTGRES_USER,POSTGRES_PASSWORD,JWT_SECRET,ADMIN_EMAIL,ADMIN_PASSWORD,APP_BASE_URL,YOUTUBE_API_KEY,OPENROUTER_API_KEY,RESEND_API_KEY,MAIL_FROM,GH_TOKEN
           script: |
             set -euo pipefail
             export PATH=$PATH:/home/linuxbrew/.linuxbrew/bin
@@ -156,6 +158,8 @@ jobs:
               printf 'POSTGRES_USER="%s"\n'       "$POSTGRES_USER"
               printf 'POSTGRES_PASSWORD="%s"\n'   "$POSTGRES_PASSWORD"
               printf 'JWT_SECRET="%s"\n'          "$JWT_SECRET"
+              printf 'ADMIN_EMAIL="%s"\n'         "$ADMIN_EMAIL"
+              printf 'ADMIN_PASSWORD="%s"\n'      "$ADMIN_PASSWORD"
               printf 'APP_BASE_URL="%s"\n'        "$APP_BASE_URL"
               printf 'YOUTUBE_API_KEY="%s"\n'     "$YOUTUBE_API_KEY"
               printf 'OPENROUTER_API_KEY="%s"\n'  "$OPENROUTER_API_KEY"
