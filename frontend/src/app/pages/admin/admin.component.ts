@@ -41,8 +41,8 @@ interface UnknownStockRow extends UnknownStock {
       </div>
     }
     <div class="bg-gray-100 w-full min-h-screen">
-      <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-10">
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 md:p-8">
+      <div class="max-w-(--breakpoint-2xl) mx-auto px-4 md:px-6 py-10">
+        <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-5 md:p-8">
         <div class="flex items-center justify-between mb-8">
           <h1 class="text-2xl font-black text-gray-900">Admin Dashboard</h1>
           <div class="flex items-center gap-4 text-xs text-gray-400 font-mono">
@@ -61,7 +61,7 @@ interface UnknownStockRow extends UnknownStock {
             (ngModelChange)="adminAddInput.set($event)"
             (keydown.enter)="addAdminChannel()"
             placeholder="Handle or YouTube URL — e.g. @EverythingMoney"
-            class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500"
           />
           <button
             (click)="addAdminChannel()"
@@ -93,9 +93,9 @@ interface UnknownStockRow extends UnknownStock {
                   <a [routerLink]="['/channel', row.handle]" class="flex items-center gap-3 mb-3 group">
                     @if (row.hasThumbnail) {
                       <img [src]="'/api/channels/' + row.handle + '/thumbnail'" [alt]="row.channelName"
-                           class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-700" />
+                           class="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-gray-700" />
                     } @else {
-                      <div class="w-9 h-9 rounded-full bg-gray-700 flex-shrink-0"></div>
+                      <div class="w-9 h-9 rounded-full bg-gray-700 shrink-0"></div>
                     }
                     <span class="font-semibold text-white group-hover:text-green-400 transition-colors truncate">{{ row.channelName }}</span>
                   </a>
@@ -108,18 +108,18 @@ interface UnknownStockRow extends UnknownStock {
                     @if (togglingNotificationFor() === row.handle) {
                       <div class="animate-spin rounded-full h-5 w-5 border-2 border-amber-400 border-t-transparent"></div>
                     } @else if (myNotifiedHandles().has(row.handle)) {
-                      <button (click)="toggleNotification(row)" class="flex-1 py-1.5 bg-amber-900/40 text-amber-400 rounded text-xs font-semibold hover:bg-amber-900/60 transition-colors">Unsubscribe</button>
+                      <button (click)="toggleNotification(row)" class="flex-1 py-1.5 bg-amber-900/40 text-amber-400 rounded-sm text-xs font-semibold hover:bg-amber-900/60 transition-colors">Unsubscribe</button>
                     } @else {
-                      <button (click)="toggleNotification(row)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded text-xs font-semibold hover:text-amber-400 transition-colors">Notify me</button>
+                      <button (click)="toggleNotification(row)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded-sm text-xs font-semibold hover:text-amber-400 transition-colors">Notify me</button>
                     }
-                    <button (click)="reprocessChannel(row.handle, row.channelName)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded text-xs font-semibold hover:text-amber-400 transition-colors">Re-extract</button>
-                    <button (click)="deleteChannel(row.handle, row.channelName)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded text-xs font-semibold hover:text-danger-500 transition-colors">Delete</button>
+                    <button (click)="reprocessChannel(row.handle, row.channelName)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded-sm text-xs font-semibold hover:text-amber-400 transition-colors">Re-extract</button>
+                    <button (click)="deleteChannel(row.handle, row.channelName)" class="flex-1 py-1.5 bg-gray-800 text-gray-300 rounded-sm text-xs font-semibold hover:text-danger-500 transition-colors">Delete</button>
                   </div>
                 </div>
               }
             </div>
             <!-- desktop table -->
-            <div class="hidden md:block bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="hidden md:block bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max">
                 <thead>
                   <tr class="border-b border-gray-700 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -137,9 +137,9 @@ interface UnknownStockRow extends UnknownStock {
                         <a [routerLink]="['/channel', row.handle]" class="flex items-center gap-3 group">
                           @if (row.hasThumbnail) {
                             <img [src]="'/api/channels/' + row.handle + '/thumbnail'" [alt]="row.channelName"
-                                 class="w-9 h-9 rounded-full object-cover flex-shrink-0 ring-2 ring-gray-700" />
+                                 class="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-gray-700" />
                           } @else {
-                            <div class="w-9 h-9 rounded-full bg-gray-700 flex-shrink-0"></div>
+                            <div class="w-9 h-9 rounded-full bg-gray-700 shrink-0"></div>
                           }
                           <span class="font-semibold text-white group-hover:text-green-400 transition-colors">{{ row.channelName }}</span>
                         </a>
@@ -158,7 +158,7 @@ interface UnknownStockRow extends UnknownStock {
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                               </svg>
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                                 Unsubscribe from notification
                               </span>
                             </button>
@@ -167,7 +167,7 @@ interface UnknownStockRow extends UnknownStock {
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                               </svg>
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                                 Notify me when done
                               </span>
                             </button>
@@ -176,7 +176,7 @@ interface UnknownStockRow extends UnknownStock {
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                               Re-extract all picks
                             </span>
                           </button>
@@ -184,7 +184,7 @@ interface UnknownStockRow extends UnknownStock {
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                               Delete channel
                             </span>
                           </button>
@@ -202,7 +202,7 @@ interface UnknownStockRow extends UnknownStock {
           <h2 class="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-4">Pipeline</h2>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             @for (step of pipelineStatus(); track step.step) {
-              <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 p-5">
+              <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 p-5">
                 <div class="flex items-center justify-between mb-4">
                   <h3 class="font-semibold text-white text-sm">{{ step.label }}</h3>
                   @if (step.ytbsdStats ? step.ytbsdStats.running : step.running) {
@@ -355,7 +355,7 @@ interface UnknownStockRow extends UnknownStock {
           @if (notificationsStatus().items.length === 0) {
             <p class="text-xs text-gray-500">No pending notifications.</p>
           } @else {
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -400,7 +400,7 @@ interface UnknownStockRow extends UnknownStock {
                 [ngModel]="unknownStockFilter()"
                 (ngModelChange)="unknownStockFilter.set($event)"
                 placeholder="Filter by ticker or company…"
-                class="w-full sm:w-64 border border-gray-700 bg-gray-800 text-white placeholder-gray-500 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500"
+                class="w-full sm:w-64 border border-gray-700 bg-gray-800 text-white placeholder-gray-500 rounded-lg px-3 py-2 text-xs focus:outline-hidden focus:ring-2 focus:ring-green-500"
               />
             }
           </div>
@@ -419,10 +419,10 @@ interface UnknownStockRow extends UnknownStock {
                       [ngModel]="row.editTicker"
                       (ngModelChange)="updateStockRow(row.id, 'editTicker', $event)"
                       [disabled]="row.saving"
-                      class="w-28 border border-gray-700 bg-gray-800 text-white rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                      class="w-28 border border-gray-700 bg-gray-800 text-white rounded-sm px-2 py-1 font-mono text-xs focus:outline-hidden focus:ring-1 focus:ring-green-500"
                     />
                     <span class="text-gray-400 flex-1 truncate">{{ row.companyName ?? '—' }}</span>
-                    <span class="font-mono text-gray-300 flex-shrink-0">{{ row.pickCount }} picks</span>
+                    <span class="font-mono text-gray-300 shrink-0">{{ row.pickCount }} picks</span>
                   </div>
                   <div class="flex items-center gap-3 mb-3">
                     <span class="text-gray-500">Currency</span>
@@ -431,7 +431,7 @@ interface UnknownStockRow extends UnknownStock {
                       (ngModelChange)="updateStockRow(row.id, 'editCurrency', $event)"
                       [disabled]="row.saving"
                       maxlength="3"
-                      class="w-16 border border-gray-700 bg-gray-800 text-white rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                      class="w-16 border border-gray-700 bg-gray-800 text-white rounded-sm px-2 py-1 font-mono text-xs focus:outline-hidden focus:ring-1 focus:ring-green-500"
                     />
                     <span class="font-mono text-gray-500 ml-auto">{{ row.createdAt | date:'dd MMM yyyy' }}</span>
                   </div>
@@ -439,24 +439,24 @@ interface UnknownStockRow extends UnknownStock {
                     <button
                       (click)="tryTicker(row)"
                       [disabled]="row.saving || (hasChanges && !row.editCurrency)"
-                      class="flex-1 py-1.5 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 disabled:opacity-40 transition-colors"
+                      class="flex-1 py-1.5 bg-primary-600 text-white rounded-sm text-xs font-semibold hover:bg-primary-700 disabled:opacity-40 transition-colors"
                     >{{ hasChanges ? 'Fix' : 'Retry' }}</button>
                     <button
                       (click)="acceptUnknown(row)"
                       [disabled]="row.saving"
-                      class="flex-1 py-1.5 bg-gray-700 text-white rounded text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors"
+                      class="flex-1 py-1.5 bg-gray-700 text-white rounded-sm text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors"
                     >Accept</button>
                     <button
                       (click)="blacklistStock(row)"
                       [disabled]="row.saving"
-                      class="flex-1 py-1.5 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 disabled:opacity-40 transition-colors"
+                      class="flex-1 py-1.5 bg-red-900/60 text-red-400 rounded-sm text-xs font-semibold hover:bg-red-900/80 disabled:opacity-40 transition-colors"
                     >Blacklist</button>
                   </div>
                 </div>
               }
             </div>
             <!-- desktop table -->
-            <div class="hidden md:block bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="hidden md:block bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -477,7 +477,7 @@ interface UnknownStockRow extends UnknownStock {
                           [ngModel]="row.editTicker"
                           (ngModelChange)="updateStockRow(row.id, 'editTicker', $event)"
                           [disabled]="row.saving"
-                          class="w-28 border border-gray-700 bg-gray-800 text-white rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                          class="w-28 border border-gray-700 bg-gray-800 text-white rounded-sm px-2 py-1 font-mono text-xs focus:outline-hidden focus:ring-1 focus:ring-green-500"
                         />
                       </td>
                       <td class="px-4 py-2 text-gray-400">{{ row.companyName ?? '—' }}</td>
@@ -488,7 +488,7 @@ interface UnknownStockRow extends UnknownStock {
                           (ngModelChange)="updateStockRow(row.id, 'editCurrency', $event)"
                           [disabled]="row.saving"
                           maxlength="3"
-                          class="w-16 border border-gray-700 bg-gray-800 text-white rounded px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-green-500"
+                          class="w-16 border border-gray-700 bg-gray-800 text-white rounded-sm px-2 py-1 font-mono text-xs focus:outline-hidden focus:ring-1 focus:ring-green-500"
                         />
                       </td>
                       <td class="px-4 py-2 font-mono text-gray-500">{{ row.createdAt | date:'dd MMM yyyy' }}</td>
@@ -497,17 +497,17 @@ interface UnknownStockRow extends UnknownStock {
                           <button
                             (click)="tryTicker(row)"
                             [disabled]="row.saving || (hasChanges && !row.editCurrency)"
-                            class="px-2 py-1 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 disabled:opacity-40 transition-colors whitespace-nowrap"
+                            class="px-2 py-1 bg-primary-600 text-white rounded-sm text-xs font-semibold hover:bg-primary-700 disabled:opacity-40 transition-colors whitespace-nowrap"
                           >{{ hasChanges ? 'Fix' : 'Retry' }}</button>
                           <button
                             (click)="acceptUnknown(row)"
                             [disabled]="row.saving"
-                            class="px-2 py-1 bg-gray-700 text-white rounded text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors whitespace-nowrap"
+                            class="px-2 py-1 bg-gray-700 text-white rounded-sm text-xs font-semibold hover:bg-gray-600 disabled:opacity-40 transition-colors whitespace-nowrap"
                           >Accept</button>
                           <button
                             (click)="blacklistStock(row)"
                             [disabled]="row.saving"
-                            class="px-2 py-1 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 disabled:opacity-40 transition-colors whitespace-nowrap"
+                            class="px-2 py-1 bg-red-900/60 text-red-400 rounded-sm text-xs font-semibold hover:bg-red-900/80 disabled:opacity-40 transition-colors whitespace-nowrap"
                           >Blacklist</button>
                         </div>
                       </td>
@@ -530,14 +530,14 @@ interface UnknownStockRow extends UnknownStock {
               (keydown.enter)="addBlacklistedTicker()"
               placeholder="Ticker (e.g. FAKE)"
               maxlength="20"
-              class="w-32 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono uppercase"
+              class="w-32 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500 font-mono uppercase"
             />
             <input
               [ngModel]="newBlacklistReason()"
               (ngModelChange)="newBlacklistReason.set($event)"
               (keydown.enter)="addBlacklistedTicker()"
               placeholder="Reason (optional)"
-              class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500"
             />
             <button
               (click)="addBlacklistedTicker()"
@@ -548,7 +548,7 @@ interface UnknownStockRow extends UnknownStock {
           @if (blacklistedTickers().length === 0) {
             <p class="text-xs text-gray-500">No blacklisted tickers.</p>
           } @else {
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -567,7 +567,7 @@ interface UnknownStockRow extends UnknownStock {
                       <td class="px-4 py-2">
                         <button
                           (click)="removeBlacklistedTicker(bt)"
-                          class="px-2 py-1 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 transition-colors"
+                          class="px-2 py-1 bg-red-900/60 text-red-400 rounded-sm text-xs font-semibold hover:bg-red-900/80 transition-colors"
                         >Remove</button>
                       </td>
                     </tr>
@@ -589,7 +589,7 @@ interface UnknownStockRow extends UnknownStock {
               (keydown.enter)="addBlockedChannel()"
               placeholder="@handle or YouTube URL"
               maxlength="255"
-              class="w-64 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 font-mono"
+              class="w-64 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500 font-mono"
             />
             <input
               [ngModel]="newBlockedChannelReason()"
@@ -597,7 +597,7 @@ interface UnknownStockRow extends UnknownStock {
               (keydown.enter)="addBlockedChannel()"
               placeholder="Reason (optional)"
               maxlength="500"
-              class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              class="flex-1 border border-gray-200 bg-gray-50 text-gray-900 placeholder-gray-400 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500"
             />
             <button
               (click)="addBlockedChannel()"
@@ -608,7 +608,7 @@ interface UnknownStockRow extends UnknownStock {
           @if (blockedChannels().length === 0) {
             <p class="text-xs text-gray-500">No blocked channels.</p>
           } @else {
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -629,7 +629,7 @@ interface UnknownStockRow extends UnknownStock {
                       <td class="px-4 py-2">
                         <button
                           (click)="removeBlockedChannel(bc)"
-                          class="px-2 py-1 bg-red-900/60 text-red-400 rounded text-xs font-semibold hover:bg-red-900/80 transition-colors"
+                          class="px-2 py-1 bg-red-900/60 text-red-400 rounded-sm text-xs font-semibold hover:bg-red-900/80 transition-colors"
                         >Remove</button>
                       </td>
                     </tr>
@@ -656,7 +656,7 @@ interface UnknownStockRow extends UnknownStock {
                   </div>
                   <button
                     (click)="featureFlags.set(flag.key, !flag.enabled)"
-                    class="flex-shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                    class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
                     [class]="flag.enabled ? 'bg-green-700 text-white hover:bg-green-600' : 'bg-gray-700 text-gray-400 hover:bg-gray-600'"
                   >{{ flag.enabled ? 'Enabled' : 'Disabled' }}</button>
                 </div>
@@ -678,7 +678,7 @@ interface UnknownStockRow extends UnknownStock {
                     <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
                          [alt]="s.channelName"
                          (error)="hideImgOnError($event)"
-                         class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-700" />
+                         class="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-gray-700" />
                     <div class="min-w-0 flex-1">
                       <p class="font-semibold text-white truncate">{{ s.channelName }}</p>
                       <p class="text-gray-400">&#64;{{ s.handle }}</p>
@@ -691,15 +691,15 @@ interface UnknownStockRow extends UnknownStock {
                   </div>
                   <div class="flex gap-2">
                     <button (click)="approveSuggestion(s)"
-                      class="flex-1 py-1.5 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 transition-colors">Add</button>
+                      class="flex-1 py-1.5 bg-primary-600 text-white rounded-sm text-xs font-semibold hover:bg-primary-700 transition-colors">Add</button>
                     <button (click)="rejectSuggestion(s)"
-                      class="flex-1 py-1.5 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition-colors">Reject</button>
+                      class="flex-1 py-1.5 bg-red-600 text-white rounded-sm text-xs font-semibold hover:bg-red-700 transition-colors">Reject</button>
                   </div>
                 </div>
               }
             </div>
             <!-- desktop table -->
-            <div class="hidden md:block bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="hidden md:block bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -718,7 +718,7 @@ interface UnknownStockRow extends UnknownStock {
                           <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
                                [alt]="s.channelName"
                                (error)="hideImgOnError($event)"
-                               class="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-700" />
+                               class="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-gray-700" />
                           <div>
                             <p class="font-semibold text-white">{{ s.channelName }}</p>
                             <p class="text-gray-400">&#64;{{ s.handle }}</p>
@@ -734,11 +734,11 @@ interface UnknownStockRow extends UnknownStock {
                         <div class="flex gap-2">
                           <button
                             (click)="approveSuggestion(s)"
-                            class="px-2 py-1 bg-primary-600 text-white rounded text-xs font-semibold hover:bg-primary-700 transition-colors"
+                            class="px-2 py-1 bg-primary-600 text-white rounded-sm text-xs font-semibold hover:bg-primary-700 transition-colors"
                           >Add</button>
                           <button
                             (click)="rejectSuggestion(s)"
-                            class="px-2 py-1 bg-red-600 text-white rounded text-xs font-semibold hover:bg-red-700 transition-colors"
+                            class="px-2 py-1 bg-red-600 text-white rounded-sm text-xs font-semibold hover:bg-red-700 transition-colors"
                           >Reject</button>
                         </div>
                       </td>

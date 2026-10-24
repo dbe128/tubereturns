@@ -7,7 +7,7 @@ import { Component, input, ChangeDetectionStrategy } from '@angular/core';
   template: `
     @if (count() == null) {
       <span class="relative group/del inline-block cursor-default text-gray-600">?
-        <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity z-10">
+        <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/del:opacity-100 transition-opacity z-10">
           Not yet scanned
         </span>
       </span>

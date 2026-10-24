@@ -28,20 +28,20 @@ import { AuthService } from '../../services/auth.service';
               <div>
                 <label class="block text-xs font-medium text-gray-400 mb-1">Name <span class="text-red-500">*</span></label>
                 <input [(ngModel)]="name" name="name" required maxlength="100"
-                  class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-600"
+                  class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500 placeholder-gray-600"
                   placeholder="Your name" />
               </div>
               <div>
                 <label class="block text-xs font-medium text-gray-400 mb-1">Email <span class="text-red-500">*</span></label>
                 <input [(ngModel)]="email" name="email" type="email" required maxlength="200"
-                  class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-600"
+                  class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500 placeholder-gray-600"
                   placeholder="you@example.com" />
               </div>
             }
             <div>
               <label class="block text-xs font-medium text-gray-400 mb-1">Message <span class="text-red-500">*</span></label>
               <textarea [(ngModel)]="message" name="message" required rows="8"
-                class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-600 resize-none"
+                class="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-green-500 placeholder-gray-600 resize-none"
                 placeholder="Tell us what's on your mind…"></textarea>
             </div>
             @if (error()) {

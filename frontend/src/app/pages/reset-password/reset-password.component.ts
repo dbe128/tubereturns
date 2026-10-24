@@ -11,7 +11,7 @@ import { ApiService } from '../../api/api.service';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-8 w-full max-w-sm">
         @if (status() === 'success') {
           <div class="text-center py-4">
             <div class="text-3xl mb-3">✓</div>
@@ -40,7 +40,7 @@ import { ApiService } from '../../api/api.service';
               </div>
               <input [ngModel]="password" (ngModelChange)="password = $event; validatePassword()" name="password"
                 [type]="showPasswords() ? 'text' : 'password'" required autocomplete="new-password"
-                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 [class.border-gray-200]="!passwordError()"
                 [class.border-danger-500]="passwordError()" />
               @if (passwordError()) {
@@ -54,7 +54,7 @@ import { ApiService } from '../../api/api.service';
               <label class="block text-xs font-medium text-gray-600 mb-1">Confirm password <span class="text-danger-500">*</span></label>
               <input [ngModel]="confirmPassword" (ngModelChange)="confirmPassword = $event; validateConfirm()" name="confirmPassword"
                 [type]="showPasswords() ? 'text' : 'password'" required autocomplete="new-password"
-                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 [class.border-gray-200]="!confirmError()"
                 [class.border-danger-500]="confirmError()" />
               @if (confirmError()) {

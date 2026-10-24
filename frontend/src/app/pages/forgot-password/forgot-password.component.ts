@@ -11,7 +11,7 @@ import { ApiService } from '../../api/api.service';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-8 w-full max-w-sm">
         @if (submitted()) {
           <div class="text-center py-4">
             <div class="text-7xl mb-4">✉</div>
@@ -27,7 +27,7 @@ import { ApiService } from '../../api/api.service';
             <div>
               <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
               <input [(ngModel)]="email" name="email" type="email" required autofocus autocomplete="email"
-                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
             </div>
 
             @if (error()) {

@@ -1,9 +1,54 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-md: 935px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  --color-primary-50: #f0faf0;
+  --color-primary-100: #d6f0d6;
+  --color-primary-200: #aadcaa;
+  --color-primary-300: #72c272;
+  --color-primary-400: #45a845;
+  --color-primary-500: #2d7a2d;
+  --color-primary-600: #246224;
+  --color-primary-700: #1a4d1a;
+  --color-primary-800: #113811;
+  --color-primary-900: #0a240a;
+
+  --color-brand-red: #cc1a1a;
+  --color-brand-red-dark: #a01414;
+  --color-brand-green: #2d7a2d;
+  --color-brand-green-dark: #1a4d1a;
+
+  --color-danger-50: #fff1f1;
+  --color-danger-100: #ffe0e0;
+  --color-danger-400: #e05050;
+  --color-danger-500: #cc1a1a;
+  --color-danger-600: #a01414;
+
+  --font-sans: Inter, system-ui, sans-serif;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 @layer base {
   body {
     font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
   }
 }

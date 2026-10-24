@@ -10,7 +10,7 @@ import { ApiService } from '../../api/api.service';
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm text-center">
+      <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-8 w-full max-w-sm text-center">
         @if (status() === 'loading') {
           <div class="flex justify-center py-4">
             <div class="animate-spin rounded-full h-8 w-8 border-2 border-primary-500 border-t-transparent"></div>

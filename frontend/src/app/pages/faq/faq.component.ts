@@ -20,7 +20,7 @@ import { Title } from '@angular/platform-browser';
             <div class="py-5">
               <button (click)="item.open = !item.open" class="w-full flex items-center justify-between gap-4 text-left group">
                 <span class="text-sm md:text-base font-semibold text-white group-hover:text-green-400 transition-colors">{{ item.q }}</span>
-                <svg class="w-5 h-5 text-gray-500 flex-shrink-0 transition-transform"
+                <svg class="w-5 h-5 text-gray-500 shrink-0 transition-transform"
                      [class.rotate-180]="item.open"
                      fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />

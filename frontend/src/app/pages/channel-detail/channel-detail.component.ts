@@ -91,18 +91,18 @@ interface IndexedVideo {
       </div>
     } @else {
       <div class="bg-gray-600 w-full min-h-screen">
-      <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-10">
+      <div class="max-w-(--breakpoint-2xl) mx-auto px-4 md:px-6 py-10">
         <a routerLink="/" [queryParams]="{ scrollTo: 'leaderboard' }" class="text-green-400 hover:text-green-300 text-sm font-medium mb-6 inline-block">
           ← Leaderboard
         </a>
 
-        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 p-6 mb-4">
+        <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 p-6 mb-4">
           <div class="flex flex-wrap items-center gap-4">
             @if (channel()!.hasThumbnail) {
               <img
                 [src]="'/api/channels/' + channel()!.handle + '/thumbnail'"
                 [alt]="channel()!.channelName"
-                class="w-14 h-14 rounded-full ring-2 ring-gray-700 flex-shrink-0"
+                class="w-14 h-14 rounded-full ring-2 ring-gray-700 shrink-0"
               />
             }
             <div class="flex-1 min-w-0">
@@ -122,12 +122,12 @@ interface IndexedVideo {
                   }
                 </button>
                 @if (!channel()!.discoveryComplete || channel()!.processedVideos < channel()!.totalVideos) {
-                  <span class="relative group/tip flex-shrink-0">
+                  <span class="relative group/tip shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                       <circle cx="12" cy="12" r="10"/>
                       <polyline points="12 6 12 12 16 14"/>
                     </svg>
-                    <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">Processing</span>
+                    <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">Processing</span>
                   </span>
                 }
               </h1>
@@ -224,7 +224,7 @@ interface IndexedVideo {
         </div>
 
         @if (activeTab() === 'videos' && auth.isAdmin) {
-        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-4 md:px-5 py-4 mb-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-xs px-4 md:px-5 py-4 mb-4">
           <div class="flex items-center justify-between mb-3">
             <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
             @if (filterTranscript() || filterProcessing() || filterPick() || !hideNoPicks()) {
@@ -241,7 +241,7 @@ interface IndexedVideo {
               <select
                 [ngModel]="filterTranscript()"
                 (ngModelChange)="onTranscriptFilterChange($event)"
-                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-green-500"
               >
                 <option value="">All transcript statuses</option>
                 <option value="DOWNLOADING">Downloading</option>
@@ -258,7 +258,7 @@ interface IndexedVideo {
               <select
                 [ngModel]="filterProcessing()"
                 (ngModelChange)="onProcessingFilterChange($event)"
-                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-green-500"
               >
                 <option value="">All pick statuses</option>
                 <option value="EXTRACTED">Extracted</option>
@@ -274,7 +274,7 @@ interface IndexedVideo {
               <select
                 [ngModel]="filterPick()"
                 (ngModelChange)="onTickerFilterChange($event)"
-                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+                class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-green-500"
               >
                 <option value="">All picks</option>
                 @for (ticker of allTickers(); track ticker) {
@@ -289,7 +289,7 @@ interface IndexedVideo {
                   type="checkbox"
                   [ngModel]="hideNoPicks()"
                   (ngModelChange)="onHideNoPicksChange($event)"
-                  class="rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
+                  class="rounded-sm border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
                 />
                 Hide processed without picks
               </label>
@@ -301,7 +301,7 @@ interface IndexedVideo {
                   type="checkbox"
                   [ngModel]="hideUnprocessed()"
                   (ngModelChange)="onHideUnprocessedChange($event)"
-                  class="rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
+                  class="rounded-sm border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
                 />
                 Hide unprocessed
               </label>
@@ -313,7 +313,7 @@ interface IndexedVideo {
                   type="checkbox"
                   [ngModel]="showExcluded()"
                   (ngModelChange)="onShowExcludedChange($event)"
-                  class="rounded border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
+                  class="rounded-sm border-gray-600 bg-gray-800 text-green-500 focus:ring-green-500"
                 />
                 Show excluded
               </label>
@@ -329,7 +329,7 @@ interface IndexedVideo {
           </div>
         </div>
 
-        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
+        <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-hidden">
           <div class="md:hidden divide-y divide-gray-700">
             @if (sorted().length === 0) {
               <div class="px-4 py-12 text-center text-gray-400 text-sm">No videos match the current filters.</div>
@@ -342,7 +342,7 @@ interface IndexedVideo {
                     @if (item.v.buyPicks.length > 0) {
                       <span class="font-mono text-primary-600">{{ item.v.buyPicks.join(', ') }}</span>
                     }
-                    <span class="inline-block px-2 py-0.5 rounded font-medium"
+                    <span class="inline-block px-2 py-0.5 rounded-sm font-medium"
                           [ngClass]="transcriptStyle(item.v.transcriptStatus)">{{ transcriptLabel(item.v.transcriptStatus) }}</span>
                   </div>
                 </div>
@@ -398,13 +398,13 @@ interface IndexedVideo {
                     <td class="px-4 py-3 max-w-0">
                       <div class="relative group/title flex items-center gap-1.5">
                         <span class="text-white block truncate">{{ item.v.title }}</span>
-                        <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
+                        <span class="pointer-events-none absolute bottom-full left-0 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm max-w-sm whitespace-normal opacity-0 group-hover/title:opacity-100 transition-opacity z-50">{{ item.v.title }}</span>
                         @if (item.v.transcriptStatus === 'PENDING' || item.v.transcriptStatus === 'DOWNLOADING' || (item.v.transcriptStatus === 'DOWNLOADED' && item.v.extractionStatus !== 'EXTRACTED')) {
-                          <span class="relative group/tip flex-shrink-0">
+                          <span class="relative group/tip shrink-0">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity z-50">
+                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity z-50">
                               Processing...
                             </span>
                           </span>
@@ -420,7 +420,7 @@ interface IndexedVideo {
                     @if (auth.isAdmin) {
                     <td class="px-4 py-3">
                       <span
-                        class="inline-block px-2 py-0.5 rounded text-xs font-medium select-none"
+                        class="inline-block px-2 py-0.5 rounded-sm text-xs font-medium select-none"
                         [class.cursor-pointer]="item.v.transcriptStatus === 'DOWNLOADED'"
                         [class.cursor-default]="item.v.transcriptStatus !== 'DOWNLOADED'"
                         [ngClass]="transcriptStyle(item.v.transcriptStatus)"
@@ -429,7 +429,7 @@ interface IndexedVideo {
                     </td>
                     <td class="px-4 py-3">
                       <span
-                        class="inline-block px-2 py-0.5 rounded text-xs font-medium"
+                        class="inline-block px-2 py-0.5 rounded-sm text-xs font-medium"
                         [ngClass]="processingStyle(item.v.extractionStatus)"
                       >{{ processingLabel(item.v.extractionStatus) }}</span>
                     </td>
@@ -447,11 +447,11 @@ interface IndexedVideo {
                           @if (!unknownTickers().has(ticker) || auth.isAdmin) {
                           <span class="inline-block whitespace-nowrap">
                             @if (unknownTickers().has(ticker)) {
-                              <span class="relative group/tk inline-block text-gray-400 italic">{{ ticker }}<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">Unresolved ticker</span></span><span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>
+                              <span class="relative group/tk inline-block text-gray-400 italic">{{ ticker }}<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">Unresolved ticker</span></span><span class="relative group/unk inline-block text-yellow-500 ml-0.5 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unknown Stock</span></span>
                             } @else {
                               <span class="relative group/tk inline-block" [class.text-primary-600]="!item.v.excluded" [class.text-gray-400]="item.v.excluded" [class.line-through]="item.v.excluded">{{ ticker }}
                                 @if (tickerMap()[ticker]) {
-                                  <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
+                                  <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tk:opacity-100 transition-opacity z-50">{{ tickerMap()[ticker] }}</span>
                                 }
                               </span>
                             }@if (!last) {, }
@@ -477,7 +477,7 @@ interface IndexedVideo {
                             (click)="handleRedownloadTranscript(item.v)"
                             [disabled]="redownloading() === item.v.videoId"
                             [title]="item.v.transcriptStatus === 'PENDING' ? 'Download transcript' : 'Re-download transcript'"
-                            class="p-1 rounded transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-900/30"
+                            class="p-1 rounded-sm transition-colors text-gray-400 hover:text-blue-400 hover:bg-blue-900/30"
                             [class.opacity-40]="redownloading() === item.v.videoId"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
@@ -502,7 +502,7 @@ interface IndexedVideo {
                           (click)="handleToggleExclusion(item.v)"
                           [disabled]="togglingExclusion() === item.v.videoId"
                           [title]="item.v.excluded ? 'Include in returns' : 'Exclude from returns'"
-                          class="p-1 rounded transition-colors"
+                          class="p-1 rounded-sm transition-colors"
                           [class.text-yellow-600]="!item.v.excluded"
                           [class.hover:bg-yellow-900/30]="!item.v.excluded"
                           [class.text-gray-400]="item.v.excluded"
@@ -551,13 +551,13 @@ interface IndexedVideo {
 
         @if (activeTab() === 'picks') {
         @if (!picksLoading() && !picksError() && picks().length > 0) {
-        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-sm px-4 md:px-5 py-3 mb-4 flex flex-wrap items-center gap-4">
+        <div class="bg-gray-900 border border-gray-700 rounded-xl shadow-xs px-4 md:px-5 py-3 mb-4 flex flex-wrap items-center gap-4">
           <div class="flex flex-col gap-1">
             <label class="text-xs text-gray-500">Ticker</label>
             <select
               [ngModel]="pickTickerFilter()"
               (ngModelChange)="onPickTickerFilterChange($event)"
-              class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500"
+              class="text-sm border border-gray-700 rounded-lg px-3 py-1.5 bg-gray-800 text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-green-500"
             >
               <option value="">All tickers</option>
               @for (ticker of allPickTickers(); track ticker) {
@@ -576,28 +576,28 @@ interface IndexedVideo {
         @if (auth.isAdmin || featureFlags.isEnabled('fastgraphs_banner')) {
         <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
            class="hidden md:flex items-center gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
-          <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+          <div class="shrink-0 bg-white rounded-lg p-1.5">
             <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
           </div>
-          <div class="flex-shrink-0 text-2xl font-black text-white">FASTgraphs</div>
+          <div class="shrink-0 text-2xl font-black text-white">FASTgraphs</div>
           <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Dig deeper into these picks — <span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400 select-all cursor-text" (click)="$event.preventDefault(); $event.stopPropagation()">AFFILIATE25</span>.</div>
-          <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
+          <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
         </a>
         <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
            class="flex md:hidden flex-col gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+              <div class="shrink-0 bg-white rounded-lg p-1.5">
                 <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
               </div>
               <div class="text-2xl font-black text-white">FASTgraphs</div>
             </div>
-            <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
+            <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
           </div>
           <div class="text-sm text-gray-400"><span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400 select-all cursor-text" (click)="$event.preventDefault(); $event.stopPropagation()">AFFILIATE25</span>.</div>
         </a>
         }
-        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
+        <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-hidden">
           @if (picksLoading()) {
             <div class="flex justify-center py-12">
               <div class="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent"></div>
@@ -630,12 +630,12 @@ interface IndexedVideo {
                         }
                       }
                     </div>
-                    <span class="text-xs text-gray-500 flex-shrink-0">{{ pick.videoPublishedAt | date: 'shortDate' }}</span>
+                    <span class="text-xs text-gray-500 shrink-0">{{ pick.videoPublishedAt | date: 'shortDate' }}</span>
                   </div>
                   <div class="flex flex-wrap gap-2 mt-1">
                     @for (col of pickTimeColumns; track col) {
                       @if (alphaForColumn(pick, col) !== null) {
-                        <span class="inline-flex items-center px-2 py-0.5 rounded font-black font-mono text-xs"
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-sm font-black font-mono text-xs"
                               [class]="alphaForColumn(pick, col)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
                           {{ col.toUpperCase() }} {{ formatPickReturn(alphaForColumn(pick, col)) }}
                         </span>
@@ -658,7 +658,7 @@ interface IndexedVideo {
                   <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('1m')">
                     <span class="inline-flex items-center gap-1 justify-end">1M Alpha
                       <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
-                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 month from the video date.</span>
+                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded-sm w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 month from the video date.</span>
                       </span>
                       <span class="ml-1" [class.text-primary-500]="pickSortKey() === '1m'" [class.text-gray-300]="pickSortKey() !== '1m'">{{ pickSortKey() === '1m' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
                     </span>
@@ -666,7 +666,7 @@ interface IndexedVideo {
                   <th class="px-4 py-3 w-32 text-right cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('1y')">
                     <span class="inline-flex items-center gap-1 justify-end">1Y Alpha
                       <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
-                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 year from the video date.</span>
+                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded-sm w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 1 year from the video date.</span>
                       </span>
                       <span class="ml-1" [class.text-primary-500]="pickSortKey() === '1y'" [class.text-gray-300]="pickSortKey() !== '1y'">{{ pickSortKey() === '1y' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
                     </span>
@@ -674,7 +674,7 @@ interface IndexedVideo {
                   <th class="px-4 py-3 w-36 text-right cursor-pointer select-none hover:text-green-400 transition-colors" (click)="togglePickSort('3y')">
                     <span class="inline-flex items-center gap-1 justify-end">3Y Alpha
                       <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal" (click)="$event.stopPropagation()">ⓘ
-                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 3 years from the video date.</span>
+                        <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded-sm w-48 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">Pick return minus S&P 500 return over 3 years from the video date.</span>
                       </span>
                       <span class="ml-1" [class.text-primary-500]="pickSortKey() === '3y'" [class.text-gray-300]="pickSortKey() !== '3y'">{{ pickSortKey() === '3y' ? (pickSortDir() === 'asc' ? '↑' : '↓') : '↕' }}</span>
                     </span>
@@ -703,10 +703,10 @@ interface IndexedVideo {
                           <a [routerLink]="['/stock', pick.tickerSymbol]" class="hover:text-green-400 transition-colors">{{ pick.tickerSymbol }}</a>
                         }
                         @if (pick.unknown) {
-                          <span class="relative group/unk inline-block text-yellow-500 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unresolved ticker — excluded from returns</span></span>
+                          <span class="relative group/unk inline-block text-yellow-500 font-normal cursor-default text-3xl leading-none">⚠<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/unk:opacity-100 transition-opacity z-50">Unresolved ticker — excluded from returns</span></span>
                         }
                         @if (pick.approximatedPrices) {
-                          <span class="relative group/approx inline-block text-blue-400 font-normal cursor-default text-xl leading-none">~<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/approx:opacity-100 transition-opacity z-50">Return estimated using AI-approximated price data{{ pick.corporateAction ? ' · ' + pick.corporateAction : '' }}</span></span>
+                          <span class="relative group/approx inline-block text-blue-400 font-normal cursor-default text-xl leading-none">~<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/approx:opacity-100 transition-opacity z-50">Return estimated using AI-approximated price data{{ pick.corporateAction ? ' · ' + pick.corporateAction : '' }}</span></span>
                         }
                       </span>
                     </td>
@@ -720,7 +720,7 @@ interface IndexedVideo {
                           <span class="relative group/spy inline-block ml-1 cursor-default text-base leading-none"
                                 [class]="alphaForColumn(pick, col)! > 0 ? 'text-green-400' : 'text-red-400'">
                             {{ alphaForColumn(pick, col)! > 0 ? '↑' : '↓' }}
-                            <span class="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/spy:opacity-100 transition-opacity z-50">
+                            <span class="pointer-events-none absolute bottom-full right-0 mb-1.5 px-2 py-1 text-xs font-normal text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/spy:opacity-100 transition-opacity z-50">
                               Pick: {{ formatPickReturn(pickReturnForColumn(pick, col)) }} · S&P 500: {{ formatPickReturn(spyReturnForColumn(pick, col)) }}
                             </span>
                           </span>
@@ -760,23 +760,23 @@ interface IndexedVideo {
       @if (auth.isAdmin || featureFlags.isEnabled('lightyear_banner')) {
       <a href="https://lightyear.com/profile/bal%C3%A0zs" target="_blank" rel="noopener sponsored"
          class="hidden md:flex items-center gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
-        <div class="flex-shrink-0 bg-black rounded-lg p-1.5">
+        <div class="shrink-0 bg-black rounded-lg p-1.5">
           <img src="/lightyear-logo.png" alt="Lightyear" class="w-8 h-8">
         </div>
-        <div class="flex-shrink-0 text-2xl font-black text-white">Lightyear</div>
+        <div class="shrink-0 text-2xl font-black text-white">Lightyear</div>
         <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Start investing commission-free — get <span class="text-green-400">up to $100 bonus</span> when you sign up with my link.</div>
-        <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+        <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
       </a>
       <a href="https://lightyear.com/profile/bal%C3%A0zs" target="_blank" rel="noopener sponsored"
          class="flex md:hidden flex-col gap-3 mt-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="flex-shrink-0 bg-black rounded-lg p-1.5">
+            <div class="shrink-0 bg-black rounded-lg p-1.5">
               <img src="/lightyear-logo.png" alt="Lightyear" class="w-8 h-8">
             </div>
             <div class="text-2xl font-black text-white">Lightyear</div>
           </div>
-          <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+          <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
         </div>
         <div class="text-sm text-gray-400">Start investing commission-free — <span class="text-green-400">up to $100 bonus</span> when you sign up with my link.</div>
       </a>

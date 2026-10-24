@@ -20,7 +20,7 @@ import type { ChannelSearchResult } from '../../api/types';
           <div class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"
                [class]="t.type === 'success' ? 'bg-green-600' : t.type === 'info' ? 'bg-blue-600' : 'bg-red-600'">
             <span class="flex-1">{{ t.message }}</span>
-            <button (click)="dismissToast(t.id)" class="flex-shrink-0 opacity-70 hover:opacity-100 transition-opacity leading-none">&times;</button>
+            <button (click)="dismissToast(t.id)" class="shrink-0 opacity-70 hover:opacity-100 transition-opacity leading-none">&times;</button>
           </div>
         }
       </div>
@@ -29,17 +29,17 @@ import type { ChannelSearchResult } from '../../api/types';
     <header class="bg-gray-100 border-b border-gray-200">
       <div class="px-6 h-[3.33rem] flex items-center justify-between gap-2">
         <div class="flex items-center gap-2 md:gap-4 flex-1 min-w-0">
-          <a routerLink="/" class="flex-shrink-0 -ml-6">
-            <img src="logo.webp" alt="TubeReturns" class="h-9 rounded hidden md:block" />
-            <img src="logo-mobile.webp" alt="TubeReturns" class="h-[38px] rounded md:hidden" />
+          <a routerLink="/" class="shrink-0 -ml-6">
+            <img src="logo.webp" alt="TubeReturns" class="h-9 rounded-sm hidden md:block" />
+            <img src="logo-mobile.webp" alt="TubeReturns" class="h-[38px] rounded-sm md:hidden" />
           </a>
 
-          <div class="relative flex-1 md:w-[26rem] md:flex-none">
-            <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2 gap-2.5 bg-white shadow-sm focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-400 transition-shadow">
+          <div class="relative flex-1 md:w-104 md:flex-none">
+            <div class="flex items-center border border-gray-300 rounded-lg px-3 py-2 gap-2.5 bg-white shadow-xs focus-within:ring-2 focus-within:ring-green-500 focus-within:border-green-400 transition-shadow">
               @if (searching()) {
-                <div class="w-4 h-4 rounded-full border-2 border-green-500 border-t-transparent animate-spin flex-shrink-0"></div>
+                <div class="w-4 h-4 rounded-full border-2 border-green-500 border-t-transparent animate-spin shrink-0"></div>
               } @else {
-                <svg class="w-4 h-4 text-gray-900 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="w-4 h-4 text-gray-900 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
                 </svg>
               }
@@ -48,7 +48,7 @@ import type { ChannelSearchResult } from '../../api/types';
                 (ngModelChange)="onSearchChange($event)"
                 (blur)="hideSearch()"
                 placeholder="Search stock-picking channels…"
-                class="w-full text-sm focus:outline-none bg-transparent text-gray-900 placeholder-gray-500"
+                class="w-full text-sm focus:outline-hidden bg-transparent text-gray-900 placeholder-gray-500"
               />
             </div>
             @if (ytResults().length > 0) {
@@ -65,20 +65,20 @@ import type { ChannelSearchResult } from '../../api/types';
                         <img [src]="result.thumbnailUrl" [alt]="result.channelName"
                              referrerpolicy="no-referrer"
                              (error)="hideImgOnError($event)"
-                             class="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-200" />
+                             class="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-gray-200" />
                       } @else {
-                        <div class="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0"></div>
+                        <div class="w-8 h-8 rounded-full bg-gray-200 shrink-0"></div>
                       }
                       <div class="min-w-0 flex-1">
                         <p class="text-sm font-semibold text-gray-900 truncate">{{ result.channelName }}</p>
                         <p class="text-xs text-gray-500">&#64;{{ result.handle }}</p>
                       </div>
                       @if (addingHandle() === result.handle) {
-                        <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin flex-shrink-0"></div>
+                        <div class="w-4 h-4 rounded-full border-2 border-primary-500 border-t-transparent animate-spin shrink-0"></div>
                       } @else if (inDb) {
-                        <span class="text-xs text-green-600 font-semibold flex-shrink-0">View</span>
+                        <span class="text-xs text-green-600 font-semibold shrink-0">View</span>
                       } @else {
-                        <span class="text-xs text-primary-600 font-semibold flex-shrink-0">Add</span>
+                        <span class="text-xs text-primary-600 font-semibold shrink-0">Add</span>
                       }
                     </button>
                   </li>
@@ -106,13 +106,13 @@ import type { ChannelSearchResult } from '../../api/types';
             }
             @if (auth.isAuthenticated) {
               <div class="relative">
-                <button (click)="toggleUserMenu()" class="focus:outline-none">
+                <button (click)="toggleUserMenu()" class="focus:outline-hidden">
                   @if (auth.user()?.profilePictureUrl) {
                     <img [src]="auth.user()!.profilePictureUrl!" [alt]="auth.user()!.firstName"
                          referrerpolicy="no-referrer"
-                         class="w-8 h-8 rounded-full object-cover ring-1 ring-gray-300 flex-shrink-0 cursor-pointer hover:ring-2 hover:ring-green-500 transition-shadow" />
+                         class="w-8 h-8 rounded-full object-cover ring-1 ring-gray-300 shrink-0 cursor-pointer hover:ring-2 hover:ring-green-500 transition-shadow" />
                   } @else {
-                    <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 cursor-pointer hover:bg-green-700 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-xs font-bold shrink-0 cursor-pointer hover:bg-green-700 transition-colors">
                       {{ userInitials() }}
                     </div>
                   }
@@ -122,9 +122,9 @@ import type { ChannelSearchResult } from '../../api/types';
                     <div class="flex items-center justify-between px-4 py-2.5 gap-3">
                       <span class="text-xs text-gray-600 leading-snug">Notify when my suggested channel is processed</span>
                       <button (click)="toggleNotifyPreference()"
-                        class="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                        class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors"
                         [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'bg-green-600' : 'bg-gray-300'">
-                        <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                        <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform"
                           [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
                       </button>
                     </div>
@@ -178,9 +178,9 @@ import type { ChannelSearchResult } from '../../api/types';
               @if (auth.user()?.profilePictureUrl) {
                 <img [src]="auth.user()!.profilePictureUrl!" [alt]="auth.user()!.firstName"
                      referrerpolicy="no-referrer"
-                     class="w-10 h-10 rounded-full object-cover ring-1 ring-gray-300 flex-shrink-0" />
+                     class="w-10 h-10 rounded-full object-cover ring-1 ring-gray-300 shrink-0" />
               } @else {
-                <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                <div class="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center text-white text-sm font-bold shrink-0">
                   {{ userInitials() }}
                 </div>
               }
@@ -198,9 +198,9 @@ import type { ChannelSearchResult } from '../../api/types';
             <div class="flex items-center justify-between px-3 py-2.5 bg-gray-50 rounded-lg mb-1">
               <span class="text-xs text-gray-600 leading-snug flex-1 mr-3">Notify when my suggested channel is processed</span>
               <button (click)="toggleNotifyPreference()"
-                class="relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors"
+                class="relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors"
                 [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'bg-green-600' : 'bg-gray-300'">
-                <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform"
+                <span class="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform"
                   [class]="(auth.user()?.notifyOnChannelProcessed ?? true) ? 'translate-x-4' : 'translate-x-1'"></span>
               </button>
             </div>

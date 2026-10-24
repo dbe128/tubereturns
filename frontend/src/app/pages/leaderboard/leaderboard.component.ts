@@ -49,7 +49,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
       </div>
     }
     <div class="bg-gray-950 w-full">
-      <div class="max-w-screen-2xl mx-auto px-4 md:px-8 py-10 md:py-14 text-center">
+      <div class="max-w-(--breakpoint-2xl) mx-auto px-4 md:px-8 py-10 md:py-14 text-center">
         <div class="flex items-center justify-center gap-4 mb-10 text-xs font-bold tracking-[0.18em] uppercase">
           <span class="flex items-center gap-1.5 text-green-400">
             <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block"></span>
@@ -111,7 +111,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
       </div>
     </div>
     <div class="bg-gray-600 w-full">
-    <div class="max-w-screen-2xl mx-auto px-4 md:px-6 py-10">
+    <div class="max-w-(--breakpoint-2xl) mx-auto px-4 md:px-6 py-10">
 
       @if (loading()) {
         <div class="flex justify-center py-20">
@@ -173,40 +173,40 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
       @if (auth.isAdmin || featureFlags.isEnabled('ibkr_banner')) {
       <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
          class="hidden md:flex items-center gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
-        <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+        <div class="shrink-0 bg-white rounded-lg p-1.5">
           <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
         </div>
-        <div class="flex-shrink-0 text-2xl font-black text-white">Interactive Brokers</div>
+        <div class="shrink-0 text-2xl font-black text-white">Interactive Brokers</div>
         <div class="flex-1 min-w-0 text-sm text-gray-400 flex items-center gap-1">
           <span class="truncate">Ready to act on what you discover? Get</span>
-          <span class="relative group/tip inline-flex items-center gap-0.5 cursor-default flex-shrink-0">
+          <span class="relative group/tip inline-flex items-center gap-0.5 cursor-default shrink-0">
             <span class="text-green-400">up to $1,000 bonus</span>
             <svg class="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 bg-gray-800 border border-gray-700 text-gray-300 text-xs leading-relaxed rounded-lg px-3 py-2.5 hidden group-hover/tip:block pointer-events-none z-20 shadow-xl font-normal whitespace-normal">
               $1 in IBKR Class A stock for every $300 deposited in the first year.
             </span>
           </span>
-          <span class="flex-shrink-0">on deposits.</span>
+          <span class="shrink-0">on deposits.</span>
         </div>
-        <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+        <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
       </a>
       <a href="https://ibkr.com/referral/balazs702" target="_blank" rel="noopener sponsored"
          class="flex md:hidden flex-col gap-3 mb-6 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+            <div class="shrink-0 bg-white rounded-lg p-1.5">
               <img src="https://www.google.com/s2/favicons?sz=64&domain=interactivebrokers.com" alt="Interactive Brokers" class="w-8 h-8">
             </div>
             <div class="text-2xl font-black text-white">Interactive Brokers</div>
           </div>
-          <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
+          <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Open account →</div>
         </div>
         <div class="text-sm font-semibold text-white">Get <span class="text-green-400">up to $1,000 bonus</span> on deposits.</div>
       </a>
       }
 
       @if (!loading() && !error()) {
-        <div id="leaderboard" class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
+        <div id="leaderboard" class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-hidden">
           <div class="flex flex-wrap items-center justify-between gap-2 px-4 md:px-6 py-4 md:py-5 border-b border-gray-700">
             <div class="flex flex-col gap-0.5">
               <span class="text-sm font-bold tracking-[0.18em] uppercase text-green-500">★ Leaderboard</span>
@@ -215,27 +215,27 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
             <div class="flex items-center gap-1 p-1 bg-gray-800 rounded-lg">
               <button (click)="selectedTimeframe.set('1m')"
                       class="px-2 py-1.5 md:px-4 text-xs font-bold rounded-md transition-colors"
-                      [class]="selectedTimeframe() === '1m' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'">
+                      [class]="selectedTimeframe() === '1m' ? 'bg-green-800 text-white shadow-xs' : 'text-gray-400 hover:text-gray-300'">
                 1M
               </button>
               <button (click)="selectedTimeframe.set('1y')"
                       class="px-2 py-1.5 md:px-4 text-xs font-bold rounded-md transition-colors"
-                      [class]="selectedTimeframe() === '1y' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'">
+                      [class]="selectedTimeframe() === '1y' ? 'bg-green-800 text-white shadow-xs' : 'text-gray-400 hover:text-gray-300'">
                 1Y
               </button>
               <button (click)="selectedTimeframe.set('3y')"
                       class="px-2 py-1.5 md:px-4 text-xs font-bold rounded-md transition-colors"
-                      [class]="selectedTimeframe() === '3y' ? 'bg-green-800 text-white shadow-sm' : 'text-gray-400 hover:text-gray-300'">
+                      [class]="selectedTimeframe() === '3y' ? 'bg-green-800 text-white shadow-xs' : 'text-gray-400 hover:text-gray-300'">
                 3Y
               </button>
             </div>
           </div>
           <div class="md:hidden divide-y divide-gray-700">
             <div class="flex items-center gap-3 px-4 py-2 bg-gray-800 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              <div class="w-7 flex-shrink-0">#</div>
-              <div class="w-9 flex-shrink-0"></div>
+              <div class="w-7 shrink-0">#</div>
+              <div class="w-9 shrink-0"></div>
               <div class="flex-1">Channel</div>
-              <div class="flex-shrink-0">{{ timeframeLabel() }} Alpha</div>
+              <div class="shrink-0">{{ timeframeLabel() }} Alpha</div>
             </div>
             @if (processedChannels().length === 0) {
               <div class="px-4 py-16 text-center text-gray-400 text-sm">No fully processed channels yet.</div>
@@ -245,13 +245,13 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                   [routerLink]="['/channel', channelSlug(row.channelName)]"
                   class="flex items-center gap-3 px-4 py-3 hover:bg-gray-800/60 transition-colors"
                 >
-                  <div class="w-7 text-center flex-shrink-0">
+                  <div class="w-7 text-center shrink-0">
                     @if (i === 0) { <span class="text-lg">🥇</span> }
                     @else if (i === 1) { <span class="text-lg">🥈</span> }
                     @else if (i === 2) { <span class="text-lg">🥉</span> }
                     @else { <span class="text-sm text-gray-400 font-mono">{{ i + 1 }}</span> }
                   </div>
-                  <div class="relative flex-shrink-0">
+                  <div class="relative shrink-0">
                     @if (row.hasThumbnail) {
                       <img [src]="'/api/channels/' + row.handle + '/thumbnail'" [alt]="row.channelName"
                            class="w-9 h-9 rounded-full object-cover ring-2 ring-gray-700" />
@@ -263,14 +263,14 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                     }
                   </div>
                   <span class="flex-1 font-semibold text-white truncate text-sm">{{ row.channelName }}</span>
-                  <app-deleted-count [count]="row.archivarixDeletedCount" size="sm" class="flex-shrink-0" />
+                  <app-deleted-count [count]="row.archivarixDeletedCount" size="sm" class="shrink-0" />
                   @if (scoreForRow(row) !== null) {
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg font-black font-mono text-xs flex-shrink-0"
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-lg font-black font-mono text-xs shrink-0"
                           [class]="scoreForRow(row)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
                       {{ formatScore(scoreForRow(row)!) }}
                     </span>
                   } @else {
-                    <span class="text-gray-400 flex-shrink-0 text-sm">—</span>
+                    <span class="text-gray-400 shrink-0 text-sm">—</span>
                   }
                 </a>
               }
@@ -291,7 +291,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                 <th class="px-3 py-4 text-right w-28">
                   <span class="inline-flex items-center gap-1 justify-end">{{ timeframeLabel() }} Alpha
                     <span class="relative group/tip cursor-default text-gray-300 hover:text-gray-500 normal-case tracking-normal font-normal">ⓘ
-                      <span class="pointer-events-none absolute top-full left-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-56 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
+                      <span class="pointer-events-none absolute top-full left-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded-sm w-56 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10">
                         Average excess return vs. S&amp;P 500 over the selected timeframe. Based on explicit BUY picks, equally weighted.
                       </span>
                     </span>
@@ -303,7 +303,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                 <th class="px-6 py-4 text-right">
                   <span class="relative group/tip cursor-default">
                     # Deleted <span class="text-base">💀</span>
-                    <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded w-64 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10 normal-case tracking-normal font-normal">
+                    <span class="pointer-events-none absolute top-full right-0 mt-2 px-2 py-1.5 text-xs text-white bg-gray-800 rounded-sm w-64 whitespace-normal opacity-0 group-hover/tip:opacity-100 transition-opacity z-10 normal-case tracking-normal font-normal">
                       Deleted videos not reflected in rankings — high count may indicate cherry-picked results.
                     </span>
                   </span>
@@ -346,7 +346,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                           [routerLink]="['/channel', channelSlug(row.channelName)]"
                           class="flex items-center gap-3 group"
                         >
-                          <div class="relative flex-shrink-0">
+                          <div class="relative shrink-0">
                             @if (row.hasThumbnail) {
                               <img
                                 [src]="'/api/channels/' + row.handle + '/thumbnail'"
@@ -385,7 +385,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
-                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                             Re-extract all picks
                           </span>
                         </button>
@@ -396,7 +396,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                          <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                             Delete channel
                           </span>
                         </button>
@@ -426,7 +426,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
         @if (auth.isAuthenticated && !auth.isAdmin && myChannelSuggestions().length > 0) {
           <div class="mt-10">
             <h2 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">My Channel Suggestions</h2>
-            <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-x-auto">
+            <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-x-auto">
               <table class="w-full min-w-max text-xs">
                 <thead class="bg-gray-800 text-gray-500 uppercase tracking-wider">
                   <tr>
@@ -444,7 +444,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                           <img [src]="'/api/channel-suggestions/' + s.handle + '/thumbnail'"
                                [alt]="s.channelName"
                                (error)="hideImgOnError($event)"
-                               class="w-7 h-7 rounded-full object-cover flex-shrink-0 ring-1 ring-gray-700" />
+                               class="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-gray-700" />
                           <div>
                             <p class="font-semibold text-white">{{ s.channelName }}</p>
                             <p class="text-gray-400">&#64;{{ s.handle }}</p>
@@ -471,7 +471,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.64-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
                               </svg>
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                                 Unsubscribe from notification
                               </span>
                             </button>
@@ -483,7 +483,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                               </svg>
-                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                              <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                                 Notify me when added and processed
                               </span>
                             </button>
@@ -495,7 +495,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                               <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
+                            <span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/tip:opacity-100 transition-opacity">
                               Remove suggestion
                             </span>
                           </button>

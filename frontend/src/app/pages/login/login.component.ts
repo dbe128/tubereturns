@@ -21,7 +21,7 @@ type GoogleApi = {
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-8 w-full max-w-sm">
         <h1 class="text-xl font-bold text-gray-900 mb-6">{{ heading }}</h1>
 
         <div id="google-signin-btn" class="w-full min-h-[44px] mb-4"></div>
@@ -36,7 +36,7 @@ type GoogleApi = {
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Email</label>
             <input [(ngModel)]="email" name="email" type="email" required autocomplete="email"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
           <div>
             <div class="flex items-center justify-between mb-1">
@@ -44,7 +44,7 @@ type GoogleApi = {
               <a routerLink="/forgot-password" class="text-xs text-primary-600 hover:underline">Forgot password?</a>
             </div>
             <input [(ngModel)]="password" name="password" type="password" required autocomplete="current-password"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
 
           @if (error()) {
@@ -95,7 +95,7 @@ export class LoginComponent implements AfterViewInit {
       client_id: '869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com',
       callback: (r) => this.handleGoogleCredential(r.credential),
     });
-    google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large', width: btn.offsetWidth || 344 });
+    google.accounts.id.renderButton(btn, { theme: 'outline-solid', size: 'large', width: btn.offsetWidth || 344 });
   }
 
   handleGoogleCredential(credential: string): void {

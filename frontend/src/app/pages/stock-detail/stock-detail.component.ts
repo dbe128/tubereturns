@@ -34,7 +34,7 @@ import { StockDetail, StockPickEntry } from '../../api/types';
               <h1 class="text-2xl md:text-3xl font-black text-white">{{ s.companyName ?? s.tickerSymbol }}</h1>
               <span class="font-mono font-semibold text-green-400 text-lg">{{ s.tickerSymbol }}</span>
               @if (s.currency && s.currency !== 'USD') {
-                <span class="text-xs text-gray-500 border border-gray-700 rounded px-1.5 py-0.5">{{ s.currency }}</span>
+                <span class="text-xs text-gray-500 border border-gray-700 rounded-sm px-1.5 py-0.5">{{ s.currency }}</span>
               }
             </div>
             <p class="text-sm text-gray-400 mt-2">
@@ -46,28 +46,28 @@ import { StockDetail, StockPickEntry } from '../../api/types';
           @if (auth.isAdmin || featureFlags.isEnabled('fastgraphs_banner')) {
           <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
              class="hidden md:flex items-center gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
-            <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+            <div class="shrink-0 bg-white rounded-lg p-1.5">
               <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
             </div>
-            <div class="flex-shrink-0 text-2xl font-black text-white">FASTgraphs</div>
+            <div class="shrink-0 text-2xl font-black text-white">FASTgraphs</div>
             <div class="flex-1 min-w-0 text-sm text-gray-400 truncate">Dig deeper into {{ s.tickerSymbol }} — <span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400 select-all cursor-text" (click)="$event.preventDefault(); $event.stopPropagation()">AFFILIATE25</span>.</div>
-            <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
+            <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
           </a>
           <a href="https://fastgraphs.com/?ref=balazs" target="_blank" rel="noopener sponsored"
              class="flex md:hidden flex-col gap-3 mb-4 bg-gray-900 border border-gray-700 hover:border-green-800 rounded-xl px-5 py-4 transition-colors group">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-3">
-                <div class="flex-shrink-0 bg-white rounded-lg p-1.5">
+                <div class="shrink-0 bg-white rounded-lg p-1.5">
                   <img src="/fastgraphs-logo-square.png" alt="FASTgraphs" class="w-8 h-8">
                 </div>
                 <div class="text-2xl font-black text-white">FASTgraphs</div>
               </div>
-              <div class="flex-shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
+              <div class="shrink-0 bg-green-800 group-hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors whitespace-nowrap wiggle">Analyze →</div>
             </div>
             <div class="text-sm text-gray-400"><span class="text-green-400">25% off</span> with code <span class="font-mono text-blue-400 select-all cursor-text" (click)="$event.preventDefault(); $event.stopPropagation()">AFFILIATE25</span>.</div>
           </a>
           }
-          <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden">
+          <div class="bg-gray-900 rounded-xl shadow-xs border border-gray-700 overflow-hidden">
             @if (s.picks.length === 0) {
               <div class="p-12 text-center text-gray-400 text-sm">No picks recorded for this stock yet.</div>
             } @else {
@@ -76,7 +76,7 @@ import { StockDetail, StockPickEntry } from '../../api/types';
                   <div class="px-4 py-3">
                     <div class="flex items-start justify-between gap-2 mb-1">
                       <a [routerLink]="['/channel', pick.channelSlug]" class="text-sm font-semibold text-white hover:text-green-400 transition-colors truncate">{{ pick.channelName }}</a>
-                      <span class="text-xs text-gray-500 flex-shrink-0">{{ pick.videoPublishedAt | date: 'shortDate' }}</span>
+                      <span class="text-xs text-gray-500 shrink-0">{{ pick.videoPublishedAt | date: 'shortDate' }}</span>
                     </div>
                     @if (pick.videoTitle) {
                       <span class="block text-xs text-gray-400 truncate mb-2">{{ pick.videoTitle }}</span>
@@ -84,7 +84,7 @@ import { StockDetail, StockPickEntry } from '../../api/types';
                     <div class="flex flex-wrap gap-2">
                       @for (col of timeColumns; track col) {
                         @if (alphaFor(pick, col) !== null) {
-                          <span class="inline-flex items-center px-2 py-0.5 rounded font-black font-mono text-xs"
+                          <span class="inline-flex items-center px-2 py-0.5 rounded-sm font-black font-mono text-xs"
                                 [class]="alphaFor(pick, col)! >= 0 ? 'bg-green-900/70 text-green-400' : 'bg-red-900/70 text-red-400'">
                             {{ col.toUpperCase() }} {{ formatPct(alphaFor(pick, col)) }}
                           </span>
@@ -116,7 +116,7 @@ import { StockDetail, StockPickEntry } from '../../api/types';
                           <div class="flex items-center gap-1 min-w-0">
                             <a [routerLink]="['/channel', pick.channelSlug]" class="text-white font-medium hover:text-green-400 transition-colors truncate">{{ pick.channelName }}</a>
                             @if (pick.approximatedPrices) {
-                              <span class="relative group/approx inline-block flex-shrink-0 text-blue-400 font-normal cursor-default text-xl leading-none">~<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded whitespace-nowrap opacity-0 group-hover/approx:opacity-100 transition-opacity z-50">Return estimated using AI-approximated price data</span></span>
+                              <span class="relative group/approx inline-block shrink-0 text-blue-400 font-normal cursor-default text-xl leading-none">~<span class="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 text-xs text-white bg-gray-800 rounded-sm whitespace-nowrap opacity-0 group-hover/approx:opacity-100 transition-opacity z-50">Return estimated using AI-approximated price data</span></span>
                             }
                           </div>
                         </td>

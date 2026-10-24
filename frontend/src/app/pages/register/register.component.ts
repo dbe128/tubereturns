@@ -21,7 +21,7 @@ type GoogleApi = {
   changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 w-full max-w-sm">
+      <div class="bg-white rounded-2xl shadow-xs border border-gray-200 p-6 sm:p-8 w-full max-w-sm">
         @if (registered()) {
           <div class="text-center py-4">
             <div class="text-7xl mb-4">✉</div>
@@ -46,13 +46,13 @@ type GoogleApi = {
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">First name <span class="text-danger-500">*</span></label>
             <input [(ngModel)]="firstName" name="firstName" type="text" required autocomplete="given-name"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
 
           <div>
             <label class="block text-xs font-medium text-gray-600 mb-1">Email <span class="text-danger-500">*</span></label>
             <input [(ngModel)]="email" name="email" type="email" required autocomplete="email"
-              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+              class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500" />
           </div>
 
           <div>
@@ -76,7 +76,7 @@ type GoogleApi = {
             </div>
             <input [ngModel]="password" (ngModelChange)="password = $event; validatePassword()" name="password"
               [type]="showPasswords() ? 'text' : 'password'" required autocomplete="new-password"
-              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500"
               [class.border-gray-200]="!passwordError()"
               [class.border-danger-500]="passwordError()" />
             @if (passwordError()) {
@@ -91,7 +91,7 @@ type GoogleApi = {
             <div class="relative">
               <input [ngModel]="confirmPassword" (ngModelChange)="confirmPassword = $event; validateConfirm()" name="confirmPassword"
                 [type]="showPasswords() ? 'text' : 'password'" required autocomplete="new-password"
-                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary-500"
                 [class.border-gray-200]="!confirmError()"
                 [class.border-danger-500]="confirmError()" />
             </div>
@@ -144,7 +144,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       client_id: '869730842488-j309dpfmbclhi6hrg2eavisn75i7fbt6.apps.googleusercontent.com',
       callback: (r) => this.handleGoogleCredential(r.credential),
     });
-    google.accounts.id.renderButton(btn, { theme: 'outline', size: 'large', width: btn.offsetWidth || 344 });
+    google.accounts.id.renderButton(btn, { theme: 'outline-solid', size: 'large', width: btn.offsetWidth || 344 });
   }
 
   handleGoogleCredential(credential: string): void {
