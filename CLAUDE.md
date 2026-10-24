@@ -21,12 +21,7 @@ When asked to push: check whether any new frontend pages were added since the la
 - `frontend/src/index.html` — JSON-LD structured data updated if the page adds significant new content
 New pages to check for: routes added to `app.routes.ts` that have a standalone path (not `:param` routes).
 
-For the companion monitoring repo at `~/IdeaProjects/tubereturns-monitoring`, commits and pushes may be made autonomously whenever monitoring-related changes are ready.
-
-### Grafana dashboard conventions
-- **Never hardcode a fixed time window in stat panels.** Stat panels that count or sum events (e.g. `increase(...)`) must use `[$__range]` so the value reflects the dashboard's selected time range. Titles must not contain a hardcoded duration (e.g. say "API Calls (window)" not "API Calls (1h)").
-- Timeseries panels that compute a rate for display (e.g. `rate(...[5m])`) may keep a fixed sampling interval — `[5m]` is appropriate there.
-- **noValue must always be set to `"0"`** on every panel so zero is shown instead of "No data" when no events have occurred.
+For the companion monitoring repo at `~/IdeaProjects/tubereturns-monitoring`, commits and pushes may be made autonomously whenever monitoring-related changes are ready. Grafana panel conventions live in the `grafana-dashboards` skill.
 
 ---
 
@@ -106,20 +101,11 @@ YouTubeDiscoveryService → TranscriptDownloadService → StockPickExtractionSer
 
 `PipelineSchedulerService` owns the cron schedule and manual trigger logic for all three steps. `PipelineStatusRegistry` is an in-memory store of per-step running state, last run times, and fatal errors — it is the single source of truth polled by the admin dashboard.
 
-**Discovery** (`YouTubeDiscoveryService`): fetches video metadata from the YouTube API for each active channel, persists `Video` rows. Skips channels whose handle starts with `mock-`. Sets `channel.discoveryComplete = true` when done.
-
-**Transcript** (`TranscriptDownloadService`): runs `ytbsd.py` (a Python proxy-rotation script) as a subprocess via `ProcessBuilder`. Videos are batched; the batch queue runs on a single background thread (`ytbsd-worker`). ytbsd writes `.md` files to `transcripts-dir`; the service reads them, extracts the text under `### Transcript`, stores it on the `Video`, then immediately enqueues the video for extraction. Key config: `tubereturns.transcript.ytbsd-path` and `tubereturns.transcript.transcripts-dir`.
-
-**Extraction** (`StockPickExtractionService`): sends transcript text to the AI model (OpenRouter, model `openrouter/owl-alpha`) and parses the JSON response into `Pick` rows. Runs on a single background thread (`extraction-worker`). Sets `video.processingStatus = COMPLETED` when done.
-
 ### Dev profile differences
 - Uses H2 in-memory DB (no PostgreSQL needed)
 - Mock channels loaded from `classpath:mock-channels/*.json` via `MockChannelDataSeedService` — these are seeded with `discoveryComplete = true` and all videos as `COMPLETED`
 - `tubereturns.transcript.ytbsd-path = scripts/ytbsd.py` (local path)
 - AI is always enabled; no flag to disable it
-
-### Prod channel seed
-`src/main/resources/channels-config.yml` lists channels with `handle`, `channelName`, and `enabled`. `ChannelInitializationService` seeds them on startup.
 
 ### Frontend architecture
 - `ApiService` (`frontend/src/app/api/api.service.ts`) — the **only** place HTTP calls are made; all responses validated with Zod
@@ -128,13 +114,6 @@ YouTubeDiscoveryService → TranscriptDownloadService → StockPickExtractionSer
 - `AuthGuard` — protects routes that require login
 - `BackendRecoveryService` — polls `/api/admin/health` and retries failed loads
 - Pages use `signal<T>()` and `forkJoin` for parallel data loading; no RxJS subjects except `searchSubject` in leaderboard
-
-### Adding a database migration
-Create a new file `src/main/resources/db/changelog/NNN-description.sql` and add an `<include>` entry in **both**:
-- `db.changelog-master.xml` (PostgreSQL / prod)
-- `db.changelog-h2-master.xml` (H2 / dev) — if the SQL is H2-incompatible, add an inline `<changeSet>` block instead of an `<include>`
-
-Use standard PostgreSQL DDL; Liquibase runs it on startup. **Never modify or delete existing migration files or changesets** — they may already be applied to production.
 
 ### Multi-currency returns (USD-denominated)
 Stock prices are stored in their local currency (the `currency` column on `Stock`). Portfolio returns are shown in USD by converting each price point via historical exchange rates.
@@ -145,17 +124,6 @@ Stock prices are stored in their local currency (the `currency` column on `Stock
 - When a new non-USD currency appears during extraction, `ExchangeRateService.ensureCurrencyHistoricalRates(code)` is called to fetch historical rates immediately
 - `PortfolioController.buildPortfolioPrices` applies the floor-entry FX rate to each local-currency price before computing % returns; USD stocks (null or "USD" currency) are unaffected (rate = 1.0)
 - Yahoo Finance FX ticker format: `<CODE>USD=X` (e.g., `EURUSD=X`, `GBPUSD=X`)
-
-### Notification flow
-`ChannelProcessingNotification` rows are created when a user subscribes (via `POST /api/channels/{handle}/notify`). `ChannelNotificationService` checks every 120 s: if `channel.discoveryComplete` is true and no videos have PENDING/DOWNLOADING transcript or PENDING/PROCESSING extraction status, it sends the email and marks the row with `sentAt`.
-
----
-
-### Caching
-
-Two Caffeine caches, both 30-minute TTL, max size 1:
-- `allChannels` — full channel list (evicted on any channel add/update/delete via `ChannelListService.evictAllChannels()`)
-- `siteStats` — site-wide stats for the stats endpoint
 
 ---
 
