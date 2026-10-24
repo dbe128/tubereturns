@@ -1,12 +1,12 @@
 plugins {
     java
-    id("org.springframework.boot") version "4.1.1"
+    id("org.springframework.boot") version "4.1.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("org.springdoc.openapi-gradle-plugin") version "1.9.0"
 }
 
 group = "com.tubereturns"
-version = "0.6.12"
+version = "0.6.13"
 
 java {
     toolchain {
@@ -40,9 +40,9 @@ dependencies {
     developmentOnly("org.springframework.boot:spring-boot-h2console")
     implementation("org.springframework.boot:spring-boot-starter-liquibase")
 
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
 
-    implementation("com.google.apis:google-api-services-youtube:v3-rev20251217-2.0.0")
+    implementation("com.google.apis:google-api-services-youtube:v3-rev20261019-2.0.0")
     implementation("com.google.http-client:google-http-client-gson:2.2.0")
 
     implementation("com.fasterxml.jackson.core:jackson-databind")
@@ -53,7 +53,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
-    implementation("com.microsoft.playwright:playwright:1.63.0")
+    implementation("com.microsoft.playwright:playwright:1.64.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
