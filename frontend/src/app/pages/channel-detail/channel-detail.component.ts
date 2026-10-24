@@ -6,6 +6,7 @@ import {
   OnInit,
   OnDestroy,
   Injector,
+  ChangeDetectionStrategy
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
@@ -73,6 +74,7 @@ interface IndexedVideo {
     }
     .wiggle { animation: wiggle 0.7s ease-in-out infinite; display: inline-block; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (loading()) {
       <div class="flex justify-center py-20">

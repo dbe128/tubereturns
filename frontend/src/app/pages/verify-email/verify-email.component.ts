@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../api/api.service';
@@ -7,6 +7,7 @@ import { ApiService } from '../../api/api.service';
   selector: 'app-verify-email',
   standalone: true,
   imports: [CommonModule, RouterLink],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-800 flex items-center justify-center px-4">
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 w-full max-w-sm text-center">

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet, RouterLink } from '@angular/router';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { FeatureFlagService } from './services/feature-flag.service';
@@ -7,6 +7,7 @@ import { FeatureFlagService } from './services/feature-flag.service';
   selector: 'app-root',
   standalone: true,
   imports: [RouterOutlet, NavbarComponent, RouterLink],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-950 flex flex-col">
       <app-navbar class="sticky top-0 z-10 block" />

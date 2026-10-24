@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, OnDestroy, signal, computed, effect, untracked, HostListener } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, effect, untracked, HostListener, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Subject, Subscription, of } from 'rxjs';
@@ -12,6 +12,7 @@ import type { ChannelSearchResult } from '../../api/types';
   selector: 'app-navbar',
   standalone: true,
   imports: [RouterLink, FormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (toasts().length > 0) {
       <div class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">

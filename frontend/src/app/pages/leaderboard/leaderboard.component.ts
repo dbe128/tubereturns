@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { DeletedCountComponent } from '../../components/deleted-count/deleted-count.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +22,7 @@ import type { Channel, MyChannelSuggestion, TrendingPick } from '../../api/types
     }
     .wiggle { animation: wiggle 0.7s ease-in-out infinite; display: inline-block; }
   `],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     @if (toast()) {
       <div class="fixed top-6 right-6 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white"

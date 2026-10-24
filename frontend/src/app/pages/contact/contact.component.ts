@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../api/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -7,6 +7,7 @@ import { AuthService } from '../../services/auth.service';
   selector: 'app-contact',
   standalone: true,
   imports: [FormsModule],
+  changeDetection: ChangeDetectionStrategy.Eager,
   template: `
     <div class="min-h-screen bg-gray-950 flex items-start justify-center px-4 py-16 md:py-24">
       <div class="w-full max-w-lg">
