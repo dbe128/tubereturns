@@ -1,6 +1,7 @@
 package com.tubereturns.service;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -10,6 +11,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.List;
 import java.util.Locale;
 
 @Slf4j
@@ -19,6 +21,9 @@ public class SafeImageFetcher {
     public record FetchedImage(byte[] data, String contentType) {}
 
     private static final long MAX_BYTES = 5L * 1024 * 1024;
+
+    @Value("${tubereturns.youtube.thumbnail-hosts}")
+    private List<String> allowedHosts;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
@@ -37,12 +42,16 @@ public class SafeImageFetcher {
             return null;
         }
         String scheme = uri.getScheme();
-        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+        if (scheme == null || !scheme.equalsIgnoreCase("https")) {
             log.warn("Rejected image URL with disallowed scheme: {}", scheme);
             return null;
         }
         String host = uri.getHost();
-        if (host == null || host.isBlank() || !isPublicHost(host)) {
+        if (host == null || !allowedHosts.contains(host.toLowerCase(Locale.ROOT))) {
+            log.warn("Rejected image URL with host outside the allowlist: {}", host);
+            return null;
+        }
+        if (!isPublicHost(host)) {
             log.warn("Rejected image URL with non-public or missing host");
             return null;
         }
