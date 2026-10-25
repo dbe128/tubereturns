@@ -1,7 +1,7 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +19,7 @@ public class StockPriceService {
     private static final HttpClient client = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
-    private static final ObjectMapper mapper = new ObjectMapper();
+    private static final JsonMapper mapper = JsonMapper.shared();
 
     private static final Map<String, Double> cache = new ConcurrentHashMap<>();
 

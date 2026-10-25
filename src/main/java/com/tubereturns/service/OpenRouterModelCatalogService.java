@@ -1,7 +1,7 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -85,15 +85,15 @@ public class OpenRouterModelCatalogService {
         long now = Instant.now().getEpochSecond();
         Map<String, CatalogModel> eligible = new LinkedHashMap<>();
         StreamSupport.stream(data.spliterator(), false)
-                .filter(m -> isFree(m.path("id").asText()))
-                .filter(m -> m.path("context_length").asLong() >= minContextTokens)
+                .filter(m -> isFree(m.path("id").asString()))
+                .filter(m -> m.path("context_length").asLong(0) >= minContextTokens)
                 .filter(m -> outputsTextOnly(m.path("architecture").path("output_modalities")))
-                .filter(m -> excluded.stream().noneMatch(k -> m.path("id").asText().contains(k)))
+                .filter(m -> excluded.stream().noneMatch(k -> m.path("id").asString().contains(k)))
                 .filter(m -> !isExpired(m.path("expiration_date"), now))
-                .forEach(m -> eligible.put(m.path("id").asText(), new CatalogModel(
-                        m.path("id").asText(),
+                .forEach(m -> eligible.put(m.path("id").asString(), new CatalogModel(
+                        m.path("id").asString(),
                         m.path("benchmarks").path("artificial_analysis").path("intelligence_index").asDouble(0),
-                        m.path("created").asLong())));
+                        m.path("created").asLong(0))));
         return eligible;
     }
 
@@ -108,17 +108,17 @@ public class OpenRouterModelCatalogService {
     }
 
     private boolean outputsTextOnly(JsonNode outputModalities) {
-        return outputModalities.size() == 1 && outputModalities.get(0).asText().equals("text");
+        return outputModalities.size() == 1 && outputModalities.get(0).asString().equals("text");
     }
 
     private boolean isExpired(JsonNode expirationDate, long now) {
-        if (expirationDate.isNull() || expirationDate.isMissingNode() || expirationDate.asText().isBlank()) {
+        if (expirationDate.isNull() || expirationDate.isMissingNode() || expirationDate.asString().isBlank()) {
             return false;
         }
         try {
-            return Instant.parse(expirationDate.asText().length() == 10
-                    ? expirationDate.asText() + "T00:00:00Z"
-                    : expirationDate.asText()).getEpochSecond() <= now;
+            return Instant.parse(expirationDate.asString().length() == 10
+                    ? expirationDate.asString() + "T00:00:00Z"
+                    : expirationDate.asString()).getEpochSecond() <= now;
         } catch (Exception e) {
             return false;
         }

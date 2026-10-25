@@ -1,11 +1,13 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -39,9 +41,11 @@ public class MockChannelProvider {
         List<MockChannelData> result = new ArrayList<>();
         for (Resource resource : resources) {
             try {
-                result.add(mapper.readValue(resource.getInputStream(), MockChannelData.class));
+                result.add(mapper.readerFor(MockChannelData.class)
+                        .without(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+                        .readValue(resource.getInputStream()));
                 log.info("Loaded mock channel: {}", resource.getFilename());
-            } catch (IOException e) {
+            } catch (IOException | JacksonException e) {
                 log.error("Failed to parse mock channel {}: {}", resource.getFilename(), e.getMessage());
             }
         }

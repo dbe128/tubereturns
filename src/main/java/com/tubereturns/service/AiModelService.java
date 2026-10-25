@@ -1,7 +1,8 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
@@ -198,7 +199,7 @@ public class AiModelService {
                         .retrieve()
                         .body(String.class);
                 JsonNode root = objectMapper.readTree(response);
-                String text = root.path("choices").get(0).path("message").path("content").asText().strip();
+                String text = root.path("choices").get(0).path("message").path("content").asString().strip();
                 String digits = text.replaceAll("[^0-9]", "");
                 return digits.isEmpty() ? 5 : Math.min(Integer.parseInt(digits.substring(0, 1)), 10);
             } catch (Exception e) {
@@ -235,7 +236,7 @@ public class AiModelService {
                         .retrieve()
                         .body(String.class);
                 JsonNode root = objectMapper.readTree(response);
-                String text = root.path("choices").get(0).path("message").path("content").asText().strip();
+                String text = root.path("choices").get(0).path("message").path("content").asString().strip();
                 log.info("callRaw: preferred model '{}' succeeded", preferredModel);
                 return stripJsonFences(text);
             } catch (Exception e) {
@@ -267,7 +268,7 @@ public class AiModelService {
                         .retrieve()
                         .body(String.class);
                 JsonNode root = objectMapper.readTree(response);
-                String text = root.path("choices").get(0).path("message").path("content").asText().strip();
+                String text = root.path("choices").get(0).path("message").path("content").asString().strip();
                 return stripJsonFences(text);
             } catch (Exception e) {
                 log.warn("callRaw failed with model {} (attempt {}/{}): {}", model, attempt + 1, maxAttempts, e.getMessage());
@@ -479,7 +480,7 @@ public class AiModelService {
                     log.warn("OpenRouter returned unparseable response with model {}: {}", model, response.strip());
                     throw new BadResponseException(model);
                 }
-                String actualModel = root.path("model").asText(model);
+                String actualModel = root.path("model").asString(model);
                 log.info("OpenRouter used model: {} — call took {}ms", actualModel, lastCallDurationMs);
                 meterRegistry.timer("tubereturns.ai.call", "model", actualModel)
                               .record(java.time.Duration.ofMillis(lastCallDurationMs));
@@ -488,14 +489,14 @@ public class AiModelService {
                     log.warn("OpenRouter returned no choices with model {}: {}", model, response.strip());
                     throw new BadResponseException(model);
                 }
-                String text = choiceNode.path("message").path("content").asText();
+                String text = choiceNode.path("message").path("content").asString();
                 if (text.isBlank()) {
                     log.warn("OpenRouter returned blank content with model {}: {}", model, response.strip());
                     throw new BadResponseException(model);
                 }
                 String stripped = stripJsonFences(text);
                 try {
-                    objectMapper.readTree(stripped);
+                    objectMapper.reader().without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(stripped);
                 } catch (Exception parseEx) {
                     log.warn("OpenRouter returned invalid JSON from model {}: {}", model,
                             stripped.length() > 300 ? stripped.substring(0, 300) + "..." : stripped);

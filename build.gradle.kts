@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.tubereturns"
-version = "0.6.14"
+version = "0.6.15"
 
 java {
     toolchain {
@@ -44,9 +44,6 @@ dependencies {
 
     implementation("com.google.apis:google-api-services-youtube:v3-rev20261019-2.0.0")
     implementation("com.google.http-client:google-http-client-gson:2.2.0")
-
-    implementation("com.fasterxml.jackson.core:jackson-databind")
-    implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 
     implementation("org.springframework.boot:spring-boot-configuration-processor")
 

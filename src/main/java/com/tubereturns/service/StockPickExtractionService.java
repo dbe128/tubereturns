@@ -1,6 +1,5 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tubereturns.dto.StockPickExtractionDto;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -19,6 +18,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -285,15 +287,16 @@ public class StockPickExtractionService {
         log.info("AI response for {} ({}) [model={}]: {}", videoTitle, videoUrl, aiResult.model(), aiResult.content());
 
         try {
-            StockPickExtractionDto parsed = objectMapper.readValue(aiResult.content(), StockPickExtractionDto.class);
+            StockPickExtractionDto parsed = objectMapper.readerFor(StockPickExtractionDto.class)
+                    .with(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    .without(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES, DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+                    .readValue(aiResult.content());
             if (parsed == null) {
                 log.error("AI returned null for {} ({}). Response: {}", videoTitle, videoUrl, aiResult.content());
                 throw new RuntimeException("AI returned null for video " + videoId);
             }
             return new ExtractionWithModel(parsed, aiResult.model());
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
+        } catch (JacksonException e) {
             log.error("Failed to parse AI response for {} ({}): {}\nResponse: {}", videoTitle, videoUrl, e.getMessage(), aiResult.content());
             throw new RuntimeException("Failed to parse AI response for video " + videoId, e);
         }

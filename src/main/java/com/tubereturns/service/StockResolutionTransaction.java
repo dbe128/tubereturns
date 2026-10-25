@@ -1,7 +1,8 @@
 package com.tubereturns.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.tubereturns.model.Pick;
 import com.tubereturns.model.Stock;
 import com.tubereturns.model.StockPrice;
@@ -86,12 +87,12 @@ public class StockResolutionTransaction {
         }
 
         try {
-            JsonNode node = objectMapper.readTree(response);
-            String type = node.path("type").asText();
+            JsonNode node = objectMapper.reader().without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(response);
+            String type = node.path("type").asString();
 
             if ("resolved".equals(type)) {
-                String suggestedTicker = node.path("ticker").asText("").trim().toUpperCase();
-                String suggestedCurrency = node.path("currency").asText("").trim().toUpperCase();
+                String suggestedTicker = node.path("ticker").asString("").trim().toUpperCase();
+                String suggestedCurrency = node.path("currency").asString("").trim().toUpperCase();
                 if (suggestedTicker.isEmpty()) {
                     log.warn("AI returned resolved type but no ticker for stock id={}", stock.getId());
                     incrementFailedAttempts(stock);
@@ -153,8 +154,8 @@ public class StockResolutionTransaction {
                 return true;
 
             } else if ("corporate_action".equals(type)) {
-                String action = node.path("action").asText("");
-                String note = node.path("note").asText("");
+                String action = node.path("action").asString("");
+                String note = node.path("note").asString("");
                 stock.setCorporateAction(action);
                 stockRepository.save(stock);
                 log.info("Corporate action recorded for stock id={} '{}': {} — {}",
@@ -236,7 +237,7 @@ public class StockResolutionTransaction {
         }
 
         try {
-            JsonNode parsed = objectMapper.readTree(response);
+            JsonNode parsed = objectMapper.reader().without(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(response);
             JsonNode array;
             if (parsed.isArray()) {
                 array = parsed;
@@ -250,7 +251,7 @@ public class StockResolutionTransaction {
             int saved = 0;
             String resolvedCurrency = null;
             for (JsonNode item : array) {
-                String dateStr = item.path("date").asText("");
+                String dateStr = item.path("date").asString("");
                 double price = item.path("price").asDouble(-1);
                 if (dateStr.isEmpty() || price < 0) {
                     log.warn("Skipping invalid AI price entry for stock id={} '{}': date='{}' price={}",
@@ -258,7 +259,7 @@ public class StockResolutionTransaction {
                     continue;
                 }
                 if (resolvedCurrency == null) {
-                    String itemCurrency = item.path("currency").asText("").trim().toUpperCase();
+                    String itemCurrency = item.path("currency").asString("").trim().toUpperCase();
                     if (!itemCurrency.isEmpty()) {
                         resolvedCurrency = itemCurrency;
                     }
