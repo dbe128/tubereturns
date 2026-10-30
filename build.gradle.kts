@@ -42,7 +42,7 @@ dependencies {
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
 
-    implementation("com.google.apis:google-api-services-youtube:v3-rev20261019-2.0.0")
+    implementation("com.google.apis:google-api-services-youtube:v3-rev20261019-2.9.2")
     implementation("com.google.http-client:google-http-client-gson:2.2.0")
 
     implementation("org.springframework.boot:spring-boot-configuration-processor")
