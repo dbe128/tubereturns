@@ -49,6 +49,9 @@ import java.util.concurrent.TimeUnit;
 @Tag(name = "Channels", description = "YouTube channel management and statistics")
 public class ChannelController {
 
+    private static final String ALREADY_TRACKED_MESSAGE = "This channel is already being tracked.";
+    private static final String NOT_VERIFIED_MESSAGE = "Could not verify channel eligibility. Please try again.";
+
     private final ChannelRepository channelRepository;
     private final ChannelProcessingNotificationRepository notificationRepository;
     private final VideoRepository videoRepository;
@@ -225,7 +228,7 @@ public class ChannelController {
     }
 
     @PostMapping("/{handle}/add")
-    @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring, or undelete a previously removed one")
+    @Operation(summary = "Add new channel", description = "Add a new YouTube channel for monitoring; non-admin additions are resolved and vetted server-side")
     public ResponseEntity<Map<String, String>> addChannel(
             @PathVariable String handle,
             @RequestParam String channelName,
@@ -237,24 +240,39 @@ public class ChannelController {
             @RequestParam(defaultValue = "false") boolean notifyOnComplete,
             Authentication authentication) {
         if (blockedChannelService.isBlocked(handle, youtubeChannelId)) {
-            return ResponseEntity.badRequest().body(Map.of("message", BlockedChannelService.BLOCKED_MESSAGE));
+            return badRequest(BlockedChannelService.BLOCKED_MESSAGE);
         }
         boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (!isAdmin) {
+        Channel channel;
+        if (isAdmin) {
+            channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount, youtubeChannelId);
+        } else {
+            if (channelRepository.findByHandle(handle).isPresent()) {
+                return badRequest(ALREADY_TRACKED_MESSAGE);
+            }
+            ChannelSearchResultDto resolved = youTubeApiService.resolveChannelByHandle(handle);
+            if (resolved == null) {
+                return badRequest(NOT_VERIFIED_MESSAGE);
+            }
+            if (channelRepository.findByHandle(resolved.handle()).isPresent()) {
+                return badRequest(ALREADY_TRACKED_MESSAGE);
+            }
+            if (blockedChannelService.isListed(resolved.handle(), resolved.channelId())) {
+                return badRequest(BlockedChannelService.BLOCKED_MESSAGE);
+            }
             try {
-                if (!channelRelevanceService.assess(channelName, handle).passed()) {
-                    return ResponseEntity.badRequest().body(Map.of("message",
-                            "This channel does not qualify as a stock-picking channel."));
+                if (!channelRelevanceService.assess(resolved.channelName(), resolved.handle()).passed()) {
+                    return badRequest("This channel does not qualify as a stock-picking channel.");
                 }
             } catch (Exception e) {
-                log.warn("Eligibility check failed for @{}: {}", handle, e.getMessage());
-                return ResponseEntity.badRequest().body(Map.of("message",
-                        "Could not verify channel eligibility. Please try again."));
+                log.warn("Eligibility check failed for @{}: {}", resolved.handle(), e.getMessage());
+                return badRequest(NOT_VERIFIED_MESSAGE);
             }
+            channel = discoveryService.createOrUpdateChannel(resolved.handle(), resolved.channelName(), resolved.channelUrl(),
+                    resolved.thumbnailUrl(), resolved.description(), resolved.subscriberCount(), resolved.channelId());
         }
         String approvalSource = isAdmin ? "ADMIN" : "AUTO";
-        var channel = discoveryService.createOrUpdateChannel(handle, channelName, channelUrl, thumbnailUrl, description, subscriberCount, youtubeChannelId);
         channel.setApprovalSource(approvalSource);
         channelRepository.save(channel);
         meterRegistry.counter("tubereturns.channels.added", "source", approvalSource).increment();
@@ -265,6 +283,10 @@ public class ChannelController {
         scheduler.triggerDiscovery();
         channelListService.evictAllChannels();
         return ResponseEntity.ok(Map.of("message", "Channel added successfully"));
+    }
+
+    private ResponseEntity<Map<String, String>> badRequest(String message) {
+        return ResponseEntity.badRequest().body(Map.of("message", message));
     }
 
     private Optional<Channel> lookupChannel(String slug) {

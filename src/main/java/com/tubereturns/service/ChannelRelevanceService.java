@@ -34,8 +34,8 @@ public class ChannelRelevanceService {
     public RelevanceResult assess(String channelName, String handle) {
         List<String> titles = youTubeApiService.getRecentVideoTitles(handle, 50);
         if (titles.isEmpty()) {
-            log.warn("No video titles found for @{} — passing relevance check by default", handle);
-            return new RelevanceResult(5, true);
+            log.warn("No video titles found for @{} — failing relevance check", handle);
+            return new RelevanceResult(0, false);
         }
         int score = aiModelService.scoreChannelRelevance(channelName, titles);
         log.info("Channel @{} relevance score: {}/10 (threshold: {})", handle, score, relevanceThreshold);
