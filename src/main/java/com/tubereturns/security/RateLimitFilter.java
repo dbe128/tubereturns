@@ -30,13 +30,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String TIER_AUTH = "auth";
     private static final String TIER_STANDARD = "standard";
     private static final String TIER_AUTHENTICATED = "authenticated";
-    private static final Set<String> CREDENTIAL_PATHS = Set.of(
+    private static final Set<String> STRICT_PATHS = Set.of(
             "/api/auth/login",
             "/api/auth/signup",
             "/api/auth/google",
             "/api/auth/verify",
             "/api/auth/forgot-password",
-            "/api/auth/reset-password");
+            "/api/auth/reset-password",
+            "/api/contact");
 
     private final RateLimitProperties props;
     private final ObjectMapper objectMapper;
@@ -88,7 +89,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String clientKey;
         String tierName;
-        if (isCredentialEndpoint(path)) {
+        if (isStrictEndpoint(path)) {
             clientKey = getClientIp(request);
             tierName = TIER_AUTH;
         } else if (isAuthenticated) {
@@ -114,8 +115,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         log.warn("Rate limit exceeded for {} on {}", clientKey, path);
     }
 
-    private boolean isCredentialEndpoint(String path) {
-        return CREDENTIAL_PATHS.contains(path);
+    private boolean isStrictEndpoint(String path) {
+        return STRICT_PATHS.contains(path);
     }
 
     private String getClientIp(HttpServletRequest request) {

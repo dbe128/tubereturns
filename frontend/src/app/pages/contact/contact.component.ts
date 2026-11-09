@@ -13,14 +13,14 @@ import { AuthService } from '../../services/auth.service';
       <div class="w-full max-w-lg">
         <div class="text-center mb-10">
           <h1 class="text-3xl md:text-4xl font-black text-white mb-3">Contact us</h1>
-          <p class="text-gray-400 text-sm leading-relaxed">Have a question, suggestion, or found something off? We'd love to hear from you.<br>You'll get a copy of your message sent to your inbox.</p>
+          <p class="text-gray-400 text-sm leading-relaxed">Have a question, suggestion, or found something off? We'd love to hear from you.<br>We'll send a confirmation to your inbox.</p>
         </div>
 
         @if (sent()) {
           <div class="bg-green-900/30 border border-green-700 rounded-2xl p-8 text-center">
             <div class="text-8xl mb-4 text-white">✉</div>
             <h2 class="text-lg font-bold text-white mb-2">Message sent!</h2>
-            <p class="text-sm text-gray-400">Thanks for reaching out. We've sent a copy to <strong class="text-white">{{ sentTo() }}</strong> and will get back to you as soon as we can.</p>
+            <p class="text-sm text-gray-400">Thanks for reaching out. We've sent a confirmation to <strong class="text-white">{{ sentTo() }}</strong> and will get back to you as soon as we can.</p>
           </div>
         } @else {
           <form (ngSubmit)="submit()" class="bg-gray-900 border border-gray-700 rounded-2xl p-6 md:p-8 space-y-5">

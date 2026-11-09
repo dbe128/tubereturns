@@ -139,7 +139,7 @@ public class EmailService {
                 """.formatted(escapedName, escapedEmail, escapedMessage);
         trySend("feedback@tubereturns.com", "TubeReturns feedback", html);
 
-        String copyHtml = """
+        String acknowledgementHtml = """
                 <!DOCTYPE html>
                 <html>
                 <head><meta charset="UTF-8"></head>
@@ -148,14 +148,12 @@ public class EmailService {
                     <img src="cid:logo" alt="TubeReturns" style="height:150px;" />
                   </div>
                   <h2 style="margin:0 0 12px;font-size:18px;font-weight:700;">We received your message</h2>
-                  <p style="margin:0 0 8px;color:#374151;font-size:15px;">Hi %s,</p>
-                  <p style="margin:0 0 16px;color:#6b7280;font-size:14px;">Thanks for reaching out! Here's a copy of what you sent us:</p>
-                  <div style="margin:0 0 24px;padding:16px;background:#f9fafb;border-left:3px solid #16a34a;border-radius:4px;font-size:14px;color:#374151;line-height:1.6;">%s</div>
-                  <p style="margin:0 0 0;color:#9ca3af;font-size:12px;">We'll get back to you as soon as we can. — TubeReturns</p>
+                  <p style="margin:0 0 16px;color:#6b7280;font-size:14px;">Thanks for reaching out through the TubeReturns contact form. We'll get back to you as soon as we can.</p>
+                  <p style="margin:0 0 0;color:#9ca3af;font-size:12px;">If you didn't contact us, you can ignore this email. — TubeReturns</p>
                 </body>
                 </html>
-                """.formatted(escapedName, escapedMessage);
-        trySend(senderEmail, "TubeReturns feedback — your message", copyHtml);
+                """;
+        trySend(senderEmail, "TubeReturns feedback — we received your message", acknowledgementHtml);
     }
 
     private String escapeHtml(String value) {
