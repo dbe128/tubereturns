@@ -61,6 +61,10 @@ tubereturns:
     enabled: true
     api-key: ${YOUTUBE_API_KEY:}
     thumbnail-hosts: "yt3.ggpht.com,yt3.googleusercontent.com,i.ytimg.com"
+    search-cache-hours: 6
+    interactive-quota:
+      anonymous-daily-units: 2000
+      authenticated-daily-units: 3000
     channel-filter-keywords: "investing,finance,investor,stocks,stock market,stock analysis,trading,portfolio,dividend,etf,befektetés,pénzügy,befektető,részvény,tőzsde,részvényelemzés,kereskedés,portfólió,osztalék,investieren,geldanlage,finanzen,anleger,aktien,börse,aktienmarkt,aktienanalyse,dividende,depot"
 
   channel:

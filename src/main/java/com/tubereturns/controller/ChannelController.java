@@ -15,6 +15,8 @@ import com.tubereturns.repository.VideoRepository;
 import com.tubereturns.service.ChannelListService;
 import com.tubereturns.service.ChannelNotificationService;
 import com.tubereturns.service.ChannelRelevanceService;
+import com.tubereturns.service.ChannelSearchService;
+import com.tubereturns.service.YouTubeInteractiveBudget;
 import com.tubereturns.service.PickPerformanceService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.BlockedChannelService;
@@ -29,6 +31,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -49,6 +52,8 @@ import java.util.concurrent.TimeUnit;
 @Tag(name = "Channels", description = "YouTube channel management and statistics")
 public class ChannelController {
 
+    private static final long RESOLVE_QUOTA_UNITS = 1;
+    private static final long RELEVANCE_QUOTA_UNITS = 2;
     private static final String ALREADY_TRACKED_MESSAGE = "This channel is already being tracked.";
     private static final String NOT_VERIFIED_MESSAGE = "Could not verify channel eligibility. Please try again.";
 
@@ -64,6 +69,8 @@ public class ChannelController {
     private final PickPerformanceService pickPerformanceService;
     private final ChannelRelevanceService channelRelevanceService;
     private final BlockedChannelService blockedChannelService;
+    private final ChannelSearchService channelSearchService;
+    private final YouTubeInteractiveBudget interactiveBudget;
     private final MeterRegistry meterRegistry;
 
     @PostConstruct
@@ -199,18 +206,24 @@ public class ChannelController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "Search YouTube channels", description = "Returns up to 5 YouTube channels matching the query")
-    public List<ChannelSearchResultDto> searchChannels(
+    @Operation(summary = "Search YouTube channels", description = "Returns YouTube channels matching the query; results are cached and bounded by a daily quota budget")
+    public ResponseEntity<List<ChannelSearchResultDto>> searchChannels(
             @RequestParam String q,
-            @RequestParam(defaultValue = "true") boolean filterByKeywords) {
-        return youTubeApiService.searchChannels(q, filterByKeywords).stream()
-                .filter(result -> !blockedChannelService.isListed(result.handle(), result.channelId()))
-                .toList();
+            @RequestParam(defaultValue = "true") boolean filterByKeywords,
+            Authentication authentication) {
+        return channelSearchService.search(q, filterByKeywords, authentication != null)
+                .map(results -> ResponseEntity.ok(results.stream()
+                        .filter(result -> !blockedChannelService.isListed(result.handle(), result.channelId()))
+                        .toList()))
+                .orElse(ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build());
     }
 
     @GetMapping("/resolve")
     @Operation(summary = "Resolve a YouTube channel by handle (1 quota unit)")
     public ResponseEntity<ChannelSearchResultDto> resolveChannel(@RequestParam String handle) {
+        if (!interactiveBudget.tryConsume(true, RESOLVE_QUOTA_UNITS)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+        }
         ChannelSearchResultDto result = youTubeApiService.resolveChannelByHandle(handle);
         if (result == null || blockedChannelService.isListed(result.handle(), result.channelId())) {
             return ResponseEntity.notFound().build();
@@ -223,6 +236,9 @@ public class ChannelController {
     public ResponseEntity<Map<String, Object>> assessRelevance(
             @RequestParam String handle,
             @RequestParam String channelName) {
+        if (!interactiveBudget.tryConsume(true, RELEVANCE_QUOTA_UNITS)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+        }
         ChannelRelevanceService.RelevanceResult result = channelRelevanceService.assess(channelName, handle);
         return ResponseEntity.ok(Map.of("score", result.score(), "passed", result.passed()));
     }
@@ -250,6 +266,10 @@ public class ChannelController {
         } else {
             if (channelRepository.findByHandle(handle).isPresent()) {
                 return badRequest(ALREADY_TRACKED_MESSAGE);
+            }
+            if (!interactiveBudget.tryConsume(true, RESOLVE_QUOTA_UNITS + RELEVANCE_QUOTA_UNITS)) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                        .body(Map.of("message", "Too many channel lookups today. Please try again tomorrow."));
             }
             ChannelSearchResultDto resolved = youTubeApiService.resolveChannelByHandle(handle);
             if (resolved == null) {
