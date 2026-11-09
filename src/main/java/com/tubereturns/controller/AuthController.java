@@ -8,6 +8,7 @@ import com.tubereturns.dto.PreferencesRequestDto;
 import com.tubereturns.dto.RegisterRequestDto;
 import com.tubereturns.dto.ResetPasswordRequestDto;
 import com.tubereturns.model.User;
+import com.tubereturns.security.LoginAttemptLimiter;
 import com.tubereturns.service.JwtService;
 import com.tubereturns.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,6 +33,7 @@ public class AuthController {
     private final UserService userService;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     @PostMapping("/signup")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDto request) {
@@ -45,6 +47,9 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDto request) {
+        if (loginAttemptLimiter.isBlocked(request.email())) {
+            return ResponseEntity.status(429).body(Map.of("message", "Too many failed sign-in attempts. Please try again later."));
+        }
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email(), request.password()));
@@ -53,6 +58,7 @@ public class AuthController {
         } catch (DisabledException e) {
             return ResponseEntity.status(403).body(Map.of("message", "Please verify your email address before signing in"));
         } catch (BadCredentialsException e) {
+            loginAttemptLimiter.recordFailure(request.email());
             return ResponseEntity.status(401).body(Map.of("message", "Invalid email or password"));
         }
     }

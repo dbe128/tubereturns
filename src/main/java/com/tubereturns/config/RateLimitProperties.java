@@ -15,6 +15,7 @@ public class RateLimitProperties {
     private Tier auth = new Tier();
     private Tier standard = new Tier();
     private Tier authenticated = new Tier();
+    private Tier loginAccount = new Tier();
 
     @Getter
     @Setter

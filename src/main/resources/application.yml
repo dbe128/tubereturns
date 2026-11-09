@@ -107,6 +107,9 @@ tubereturns:
     authenticated:
       capacity: 100
       refill-seconds: 60
+    login-account:
+      capacity: 10
+      refill-seconds: 900
 
   security:
     jwt-secret: ${JWT_SECRET}

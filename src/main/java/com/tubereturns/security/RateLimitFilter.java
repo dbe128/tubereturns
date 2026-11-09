@@ -20,6 +20,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -29,6 +30,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String TIER_AUTH = "auth";
     private static final String TIER_STANDARD = "standard";
     private static final String TIER_AUTHENTICATED = "authenticated";
+    private static final Set<String> CREDENTIAL_PATHS = Set.of(
+            "/api/auth/login",
+            "/api/auth/signup",
+            "/api/auth/google",
+            "/api/auth/verify",
+            "/api/auth/forgot-password",
+            "/api/auth/reset-password");
 
     private final RateLimitProperties props;
     private final ObjectMapper objectMapper;
@@ -80,7 +88,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         String clientKey;
         String tierName;
-        if (isAuthenticated) {
+        if (isCredentialEndpoint(path)) {
+            clientKey = getClientIp(request);
+            tierName = TIER_AUTH;
+        } else if (isAuthenticated) {
             clientKey = "user:" + auth.getName();
             tierName = TIER_AUTHENTICATED;
         } else {
@@ -103,15 +114,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
         log.warn("Rate limit exceeded for {} on {}", clientKey, path);
     }
 
+    private boolean isCredentialEndpoint(String path) {
+        return CREDENTIAL_PATHS.contains(path);
+    }
+
     private String getClientIp(HttpServletRequest request) {
-        String cfConnectingIp = request.getHeader("CF-Connecting-IP");
-        if (cfConnectingIp != null && !cfConnectingIp.isBlank()) {
-            return cfConnectingIp.trim();
-        }
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            String[] hops = forwarded.split(",");
-            return hops[hops.length - 1].trim();
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
         }
         return request.getRemoteAddr();
     }

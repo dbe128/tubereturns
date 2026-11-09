@@ -48,6 +48,10 @@ export class ApiService {
       const msg = (err.error as Record<string, string> | null)?.['message'];
       return throwError(() => new Error(msg ?? 'Please check your input and try again'));
     }
+    if (err.status === 429) {
+      const msg = (err.error as Record<string, string> | null)?.['message'];
+      return throwError(() => new Error(msg ?? 'Too many requests, please try again later.'));
+    }
     if (err.status >= 500) {
       return throwError(() => new Error('The service is not available, please try again later.'));
     }

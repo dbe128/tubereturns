@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "com.tubereturns"
-version = "0.6.17"
+version = "0.6.18"
 
 java {
     toolchain {
