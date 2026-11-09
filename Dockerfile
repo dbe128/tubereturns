@@ -13,12 +13,12 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir \
-    youtube-transcript-api \
-    yt-dlp \
-    requests \
-    selenium \
-    webdriver-manager \
-    rich
+    youtube-transcript-api==1.2.5 \
+    yt-dlp==2026.10.26 \
+    requests==2.34.2 \
+    selenium==4.52.0 \
+    webdriver-manager==4.1.2 \
+    rich==15.0.0
 
 COPY scripts/ytbsd.py /app/scripts/ytbsd.py
 COPY llm-models.txt /app/llm-models.txt
