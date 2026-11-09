@@ -1,5 +1,6 @@
 package com.tubereturns.security;
 
+import com.tubereturns.model.User;
 import com.tubereturns.service.JwtService;
 import com.tubereturns.service.UserService;
 import jakarta.servlet.FilterChain;
@@ -10,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -39,10 +39,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             String email = jwtService.extractEmail(jwt);
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserDetails userDetails = userService.loadUserByUsername(email);
+                User userDetails = (User) userService.loadUserByUsername(email);
                 if (jwtService.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
+                            userDetails, jwt, userDetails.getAuthorities());
                     auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(auth);
                     log.debug("Authenticated {} with authorities {} for {}", email, userDetails.getAuthorities(), request.getRequestURI());

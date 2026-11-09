@@ -107,7 +107,7 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
         User user = userService.updateNotifyPreference(authentication.getName(), request.notifyOnChannelProcessed());
-        return ResponseEntity.ok(new AuthResponseDto(jwtService.generateToken(user), user.getEmail(), user.getFirstName()));
+        return ResponseEntity.ok(new AuthResponseDto(jwtService.renewToken(user, (String) authentication.getCredentials()), user.getEmail(), user.getFirstName()));
     }
 
     @GetMapping("/me")
@@ -116,6 +116,6 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
         User user = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(new AuthResponseDto(jwtService.generateToken(user), user.getEmail(), user.getFirstName()));
+        return ResponseEntity.ok(new AuthResponseDto(jwtService.renewToken(user, (String) authentication.getCredentials()), user.getEmail(), user.getFirstName()));
     }
 }

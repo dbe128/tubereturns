@@ -62,6 +62,9 @@ public class User implements UserDetails {
     @Column(name = "password_reset_token_expires_at")
     private Instant passwordResetTokenExpiresAt;
 
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;

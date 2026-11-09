@@ -112,6 +112,7 @@ public class UserService implements UserDetailsService {
             throw new IllegalArgumentException("Password reset link has expired");
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setTokenVersion(user.getTokenVersion() + 1);
         user.setPasswordResetToken(null);
         user.setPasswordResetTokenExpiresAt(null);
         userRepository.save(user);
