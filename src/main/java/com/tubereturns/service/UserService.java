@@ -31,6 +31,9 @@ import java.util.UUID;
 @Service
 public class UserService implements UserDetailsService {
 
+    private static final String LOCAL_PROVIDER = "local";
+    private static final String GOOGLE_PROVIDER = "google";
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
@@ -56,23 +59,27 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void registerUser(RegisterRequestDto request) {
-        if (userRepository.existsByEmail(request.email())) {
+        User user = userRepository.findByEmail(request.email()).orElseGet(User::new);
+        if (user.getId() != null && !isUnverifiedLocalAccount(user)) {
             throw new IllegalArgumentException("Email already registered");
         }
         Role freeRole = roleRepository.findByName("FREE")
                 .orElseThrow(() -> new IllegalStateException("FREE role not found"));
         String token = UUID.randomUUID().toString();
-        User user = new User();
         user.setFirstName(request.firstName());
         user.setEmail(request.email());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setProvider("local");
+        user.setProvider(LOCAL_PROVIDER);
         user.setEmailVerified(false);
         user.setRole(freeRole);
         user.setVerificationToken(token);
         user.setVerificationTokenExpiresAt(Instant.now().plusSeconds(3600));
         userRepository.save(user);
         emailService.sendVerificationEmail(user.getEmail(), user.getFirstName(), token);
+    }
+
+    private boolean isUnverifiedLocalAccount(User user) {
+        return LOCAL_PROVIDER.equals(user.getProvider()) && !user.isEmailVerified();
     }
 
     @Transactional
@@ -113,6 +120,9 @@ public class UserService implements UserDetailsService {
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setTokenVersion(user.getTokenVersion() + 1);
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiresAt(null);
         user.setPasswordResetToken(null);
         user.setPasswordResetTokenExpiresAt(null);
         userRepository.save(user);
@@ -131,6 +141,9 @@ public class UserService implements UserDetailsService {
             throw new IllegalArgumentException("Invalid Google token");
         }
         GoogleIdToken.Payload payload = idToken.getPayload();
+        if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+            throw new IllegalArgumentException("Your Google account email is not verified");
+        }
         String email = payload.getEmail();
         String firstName = (String) payload.get("given_name");
         String lastName = (String) payload.get("family_name");
@@ -139,7 +152,17 @@ public class UserService implements UserDetailsService {
 
         return userRepository.findByEmail(email)
                 .map(existing -> {
-                    if ("local".equals(existing.getProvider())) {
+                    if (isUnverifiedLocalAccount(existing)) {
+                        existing.setProvider(GOOGLE_PROVIDER);
+                        existing.setPasswordHash(null);
+                        existing.setEmailVerified(true);
+                        existing.setVerificationToken(null);
+                        existing.setVerificationTokenExpiresAt(null);
+                        existing.setTokenVersion(existing.getTokenVersion() + 1);
+                        if (firstName != null && !firstName.isBlank()) {
+                            existing.setFirstName(firstName);
+                        }
+                    } else if (LOCAL_PROVIDER.equals(existing.getProvider())) {
                         throw new IllegalArgumentException("An account with this email already exists. Please sign in with email and password.");
                     }
                     existing.setProviderId(googleId);
@@ -155,7 +178,7 @@ public class UserService implements UserDetailsService {
                     user.setLastName(lastName);
                     user.setProfilePictureUrl(pictureUrl);
                     user.setEmail(email);
-                    user.setProvider("google");
+                    user.setProvider(GOOGLE_PROVIDER);
                     user.setProviderId(googleId);
                     user.setEmailVerified(true);
                     user.setRole(freeRole);
@@ -168,24 +191,5 @@ public class UserService implements UserDetailsService {
         User user = (User) loadUserByUsername(email);
         user.setNotifyOnChannelProcessed(notifyOnChannelProcessed);
         return userRepository.save(user);
-    }
-
-    @Transactional
-    public User findOrCreateOAuth2User(String provider, String providerId, String email, String firstName) {
-        return userRepository.findByEmail(email)
-                .map(existing -> {
-                    existing.setProvider(provider);
-                    existing.setProviderId(providerId);
-                    return userRepository.save(existing);
-                })
-                .orElseGet(() -> {
-                    User user = new User();
-                    user.setFirstName(firstName);
-                    user.setEmail(email);
-                    user.setProvider(provider);
-                    user.setProviderId(providerId);
-                    user.setEmailVerified(true);
-                    return userRepository.save(user);
-                });
     }
 }

@@ -5,6 +5,7 @@ import com.tubereturns.model.User;
 import com.tubereturns.repository.RoleRepository;
 import com.tubereturns.repository.UserRepository;
 import com.tubereturns.service.AiModelService;
+import com.tubereturns.service.EmailService;
 import com.tubereturns.service.JwtService;
 import com.tubereturns.service.PipelineSchedulerService;
 import com.tubereturns.service.YouTubeApiService;
@@ -44,6 +45,8 @@ abstract class ApiIntegrationTest {
     AiModelService aiModelService;
     @MockitoBean
     PipelineSchedulerService pipelineSchedulerService;
+    @MockitoBean
+    EmailService emailService;
 
     MockMvc mvc;
 
