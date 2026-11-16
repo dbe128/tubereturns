@@ -50,7 +50,7 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
-    implementation("com.microsoft.playwright:playwright:1.64.0")
+    implementation("com.microsoft.playwright:playwright:1.65.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
